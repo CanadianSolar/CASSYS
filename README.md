@@ -1,5 +1,5 @@
 # CASSYS - Canadian Solar System Simulator#
-*A Simulation Tool for Grid-Connected PV Systems*
+*A Simulation Tool for Grid-Connected Photovolatic Systems*
  
  
 ### Program goals and description ##
