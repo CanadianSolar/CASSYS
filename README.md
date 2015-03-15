@@ -1,5 +1,5 @@
 # CASSYS #
-Canadian Solar Simulation Program for Grid-Connected PV Systems
+*Canadian Solar Simulation Program for Grid-Connected PV Systems*
  
  
 ### Program goals and description ##
