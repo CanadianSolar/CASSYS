@@ -32,7 +32,7 @@ contains a user's manual and various documents to better understand the models u
 
 ### Licensing ##
 ----------------
-That's the best part: CASSYS is free and open source software. You are free to use it and explore the code, subject to the conditions expressed in the  ([Licensing Agreement](https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE "Licensing Agreement")). Feel free to send your comments (positive or negative) or provide suggestions using the 
+That's the best part: CASSYS is free and open source software. You are free to use it and explore the code, subject to the conditions expressed in the  [Licensing Agreement](https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE "Licensing Agreement"). Feel free to send your comments (positive or negative) or provide suggestions using the 
 [Report Issues](https://github.com/CanadianSolar/CASSYS/issues "Report Issues") Link.
 
  
