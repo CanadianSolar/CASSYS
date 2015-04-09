@@ -1,14 +1,14 @@
 # CASSYS - Canadian Solar System Simulator#
-*A Simulation Tool for Grid-Connected Photovolatic Systems*
+*A Simulation Tool for Grid-Connected Photovoltaic Systems*
 
 *Current Version: 0.9*
  
 ### Program goals and description ##
 ---------------------------------------
  
-CASSYS  simulates the performance of photovoltaic arrays and balance of system components for different site specific and climatalogical conditions.
+CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.
 
-The goal of CASSYS is provide a reliable, flexible and user-friendly way to simulate solar farm performance for operational purposes.  
+The goal of CASSYS is provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  
 
 CASSYS is developed and maintained by [Canadian Solar O&M Inc. (Ontario)](http://www.canadiansolar.com/ "Canadian Solar O&M Inc. (Ontario)"). 
 
@@ -16,8 +16,27 @@ CASSYS is developed and maintained by [Canadian Solar O&M Inc. (Ontario)](http:/
 ----------------------------------------
 CASSYS is composed of two main software components: 
 
- 1. User Interface: A Macro Enabled Microsoft Excel Workbook developed with VBA.
- 2. Simulation Engine: Simulates farm performance for given climate data based on user entered parameters. This is developed in C#.
+ 1. User Interface: A macro-enabled Microsoft Excel Workbook called CASSYS.XLSM. This is your main tool to interact with the program. With the workbook you can define the system, run the simulation, and retrieve and analyze the results.
+ 2. Simulation Engine: A C# program called CASSYS.exe which performs the actual simulation. Do not run CASSYS.exe directly; use the interface to launch it.
+ 
+### Installing and running the program ##
+-----------------------------------------
+The easiest way to install the program is to download the installer from this location:  
+xxx
+The installer lets you specify the directory in which you want the program to be installed. After installation, go to that directory, open the CASSYS.XLSM file in Excel, and start interacting with the program.
+
+### Documentation ##
+--------------------
+This directory:
+xxx
+contains a user's manual and various documents to better understand the models used in the simulation engine.
+
+### Licensing ##
+----------------
+That's the best part: CASSYS is free and open source software. You are free to use it and explore the code, subject to the conditions expressed in the Licensing Agreement (xxx). Feel free to send your comments (positive or negative) or provide suggestions using this link:
+xxx
+
+ 
 
 
 
