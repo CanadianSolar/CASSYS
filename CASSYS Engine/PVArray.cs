@@ -440,7 +440,7 @@ namespace CASSYS
             itsTCoefVoc = double.Parse(ReadFarmSettings.GetInnerText("PV", "mVco", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 1000;
             itsRpRef = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rshunt", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsRs = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rserie", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
-            itsRshZero = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rsh0", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: (4*itsRs).ToString()));
+            itsRshZero = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rsh0", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: (4*itsRpRef).ToString()));
             itsRshExp = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rshexp", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "5.5"));
             itsRw = double.Parse(ReadFarmSettings.GetInnerText("PV", "GlobWireResist", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "1")) / 1000;
             cellArea = itsNParallel * itsNSeries * itsCellCount * double.Parse(ReadFarmSettings.GetInnerText("PV", "Cellarea", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.01")) / 10000;
