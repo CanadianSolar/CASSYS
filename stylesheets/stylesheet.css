@@ -54,10 +54,12 @@ a {
       margin-left: 0; } }
 
 .page-header {
-  color: #fff;
+  color: #000033;
   text-align: center;
   background-color: #159957;
-  background-image: linear-gradient(120deg, #155799, #159957); }
+  background-image: url(header-background.jpg);
+  background-repeat: no-repeat; 
+  background-size: cover;  }
 
 @media screen and (min-width: 64em) {
   .page-header {
@@ -112,7 +114,7 @@ a {
   margin-top: 2rem;
   margin-bottom: 1rem;
   font-weight: normal;
-  color: #159957; }
+  color: #00CC66; }
 .main-content p {
   margin-bottom: 1em; }
 .main-content code {
@@ -131,7 +133,7 @@ a {
   word-wrap: normal;
   background-color: #f3f6fa;
   border: solid 1px #dce6f0;
-  border-radius: 0.3rem; }
+  border-radius: 0.3rem;  }
   .main-content pre > code {
     padding: 0;
     margin: 0;
@@ -200,7 +202,7 @@ a {
   height: 2px;
   padding: 0;
   margin: 1rem 0;
-  background-color: #eff0f1;
+  background-color: #ffff66;
   border: 0; }
 
 @media screen and (min-width: 64em) {
