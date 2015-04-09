@@ -28,13 +28,13 @@ The installer lets you specify the directory in which you want the program to be
 ### Documentation ##
 --------------------
 This directory:
-xxx
+[Documents and Help](https://github.com/CanadianSolar/CASSYS/tree/master/Documents%20and%20Help "Documents and Help")
 contains a user's manual and various documents to better understand the models used in the simulation engine.
 
 ### Licensing ##
 ----------------
 That's the best part: CASSYS is free and open source software. You are free to use it and explore the code, subject to the conditions expressed in the Licensing Agreement (xxx). Feel free to send your comments (positive or negative) or provide suggestions using this link:
-xxx
+[Report Issues](https://github.com/CanadianSolar/CASSYS/issues "Report Issues")
 
  
 
