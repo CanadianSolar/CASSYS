@@ -6,7 +6,7 @@
 ### Program goals and description ##
 ---------------------------------------
  
-CASSYS  enables the simulation of photovoltaic array and balance of plant system performance for different site specific and climatalogical conditions.
+CASSYS  simulates the performance of photovoltaic arrays and balance of system components for different site specific and climatalogical conditions based on different user configurations.
 
 The goal of CASSYS is provide a reliable, flexible and user-friendly way to simulate solar farm performance for operational purposes.  
 
