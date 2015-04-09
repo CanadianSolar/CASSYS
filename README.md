@@ -8,7 +8,7 @@
  
 CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.
 
-The goal of CASSYS is provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  
+The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  
 
 CASSYS is developed and maintained by [Canadian Solar O&M Inc. (Ontario)](http://www.canadiansolar.com/ "Canadian Solar O&M Inc. (Ontario)"). 
 
