@@ -6,7 +6,7 @@
 ### Program goals and description ##
 ---------------------------------------
  
-CASSYS is a program in development by [Canadian Solar](http://www.canadiansolar.com/ "Canadian Solar") which analyzes solar farm specifications and climate data provided by the user. 
+CASSYS is a simulation program for grid-connected photovoltaic systems developed by [Canadian Solar O&M Inc. (Ontario)](http://www.canadiansolar.com/ "Canadian Solar O&M Inc. (Ontario)") which enbables users to define and simulate performance of photovoltaic arrays and balance of plant systems for different site specific and climatalogical conditions.
 
 The goal of CASSYS is provide a reliable, flexible and user-friendly way to simulate solar farm performance for operational purposes.  
 
