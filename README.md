@@ -21,9 +21,9 @@ CASSYS is composed of two main software components:
  
 ### Installing and running the program ##
 -----------------------------------------
-The easiest way to install the program is to download the installer from this location:  
-xxx
-The installer lets you specify the directory in which you want the program to be installed. After installation, go to that directory, open the CASSYS.XLSM file in Excel, and start interacting with the program.
+The easiest way to install the program is to download the  
+[Installer](https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true "Installer").
+The installer lets you specify the directory in which you want the program to be installed. After installation, go to the selected directory, open the CASSYS.XLSM file in MS Excel, and start interacting with the program.
 
 ### Documentation ##
 --------------------
