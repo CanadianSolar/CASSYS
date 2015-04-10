@@ -20,30 +20,59 @@
 
     <section class="main-content">
       <h1>
-<a id="cassys" class="anchor" href="#cassys" aria-hidden="true"><span class="octicon octicon-link"></span></a>CASSYS</h1>
+<a id="cassys---canadian-solar-system-simulator" class="anchor" href="#cassys---canadian-solar-system-simulator" aria-hidden="true"><span class="octicon octicon-link"></span></a>CASSYS - Canadian Solar System Simulator</h1>
 
-<p>Canadian Solar Simulation Program for Grid-Connected PV Systems</p>
+<p><em>A Simulation Tool for Grid-Connected Photovoltaic Systems</em></p>
+
+<p><em>Current Version: 0.9</em></p>
 
 <h3>
 <a id="program-goals-and-description" class="anchor" href="#program-goals-and-description" aria-hidden="true"><span class="octicon octicon-link"></span></a>Program goals and description</h3>
 
 <hr>
 
-<p>CASSYS is a program in development by <a href="http://www.canadiansolar.com/" title="Canadian Solar">Canadian Solar</a> which analyzes solar farm specifications and monitoring data. Based on this data, it then outputs simulated values corresponding to expected farm performance and/or environmental factors during the time period. </p>
+<p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
 
-<p>The goal of CASSYS is provide a reliable, flexible and user-friendly way to simulate solar farm data. </p>
+<p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
+
+<p>CASSYS is developed and maintained by <a href="http://www.canadiansolar.com/" title="Canadian Solar O&amp;M Inc. (Ontario)">Canadian Solar O&amp;M Inc. (Ontario)</a>. </p>
 
 <h3>
 <a id="software-components-and-languages" class="anchor" href="#software-components-and-languages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Software components and languages</h3>
 
 <hr>
 
-<p>The two main software components of CASSYS are: </p>
+<p>CASSYS is composed of two main software components: </p>
 
 <ol>
-<li>A Microsoft Excel based user-interface that operates using macros programmed in VBA</li>
-<li>A C# source engine responsible for receiving data entered into the interface and passing back the calculated values.</li>
+<li>User Interface: A macro-enabled Microsoft Excel Workbook called CASSYS.XLSM. This is your main tool to interact with the program. With the workbook you can define the system, run the simulation, and retrieve and analyze the results.</li>
+<li>Simulation Engine: A C# program called CASSYS.exe which performs the actual simulation. Do not run CASSYS.exe directly; use the interface to launch it.</li>
 </ol>
+
+<h3>
+<a id="installing-and-running-the-program" class="anchor" href="#installing-and-running-the-program" aria-hidden="true"><span class="octicon octicon-link"></span></a>Installing and running the program</h3>
+
+<hr>
+
+<p>The easiest way to install the program is to download the  <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" title="Installer">Installer</a>.</p>
+
+<p>The installer lets you specify the directory in which you want the program to be installed. After installation, go to the selected directory, open the CASSYS.XLSM file in MS Excel, and start interacting with the program.</p>
+
+<h3>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Documentation</h3>
+
+<hr>
+
+<p><a href="https://github.com/CanadianSolar/CASSYS/tree/master/Documents%20and%20Help" title="Documents and Help">Documents and Help</a>
+contains a user's manual and various documents to better understand the models used in the simulation engine.</p>
+
+<h3>
+<a id="licensing" class="anchor" href="#licensing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Licensing</h3>
+
+<hr>
+
+<p>That's the best part: CASSYS is free and open source software. You are free to use it and explore the code, subject to the conditions expressed in the  <a href="https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE" title="Licensing Agreement">Licensing Agreement</a>. Feel free to send your comments (positive or negative) or provide suggestions using the 
+<a href="https://github.com/CanadianSolar/CASSYS/issues" title="Report Issues">Report Issues</a> Link.</p>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/CanadianSolar/CASSYS">CASSYS</a> is maintained by <a href="https://github.com/CanadianSolar">CanadianSolar</a>.</span>
