@@ -7,8 +7,3 @@ U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Debug\
 U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Debug\CASSYS.csprojResolveAssemblyReference.cache
 U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Debug\CASSYS.exe
 U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Debug\CASSYS.pdb
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\bin\Debug\CASSYS.exe
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\bin\Debug\CASSYS.pdb
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Debug\CASSYS.csprojResolveAssemblyReference.cache
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Debug\CASSYS.exe
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Debug\CASSYS.pdb

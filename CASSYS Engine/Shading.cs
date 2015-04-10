@@ -42,7 +42,7 @@ namespace CASSYS
         double itsCollTilt;                         // Tilt of the collector [radians]
         double itsCollAzimuth;                      // Collector Azimuth [radians]
         double itsShadingLimitAngle;                // The shading limit angle [radians]
-        double itsCollBW;                           // Collector width [m]
+        double itsCollBW;                           // Collector Distance [m]
         double itsPitch;                            // The distance between the rows [m]
         double itsRowsBlock;                        // The number of rows used in the farm set-up [#]
         double itsRowBlockFactor;                   // The factor applied to shading factors depending on the number of rows [#]
@@ -170,9 +170,8 @@ namespace CASSYS
                     if (useCellBasedShading)
                     {
                         double cellShaded = AAp / (CellSize);               // The number of cells shaded
-                        double SF = 1;                                      // The resultant shading factor initialized to 1, modified later
-                        
-                        // Calculate the Shading fraction based on which cell numbers they are between
+                        double SF = 1;                                      // The resultant shading factor initialized to 1, modified later// Calculate the Shading fraction based on which cell numbers they are between
+
                         for (int i = 1; i <= itsNumModTransverseStrings; i++)
                         {
                             if ((cellShaded > cellSetup[i - 1]) && (cellShaded < cellSetup[i]))
