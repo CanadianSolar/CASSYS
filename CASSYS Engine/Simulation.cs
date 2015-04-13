@@ -197,6 +197,7 @@ namespace CASSYS
                 // if in batch mode, use the appending overload of StreamWriter
                 if (ReadFarmSettings.batchMode)
                 {
+                    OutputFileWriter.Close();
                     OutputFileWriter = new StreamWriter(ReadFarmSettings.SimOutputFile, true);
                 }
 
