@@ -2,6 +2,8 @@
 *A Simulation Tool for Grid-Connected Photovoltaic Systems*
 
 *Current Version: 0.9*
+
+<img align="center" src =https://github.com/CanadianSolar/CASSYS/blob/gh-pages/images/CASSYS-logo.png alt="CASSYS Logo"></img>
  
 ### Program goals and description ##
 ---------------------------------------
