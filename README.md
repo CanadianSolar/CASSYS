@@ -3,7 +3,9 @@
 
 *Current Version: 0.9*
 
-<img align="center" src =https://github.com/CanadianSolar/CASSYS/blob/gh-pages/images/CASSYS-logo.png alt="CASSYS Logo"></img>
+<p align="center">
+<img src =https://github.com/CanadianSolar/CASSYS/blob/gh-pages/images/CASSYS-logo.png alt="CASSYS Logo"></img>
+</p>
  
 ### Program goals and description ##
 ---------------------------------------
