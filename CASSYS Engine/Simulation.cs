@@ -189,11 +189,12 @@ namespace CASSYS
             }
             
             // Creating the StreamReader and StreamWriter to Read the Input File and Write to the Output File
-            try
-            {
+           try
+           {
+             
                 TextFieldParser InputFileReader = new TextFieldParser(ReadFarmSettings.SimInputFile);
                 StreamWriter OutputFileWriter = new StreamWriter(ReadFarmSettings.SimOutputFile);
-
+                
                 // if in batch mode, use the appending overload of StreamWriter
                 if (ReadFarmSettings.batchMode)
                 {
@@ -478,7 +479,14 @@ namespace CASSYS
             }
             catch (IOException ex)
             {
-                ErrorLogger.Log(ex, ErrLevel.FATAL);
+                if (ex.ToString().Contains("Writer") == true)
+                {
+                    ErrorLogger.Log("The output file name " + ReadFarmSettings.SimOutputFile + " or volume label syntax is incorrect.", ErrLevel.FATAL);
+                }
+                else
+                {
+                    ErrorLogger.Log("The input file name " + ReadFarmSettings.SimInputFile + " or volume label syntax is incorrect.", ErrLevel.FATAL);
+                }
             }
 
             timeTaken.Stop();
