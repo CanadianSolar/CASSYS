@@ -128,6 +128,7 @@ namespace CASSYS
             , double InvVoltage                     // Voltage set by inverter [V], only used if MPPT status is false                                      
             )
         {
+
             if (isMPPT)
             {
                 // If the Inverter is MPPT tracking allow PV array to produce MPP
@@ -337,6 +338,7 @@ namespace CASSYS
             , out double moduleP                      // Evaluated Module Power [W]
             )
         {
+
             double tolerance = 0.001;                                                 // Tolerance of error [A]
             double iNew = 0;                                                          // Initializing variable
             double iGuess = itsImppref * (mIPhi / itsIscref);                         // Best guess scenario is an Isc-adjusted Impp from ref conditions
@@ -384,6 +386,7 @@ namespace CASSYS
             , double TModMeasured                     // Measured temperature of the module [C]  
             )
         {
+
             // Beginning of Temperature calculation model (see Ref 4)
             // Enables user to choose the temperature model, or use measured values
             if (useMeasuredTemp)
@@ -467,7 +470,7 @@ namespace CASSYS
             // Based on month number
             if (ReadFarmSettings.GetXMLAttribute("Losses", "Frequency", _Adder: "/SoilingLosses") == "Monthly")
             {
-                // Initializing the expected list
+                // Initializing the array for the soiling losses; index numbers correspond to the months (therefore index 0 must be included in array size but is not used for assigning values
                 itsMonthlySoilingPC = new double[13];
 
                 // Using the month number as the index, populate the Soiling Loss values from each corresponding node
@@ -509,7 +512,6 @@ namespace CASSYS
         // Calculate Gamma, IrsRef, IphiRef for the module provided using equations for Impp condition and Voc condition with N-R method to calculate Gamma
         void CalcGammaIPhiIrsRef()
         {
-             
 
             // Constants (cX - X=1,2,3 - 1 - Isc condition, 2 - Pmpp Condition, 3 - Voc Condition)
             double c1 = -itsIscref - (itsIscref * (itsRs / itsRpRef));

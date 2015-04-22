@@ -37,7 +37,7 @@ namespace CASSYS
         private double tGlo = double.NaN;                           // Tilted Global Irradiance  [W/m^2]
         private double tAmbient = double.NaN;                       // Ambient temperature measured [deg C]  
         private double windSpeed = double.NaN;                      // Measured wind speed [m/s]
-        private double tModMeasured = double.NaN;                   // Module Temperature Measured
+        private double tModMeasured = double.NaN;                   // Module Temperature Measured [deg C]
         private String timeStamp = null;                            // Time stamp Initializer [yyyy-mm-dd hh:mm:ss]
 
         // Set properties
@@ -57,7 +57,8 @@ namespace CASSYS
         // Reads .TM2 files and provides the values to Simulation Object
         public static void ParseTM2Line(TextFieldParser InputFileReader,SimMeteo SimEnvironment)
         {
-       
+            
+            // Initializing the array used to store the fields from the TMY file; the field number corresponds to the column number in the Excel file (minus one because of zero index)
             string[] fields = InputFileReader.ReadFields();
             DateTime tStamp = new DateTime();
 
@@ -108,9 +109,7 @@ namespace CASSYS
         // Reads CSV Files and provides the values to Simulation Object
         public static void ParseCSVLine(TextFieldParser InputFileReader, SimMeteo SimEnvironment)
         {   
-      
             // Read Input file line and split line based on the delimiter, and assign variables as defined above
-            
             string[] inputLineDelimited = InputFileReader.ReadFields();
            
             try
@@ -171,7 +170,6 @@ namespace CASSYS
         {
 
             // Read Input file line and split line based on the delimiter, and assign variables as defined above
-
             string[] inputLineDelimited = InputFileReader.ReadFields();
             DateTime simDateTime = new DateTime();
 

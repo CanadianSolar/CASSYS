@@ -211,7 +211,7 @@ namespace CASSYS
         // GetATmsST = Apparent Time MinuS Standard Time, in minutes
         // Duffie & Beckman (1991), eq. 1.5.3a and 1.5.3b
 
-        public static double GetATmsST                // (o) Apparent (solar) Time MinuS Standard Time [min]  
+        public static double GetATmsST                // (o) Apparent (solar) Time Minus Standard Time [min]  
             ( 
             int DayOfYear                           // (i) day of year [1, 365] 
             , double SLong                          // (i) site longitude [radians, E > 0]  

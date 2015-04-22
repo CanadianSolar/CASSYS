@@ -12,3 +12,5 @@ C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASS
 C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\bin\Release\CASSYS.exe
 C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\bin\Release\CASSYS.pdb
 C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASSYS.csprojResolveAssemblyReference.cache
+C:\Users\martin.lai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASSYS.exe
+C:\Users\martin.lai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASSYS.pdb

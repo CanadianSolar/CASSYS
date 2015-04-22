@@ -274,7 +274,6 @@ namespace CASSYS
                         MetReader.ParseCSVLine(InputFileReader, SimMet);
                     }
 
-
                     // Analyse the TimeStamp for use in Solar Calculations.
                     // Get the value for the Day of the Year, and Hour from Time Stamp [# 1->365,# 0->24, # 1->12]
                     Utilities.TSBreak(SimMet.TimeStamp, out DayOfYear, out HourOfDay, out MonthOfYear, out TimeStepEnd, out TimeStepBeg);
@@ -482,8 +481,6 @@ namespace CASSYS
                 ErrorLogger.Log(ex, ErrLevel.FATAL);
             }
 
-
-
             timeTaken.Stop();
 
             Console.WriteLine("");
@@ -596,7 +593,6 @@ namespace CASSYS
                         SimInv[j].ACPwrOut = 0;
                         SimInv[j].inMPPTWindow = false;
                     }
-
                 }
                 else
                 {
