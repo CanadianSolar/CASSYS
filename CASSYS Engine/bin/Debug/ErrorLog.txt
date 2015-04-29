@@ -1,5 +1,0 @@
-CASSYS - Simulation Error Log for : TEST.csyx
-Site Configuration File: TEST.csyx
-Input File line: 0
-Error Description: FATAL: The output file name U:/CASS/Engineering/Monitoring/Simulation/Stable/Stable Executabgegegegehrhles and UI/ or volume label syntax is incorrect.
---------------------------------------------------------

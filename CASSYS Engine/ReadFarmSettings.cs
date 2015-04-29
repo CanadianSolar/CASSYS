@@ -34,30 +34,30 @@ namespace CASSYS
     static class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static string CurrentVersion = "0.9";            // The current version of CASSYS XML.
-        public static XmlDocument doc;                          // The XML document that contains the Site, System, etc. definitions
-        public static String CASSYSCSYXVersion;                 // The CASSYS XML Version Number obtained from the XML file
-        public static bool UseDiffMeasured;                     // Using the Measured Diffuse on Horizontal Value
-        public static bool UseMeasuredTemp;                     // Using measured temperature for the panels
-        public static bool UsePOA;                              // Boolean that indicates if the program should use tilted irradiance to simulate
-        public static bool UseGHI;                              // Boolean that indicates if the program should use horizontal irradiance to simulate
-        public static bool UseWindSpeed;                        // Boolean indicating if the program has the Wind Speed available to use
-        public static bool tempAmbDefined;                      // Boolean indicating if the program has Temp Ambient available to use
-        public static bool batchMode = false;                   // Determines if the program is being run in batch mode (CMD prompt arguments for IO files) or not
+        public static String[] SupportedVersion = { "0.9", "0.9.1" };  // The supported versions of CASSYS XML.
+        public static XmlDocument doc;                              // The XML document that contains the Site, System, etc. definitions
+        public static String CASSYSCSYXVersion;                     // The CASSYS XML Version Number obtained from the XML file
+        public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
+        public static bool UseMeasuredTemp;                         // Using measured temperature for the panels
+        public static bool UsePOA;                                  // Boolean that indicates if the program should use tilted irradiance to simulate
+        public static bool UseGHI;                                  // Boolean that indicates if the program should use horizontal irradiance to simulate
+        public static bool UseWindSpeed;                            // Boolean indicating if the program has the Wind Speed available to use
+        public static bool tempAmbDefined;                          // Boolean indicating if the program has Temp Ambient available to use
+        public static bool batchMode = false;                       // Determines if the program is being run in batch mode (CMD prompt arguments for IO files) or not
 
         // Gathering Input and Output Configurations for the ReadFarmSettings Class
-        public static String SimInputFile;                      // Input file path
-        public static String SimOutputFile;                     // Output file path
-        public static int SubArrayCount;                        // Number of system sub-arrays, default: 1
-        public static int ClimateFileRowsToSkip;                // Number of rows to skip
-        public static int TMYType;                              // If a TMY file is loaded, it specifies either 2 or 3 for .tm2 or .tm3 format
-        public static string delim;                             // The character used in the input file between adjacent values
-        public static int[] ClimateRefPos;                      // The positions of input data from the user input file
-        
+        public static String SimInputFile;                          // Input file path
+        public static String SimOutputFile;                         // Output file path
+        public static int SubArrayCount;                            // Number of system sub-arrays, default: 1
+        public static int ClimateFileRowsToSkip;                    // Number of rows to skip
+        public static int TMYType;                                  // If a TMY file is loaded, it specifies either 2 or 3 for .tm2 or .tm3 format
+        public static string delim;                                 // The character used in the input file between adjacent values
+        public static int[] ClimateRefPos;                          // The positions of input data from the user input file
+
         // Output configuration for the Program
-        public static Dictionary<String, dynamic> Outputlist;   // Creating a dictionary to hold all output values;
-        public static List<String> OutputScheme;                // String Array that holds values based on user request
-        public static String OutputHeader = null;               // The header of the output file, Always begins with TimeStamp.
+        public static Dictionary<String, dynamic> Outputlist;       // Creating a dictionary to hold all output values;
+        public static List<String> OutputScheme;                    // String Array that holds values based on user request
+        public static String OutputHeader = null;                   // The header of the output file, Always begins with TimeStamp.
 
         // Finding and assigning the Simulation Input and Output file name 
         public static void AssignIOFileNames()
@@ -86,18 +86,18 @@ namespace CASSYS
                 Util.timeFormat = GetInnerText("InputFile", "TimeFormat", _Error: ErrLevel.FATAL);
                 Util.timeStep = double.Parse(GetInnerText("InputFile", "Interval", _Error: ErrLevel.FATAL));
                 ClimateFileRowsToSkip = int.Parse(GetInnerText("InputFile", "RowsToSkip", _Error: ErrLevel.WARNING, _default: "0"));
-                TMYType = int.Parse(GetInnerText("InputFile", "TMYType",_default:"-1"));
+                TMYType = int.Parse(GetInnerText("InputFile", "TMYType", _default: "-1"));
 
                 // Initializing the array to use as a holder for column numbers.
                 ClimateRefPos = new int[30];
 
                 // Collecting weather variable locations in the file
-                if((TMYType != 2) && (TMYType != 3))
+                if ((TMYType != 2) && (TMYType != 3))
                 {
                     ClimateRefPos[0] = int.Parse(GetInnerText("InputFile", "TimeStamp", _Error: ErrLevel.FATAL));
                     UsePOA = Int32.TryParse(GetInnerText("InputFile", "GlobalRad", _Error: ErrLevel.WARNING, _default: "N/A"), out ClimateRefPos[2]);
                     UseGHI = Int32.TryParse(GetInnerText("InputFile", "HorIrradiance", _Error: ErrLevel.WARNING, _default: "N/A"), out ClimateRefPos[1]);
-                    tempAmbDefined = Int32.TryParse(GetInnerText("InputFile", "TempAmbient", _Error: ErrLevel.FATAL),out ClimateRefPos[3]);
+                    tempAmbDefined = Int32.TryParse(GetInnerText("InputFile", "TempAmbient", _Error: ErrLevel.FATAL), out ClimateRefPos[3]);
                     UseMeasuredTemp = Int32.TryParse(GetInnerText("InputFile", "TempPanel", _Error: ErrLevel.WARNING), out ClimateRefPos[4]);
                     UseWindSpeed = Int32.TryParse(GetInnerText("InputFile", "WindSpeed", _Error: ErrLevel.WARNING), out ClimateRefPos[5]);
 
@@ -105,7 +105,7 @@ namespace CASSYS
                     if (UseGHI)
                     {
                         // Check if Diffuse Measured is defined, if Global Horizontal is provided.
-                            UseDiffMeasured = Int32.TryParse(GetInnerText("InputFile", "Hor_Diffuse", _Error: ErrLevel.WARNING), out ClimateRefPos[6]);
+                        UseDiffMeasured = Int32.TryParse(GetInnerText("InputFile", "Hor_Diffuse", _Error: ErrLevel.WARNING), out ClimateRefPos[6]);
                     }
 
                     // Check if at least, and only one type of Irradiance is available to continue the simulation.
@@ -143,7 +143,7 @@ namespace CASSYS
             XmlNodeList xnlist = doc.SelectNodes(OutputPath);
             Outputlist = new Dictionary<String, dynamic>();
             OutputScheme = new List<String>();
- 
+
             // Loading all possible Output Values
             foreach (XmlNode outNode in xnlist)
             {
@@ -151,10 +151,10 @@ namespace CASSYS
                 {
                     // Gathering Relevant nodes
                     Outputlist.Add(outNode.Name, null);
-                    
+
                     // Creating a list of all items
                     OutputScheme.Add(outNode.Name);
-                    
+
                     // Creating the output header, using the display name attribute of each output, or if individual sub-array performance is requested
                     // providing the header for each PV-side or Inv-side of Sub-Array for Current, Power, and Voltage
                     if (outNode.Name == "ShowSubInv")
@@ -174,7 +174,7 @@ namespace CASSYS
 
                         for (int arrayCount = 0; arrayCount < SubArrayCount; arrayCount++)
                         {
-                            SubArrayTitle +=  "SubArray " + (arrayCount + 1) + " 1-Phase Inv. Voltage (V)," + "SubArray ";
+                            SubArrayTitle += "SubArray " + (arrayCount + 1) + " 1-Phase Inv. Voltage (V)," + "SubArray ";
                         }
 
                         OutputHeader += SubArrayTitle;
@@ -236,8 +236,10 @@ namespace CASSYS
         public static String GetInnerText(String Path, String NodeName, ErrLevel _Error = ErrLevel.WARNING, String _VersionNum = "0.9", int _ArrayNum = 0, String _default = "0")
         {
             try
-            {       
-                // Determine the Path of the XML requested
+            {
+                if (SupportedVersion.Contains(_VersionNum))
+                {
+                    // Determine the Path of the XML requested
                     switch (Path)
                     {
                         case "Site":
@@ -271,7 +273,6 @@ namespace CASSYS
                             Path = "/Site/OutputFileStyle/" + NodeName;
                             break;
                     }
-                    
                     // Check if the XML Blank, if it is, return the default value
                     if (doc.SelectSingleNode(Path).InnerText == "")
                     {
@@ -290,17 +291,32 @@ namespace CASSYS
                     {
                         return doc.SelectSingleNode(Path).InnerText;
                     }
-            }
-            catch (NullReferenceException)
-            {
-                if (_Error == ErrLevel.FATAL)
-                {
-                    ErrorLogger.Log(NodeName + " in " + Path + " is not defined in this XML Version. CASSYS requires this value to run.", ErrLevel.FATAL);
-                    return "N/A";
                 }
                 else
                 {
-                    ErrorLogger.Log(NodeName + " in " + Path + " is not defined for this file. This may be because you are using site files created with an older version of CASSYS. CASSYS assigned " + _default + " for this value.", ErrLevel.WARNING);
+                    ErrorLogger.Log(NodeName + " is not supported in this version of CASSYS. Please update to the latest version available at https://github.com/CanadianSolar/CASSYS", ErrLevel.WARNING);
+                    return null;
+                }
+            }
+            catch (NullReferenceException)
+            {
+                if (_default != null)
+                {
+                    {
+                        if (_Error == ErrLevel.FATAL)
+                        {
+                            ErrorLogger.Log(NodeName + " in " + Path + " is not defined. CASSYS requires this value to run.", ErrLevel.FATAL);
+                            return "N/A";
+                        }
+                        else
+                        {
+                            ErrorLogger.Log(NodeName + "in" + Path + " is not defined. CASSYS will assume a default of " + _default + " to run.", ErrLevel.WARNING);
+                            return _default;
+                        }
+                    }
+                }
+                else
+                {
                     return _default;
                 }
             }
@@ -311,38 +327,46 @@ namespace CASSYS
         {
             try
             {
-                switch (Path)
+                if (SupportedVersion.Contains(_VersionNum))
                 {
-                    case "Site":
-                        Path = "/Site" + _Adder;
-                        break;
-                    case "Albedo":
-                        Path = "/Site/Albedo" + _Adder;
-                        break;
-                    case "O&S":
-                        Path = "/Site/Orientation_and_Shading" + _Adder;
-                        break;
-                    case "System":
-                        Path = "/Site/System" + _Adder;
-                        break;
-                    case "PV":
-                        Path = "/Site/System/" + "SubArray" + _ArrayNum + "/PVModule" + _Adder;
-                        break;
-                    case "Inverter":
-                        Path = "/Site/System/" + "SubArray" + _ArrayNum + "/Inverter" + _Adder;
-                        break;
-                    case "Losses":
-                        Path = "/Site/System/Losses" + _Adder;
-                        break;
-                    case "InputFile":
-                        Path = "/Site/InputFileStyle" + _Adder;
-                        break;
-                    case "OutputFile":
-                        Path = "/Site/OutputFileStyle" + _Adder;
-                        break;
-                }
+                    switch (Path)
+                    {
+                        case "Site":
+                            Path = "/Site" + _Adder;
+                            break;
+                        case "Albedo":
+                            Path = "/Site/Albedo" + _Adder;
+                            break;
+                        case "O&S":
+                            Path = "/Site/Orientation_and_Shading" + _Adder;
+                            break;
+                        case "System":
+                            Path = "/Site/System" + _Adder;
+                            break;
+                        case "PV":
+                            Path = "/Site/System/" + "SubArray" + _ArrayNum + "/PVModule" + _Adder;
+                            break;
+                        case "Inverter":
+                            Path = "/Site/System/" + "SubArray" + _ArrayNum + "/Inverter" + _Adder;
+                            break;
+                        case "Losses":
+                            Path = "/Site/System/Losses" + _Adder;
+                            break;
+                        case "InputFile":
+                            Path = "/Site/InputFileStyle" + _Adder;
+                            break;
+                        case "OutputFile":
+                            Path = "/Site/OutputFileStyle" + _Adder;
+                            break;
+                    }
 
-                return doc.SelectSingleNode(Path).Attributes[AttributeName].Value;
+                    return doc.SelectSingleNode(Path).Attributes[AttributeName].Value;
+                }
+                else
+                {
+                    ErrorLogger.Log(AttributeName + " is not available in this version of CASSYS. Please update to the latest version available at https://github.com/CanadianSolar/CASSYS", ErrLevel.WARNING);
+                    return null;
+                }
             }
             catch (NullReferenceException)
             {
@@ -371,8 +395,8 @@ namespace CASSYS
             }
 
 
-            // CASSYS Version check, if the version does not match, the program should exit.
-            if (CASSYSCSYXVersion != CurrentVersion)
+            // CASSYS Version check, if the version does not match, the program should warn the user.
+            if (!SupportedVersion.Contains(CASSYSCSYXVersion))
             {
                 ErrorLogger.Log("You are using an older version of the CASSYS Engine. Please update to the latest version available at https://github.com/CanadianSolar/CASSYS", ErrLevel.FATAL);
             }
@@ -386,7 +410,7 @@ namespace CASSYS
         {
             // Assigning a title to the console window.
             Console.Title = "CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems";
-           
+
             // Show the following messages to the user
             Console.WriteLine("-------------------------------------------------------------------------------");
             Console.WriteLine("CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems");

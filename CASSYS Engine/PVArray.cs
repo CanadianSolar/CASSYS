@@ -7,6 +7,7 @@
 // 
 // Revision History:
 // AP - 2014-10-14: Version 0.9
+// AP - 2015-04-23: Version 0.9.1 - Added the User defined IAM Profile Option.
 //
 // Description:
 // The PV Array Class evaluates the performance of a solar module using the 
@@ -65,12 +66,15 @@ namespace CASSYS
         double itsRpRef;                      // Shunt resistance [ohms];
         double itsRw;                         // Global wiring loss as seen from Inverter for entire Sub-Array [ohms]
         double itsSubArrayNum;                // The sub-array number that the PVArray belongs to. [#]
+        
 
         // Module Temperature and Irradiance Coefficients
-        double itsBo;                         // ASHARE Parameter used for IAM calculation (see Ref 5)
-        double itsTCoefIsc;                   // Temperature coefficient for Isc [1/C]
-        double itsTCoefVoc;                   // Temperature coefficient for Voc [1/C]
-        bool useMeasuredTemp;                 // Override boolean, true uses measured values, false calculates values using the Faiman Module Temperature Model
+        double itsBo;                                       // ASHARE Parameter used for IAM calculation (see Ref 5)
+        bool userIAMModel;                                  // If a userIAM profile is defined or the ASHRAE model is used.
+        double[][] itsUserIAMProfile = new double[2][];     // The IAM profile entered by the user.
+        double itsTCoefIsc;                                 // Temperature coefficient for Isc [1/C]
+        double itsTCoefVoc;                                 // Temperature coefficient for Voc [1/C]
+        bool useMeasuredTemp;                               // Override boolean, true uses measured values, false calculates values using the Faiman Module Temperature Model
 
         // Array losses related variables
         double itsMismatchLossSTCPC;          // Mismatch Loss for Sub Array [%] 
@@ -198,9 +202,21 @@ namespace CASSYS
             )
         {
             // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component (Calculated using ASHRAE Parameter, see Ref 5 in PV Array Class)
-            IAMDir = Math.Cos(InciAng) > itsBo / (1 + itsBo) ? Math.Max((1 - itsBo * (1 / Math.Cos(InciAng) - 1)), 0) : 0;
-            IAMDif = (1 - itsBo * (1 / Math.Cos(Util.DiffInciAng) - 1));
-            IAMRef = IAMDif;
+            if (userIAMModel)
+            {
+                InciAng = Math.Max(0, InciAng);
+                InciAng = Math.Min(InciAng, Math.PI / 2);
+
+                IAMDir = Interpolate.Bezier(itsUserIAMProfile[0], itsUserIAMProfile[1], InciAng * Util.RTOD, itsUserIAMProfile[0].Length);
+                IAMDif = Interpolate.Bezier(itsUserIAMProfile[0], itsUserIAMProfile[1], Util.DiffInciAng * Util.RTOD, itsUserIAMProfile[0].Length);
+                IAMRef = IAMDif;
+            }
+            else
+            {
+                IAMDir = Math.Cos(InciAng) > itsBo / (1 + itsBo) ? Math.Max((1 - itsBo * (1 / Math.Cos(InciAng) - 1)), 0) : 0;
+                IAMDif = (1 - itsBo * (1 / Math.Cos(Util.DiffInciAng) - 1));
+                IAMRef = IAMDif;
+            }
 
             // Calculating the IAM Modified Tilted Irradiance [W/m^2]
             IAMTGlo = TDir * IAMDir + TDif * IAMDif + TRef * IAMRef;
@@ -464,7 +480,40 @@ namespace CASSYS
             itsMismatchFixedVLoss = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ModuleMismatchLosses/LossFixedVoltage", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0"));
 
             // Defining the Incidence Angle Modifier
-            itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.05"));
+            if (ReadFarmSettings.CASSYSCSYXVersion == "0.9")
+            {
+                itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.05"));
+            }
+            else
+            {
+                if ((ReadFarmSettings.GetXMLAttribute("Losses", "IAMSelection", _Adder: "/IncidenceAngleModifier", _VersionNum: "0.9.1", _ArrayNum: ArrayNum) == "ASHRAE"))
+                {
+                    itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL, _default: "0.05"));
+                }
+                else
+                {
+                    List<double> UserAOI = new List<double>();
+                    List<double> UserIAM = new List<double>();
+
+                    double placeholder;
+
+                    // Using the Angle of incidence as an iteration variable
+                    // Gettings values from the IAM list
+                    for (int AOI = 0; AOI <= 90; AOI +=5)
+                    {
+                        userIAMModel = double.TryParse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/IAM_" + AOI.ToString(), _VersionNum: "0.9.1", _ArrayNum: ArrayNum, _default: null), out placeholder);
+
+                        if (userIAMModel)
+                        {
+                            UserAOI.Add(Convert.ToDouble(AOI));
+                            UserIAM.Add(placeholder);
+                        }
+                    }
+
+                    itsUserIAMProfile[0] = UserAOI.ToArray();
+                    itsUserIAMProfile[1] = UserIAM.ToArray();
+                }
+            }
 
             // If soiling losses are defined on a monthly basis, then populate an array with values for each month
             // Based on month number

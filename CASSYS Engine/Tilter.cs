@@ -93,7 +93,6 @@ namespace CASSYS
                         break;
                     default:
                         itsTiltAlgorithm = TiltAlgorithm.HAY;
-                        ErrorLogger.Log("Tilter: Invalid tilt algorithm provided by User. CASSYS uses Hay as default.", ErrLevel.WARNING);
                         break;
                 }
 
@@ -347,6 +346,21 @@ namespace CASSYS
             // Getting the parameter values
             itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
             itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+            
+            // Getting the Tilt Algorithm for the Simulation
+            if (ReadFarmSettings.GetInnerText("Site", "TransEnum", ErrLevel.WARNING) == "0")
+            {
+                itsTiltAlgorithm = TiltAlgorithm.HAY;
+            }
+            else if (ReadFarmSettings.GetInnerText("Site", "TransEnum", ErrLevel.WARNING) == "1")
+            {
+                itsTiltAlgorithm = TiltAlgorithm.PEREZ;
+            }
+            else
+            {
+                ErrorLogger.Log("Tilter: Invalid tilt algorithm chosen by User. CASSYS uses Hay as default.", ErrLevel.WARNING);
+                itsTiltAlgorithm = TiltAlgorithm.HAY;
+            }
 
             // Getting the Albedo values either at a monthly or yearly level
             if (ReadFarmSettings.GetXMLAttribute("Albedo","Frequency", ErrLevel.WARNING) == "Monthly")
