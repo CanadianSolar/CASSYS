@@ -54,8 +54,8 @@ namespace CASSYS
         // Local variable declarations
         double ShadBeamLoss;                            // Shading Losses to Beam
         double ShadDiffLoss;                            // Shading Losses to Diffuse
-        double ShadRefLoss;                          // Shading Losses to Albedo
-
+        double ShadRefLoss;                             // Shading Losses to Albedo
+        bool negativeIrradFlag = false;                 // Negative Irradiance Warning Flag 
         
 
         // Output variables Summation or Averages from Sub-Arrays 
@@ -306,35 +306,45 @@ namespace CASSYS
                         if (SimMet.TGlo < 0)
                         {
                             SimMet.TGlo = 0;
-                            ErrorLogger.Log("Global Plane of Array Irradiance is negative. CASSYS set the value to 0.", ErrLevel.WARNING);
+
+                            if (negativeIrradFlag == false)
+                            {
+                                ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
+                                negativeIrradFlag = true;
+                            }
                         }
-                        else
-                        {
                             Detranspose();
-                        }
                     }
                     else
                     {
                         if (SimMet.HGlo < 0)
                         {
                             SimMet.HGlo = 0;
-                            throw new CASSYSException("Global Horizontal Irradiance is negative. CASSYS set the value to 0.");
 
+                            if (negativeIrradFlag == false)
+                            {
+                                ErrorLogger.Log("Global Horizontal Irradiance is negative. CASSYS set the value to 0.", ErrLevel.WARNING);
+                                negativeIrradFlag = true;
+                            }
                         }
                         if (ReadFarmSettings.UseDiffMeasured == true)
                         {
                             if (SimMet.HDiff < 0)
                             {
-                                SimMet.HDiff = 0;
-                                throw new CASSYSException("Horizontal Diffuse Irradiance is negative. CASSYS set the value to 0.");
+                                if (negativeIrradFlag == false)
+                                {
+                                    SimMet.HDiff = 0;
+                                    ErrorLogger.Log("Horizontal Diffuse Irradiance is negative. CASSYS set the value to 0.", ErrLevel.WARNING);
+                                    negativeIrradFlag = true;
+                                }
                             }
-                            Transpose();
                         }
                         else
                         {
                             SimMet.HDiff = double.NaN;
-                            Transpose();
                         }
+
+                        Transpose();
                     }
 
                     // Calculate shading and determine the values of tilted radiation components based on shading factors
