@@ -114,10 +114,10 @@ namespace CASSYS
            
             try
             {
-                // Get the Inputs from the Input file as assigned by the XML file
+                // Get the Inputs from the Input file as assigned by the .CSYX file
                 // The Input order is setup in weatherRefPos and then the input line is broken into its constituents based on the user assignment
                 SimEnvironment.TimeStamp = inputLineDelimited[ReadFarmSettings.ClimateRefPos[0] - 1];
-                SimEnvironment.TAmbient = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[3] - 1]);
+                
                 if (ReadFarmSettings.UsePOA)
                 {
                     SimEnvironment.TGlo = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[2] - 1]);
@@ -130,25 +130,30 @@ namespace CASSYS
                     }
                     SimEnvironment.HGlo = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[1] - 1]);
                 }
-                
-                // Measured temperature is available, try and access the value from the Input file else assign not a number status
-                if (ReadFarmSettings.UseMeasuredTemp)
-                {
-                    SimEnvironment.TModMeasured = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[4] - 1]);
-                }
-                else
-                {
-                    SimEnvironment.TModMeasured = double.NaN;
-                }
 
+                // If no system is defined proceed as normal to read and simulate file.
+                if (!ReadFarmSettings.NoSystemDefined)
+                {
+                    // Measured temperature is available, try and access the value from the Input file else assign not a number status
+                    if (ReadFarmSettings.UseMeasuredTemp)
+                    {
+                        SimEnvironment.TModMeasured = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[4] - 1]);
+                    }
+                    else
+                    {
+                        SimEnvironment.TModMeasured = double.NaN;
+                    }
 
-                if (ReadFarmSettings.UseWindSpeed)
-                {
-                    SimEnvironment.WindSpeed = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[5] - 1]);
-                }
-                else
-                {
-                    SimEnvironment.WindSpeed = double.NaN;
+                    SimEnvironment.TAmbient = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[3] - 1]);
+
+                    if (ReadFarmSettings.UseWindSpeed)
+                    {
+                        SimEnvironment.WindSpeed = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[5] - 1]);
+                    }
+                    else
+                    {
+                        SimEnvironment.WindSpeed = double.NaN;
+                    }
                 }
             }
             catch (IndexOutOfRangeException)
@@ -175,7 +180,7 @@ namespace CASSYS
 
             try
             {
-                // Get the Inputs from the Input file as assigned by the XML file
+                // Get the Inputs from the Input file as assigned by the .CSYX file
                 // The Input order is set up in weatherRefPos and then the input line is broken into its constituents based on the user assignment
                 if (SimEnvironment.TimeStamp == null)
                 {

@@ -193,7 +193,7 @@ namespace CASSYS
         public void Config()
         {
             // Determine the type of Array layout
-            switch (ReadFarmSettings.GetXMLAttribute("O&S","ArrayType", ErrLevel.FATAL))
+            switch (ReadFarmSettings.GetAttribute("O&S","ArrayType", ErrLevel.FATAL))
             {
                 case "Unlimited Rows":
                     itsShadModel = ShadModel.UR;
@@ -257,9 +257,9 @@ namespace CASSYS
                     itsCollTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
                     itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
 
-                    // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant
-                    GetDiffuseShadingFraction();
-                    ReflectedSF = (1 - Math.Cos(itsCollTilt)) / 2;
+                    // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant and 1.
+                    DiffuseSF = 1;
+                    ReflectedSF = 1;
                     break;
             }
         }

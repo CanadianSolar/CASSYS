@@ -154,7 +154,7 @@ namespace CASSYS
             AirMass = Astro.GetAirMass(Zenith);
         }
 
-        // Config will assign parameter variables their values as obtained from the XML file
+        // Config will assign parameter variables their values as obtained from the .CSYX file
         public void Config()
         {
             // Gathering the parameters for the Sun Class

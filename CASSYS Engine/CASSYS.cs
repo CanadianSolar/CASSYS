@@ -10,7 +10,7 @@
 //
 // Description 
 // The main program calls the Simulation class and provides its run method with 
-// the XML file it should simulate. 
+// the .CSYX file it should simulate. 
 //                                                  
 ///////////////////////////////////////////////////////////////////////////////
 // References and Supporting Documentation or Links

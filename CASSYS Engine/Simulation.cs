@@ -7,7 +7,10 @@
 // 
 // Revision History:
 // AP - 2014-10-14: Version 0.9
-//
+// AP - 2015-04-20: Veresion 0.9.1 Added user defined IAM profile for PV Module
+// AP - 2015-05-22: Version 0.9.2 Added ability to perform irradiance only calculation
+// AP - 2015-06-12: Version 0.9.2 Added separate detranspose method if meter and panel tilt do not match
+// 
 // Description 
 // The main program reads the input file and output file and interacts with 
 // all other classes that pertain to a grid connected solar farm 
@@ -56,7 +59,7 @@ namespace CASSYS
         double ShadDiffLoss;                            // Shading Losses to Diffuse
         double ShadRefLoss;                             // Shading Losses to Albedo
         bool negativeIrradFlag = false;                 // Negative Irradiance Warning Flag 
-        
+
 
         // Output variables Summation or Averages from Sub-Arrays 
         // PV Array related:
@@ -98,13 +101,13 @@ namespace CASSYS
         // Method to start the simulation software run.
         public void Simulate(String XMLFileName, String _Input = null, String _Output = null)
         {
-                #region SITE CONFIGURATION BEINGS HERE
+            #region SITE CONFIGURATION BEINGS HERE
 
             // Adding timer to calculate elapsed time for the simulation.
             Stopwatch timeTaken = new Stopwatch();
             timeTaken.Start();
 
-            // Get XML file name from CMDPrompt, and Load document
+            // Get .CSYX file name from CMDPrompt, and Load document
             XmlDocument SiteSettings = new XmlDocument();
             try
             {
@@ -120,7 +123,7 @@ namespace CASSYS
             // ReadFarmSettings reads the overall configuration of the farm
             ReadFarmSettings.doc = SiteSettings;
             ReadFarmSettings.CheckCSYXVersion();
-            
+
 
             // Inform user about site configuration:
             Console.WriteLine("Status: Configuring parameters");
@@ -128,13 +131,9 @@ namespace CASSYS
             // Configuration of singular instance objects (weather, farm transformer)
             try
             {
-                // Weather and radiation related objects
+                // Weather and radiation related objects.
                 SimSun.Config();
                 SimTilter.Config();
-                SimShading.Config();
-
-                // Configuring the transformer object
-                SimTransformer.Config();
             }
             catch (XPathException ex)
             {
@@ -145,7 +144,7 @@ namespace CASSYS
                 ErrorLogger.Log(ex, ErrLevel.FATAL);
             }
 
-            // Obtain IO File names, either from the command prompt, or from XML
+            // Obtain IO File names, either from the command prompt, or from .CSYX
             if ((_Input == null) && (_Output == null))
             {
                 ReadFarmSettings.AssignIOFileNames();
@@ -163,38 +162,52 @@ namespace CASSYS
             ReadFarmSettings.AssignOutputFileSchema();
             ReadFarmSettings.AssignInputFileSchema();
 
-            // Array of PVArray, Inverter and Wiring objects based on the number of Sub-Arrays 
-            SimPVA = new PVArray[ReadFarmSettings.SubArrayCount];
-            SimInv = new Inverter[ReadFarmSettings.SubArrayCount];
-
-            // Initialize and Configure PVArray and Inverter Objects through their XML file
-            for (int SubArrayCount = 0; SubArrayCount < ReadFarmSettings.SubArrayCount; SubArrayCount++)
+            if (!ReadFarmSettings.NoSystemDefined)
             {
-                try
+                // Configuration of shading object
+                SimShading.Config();
+
+                // Configuring the transformer object
+                SimTransformer.Config();
+
+                // Array of PVArray, Inverter and Wiring objects based on the number of Sub-Arrays 
+                SimPVA = new PVArray[ReadFarmSettings.SubArrayCount];
+                SimInv = new Inverter[ReadFarmSettings.SubArrayCount];
+
+                // Initialize and Configure PVArray and Inverter Objects through their .CSYX file
+                for (int SubArrayCount = 0; SubArrayCount < ReadFarmSettings.SubArrayCount; SubArrayCount++)
                 {
-                    SimInv[SubArrayCount] = new Inverter();
-                    SimInv[SubArrayCount].Config(SubArrayCount + 1, SiteSettings);
-                    SimPVA[SubArrayCount] = new PVArray();
-                    SimPVA[SubArrayCount].Config(SubArrayCount + 1);
-                    SimInv[SubArrayCount].ConfigACWiring(SimPVA[SubArrayCount].itsPNomDCArray);
-                }
-                catch (XPathException ex)
-                {
-                    ErrorLogger.Log(ex, ErrLevel.FATAL);
-                }
-                catch (FormatException ex)
-                {
-                    ErrorLogger.Log(ex, ErrLevel.FATAL);
+                    try
+                    {
+                        SimInv[SubArrayCount] = new Inverter();
+                        SimInv[SubArrayCount].Config(SubArrayCount + 1, SiteSettings);
+                        SimPVA[SubArrayCount] = new PVArray();
+                        SimPVA[SubArrayCount].Config(SubArrayCount + 1);
+                        SimInv[SubArrayCount].ConfigACWiring(SimPVA[SubArrayCount].itsPNomDCArray);
+                    }
+                    catch (XPathException ex)
+                    {
+                        ErrorLogger.Log(ex, ErrLevel.FATAL);
+                    }
+                    catch (FormatException ex)
+                    {
+                        ErrorLogger.Log(ex, ErrLevel.FATAL);
+                    }
                 }
             }
-            
+            else
+            {
+                Console.WriteLine("Status: No system was defined but irradiance specifications were found.");
+                Console.WriteLine("Status: Only irradiance calculations will be performed in this simulation.");
+            }
+
             // Creating the StreamReader and StreamWriter to Read the Input File and Write to the Output File
-           try
-           {
-             
+            try
+            {
+
                 TextFieldParser InputFileReader = new TextFieldParser(ReadFarmSettings.SimInputFile);
                 StreamWriter OutputFileWriter = new StreamWriter(ReadFarmSettings.SimOutputFile);
-                
+
                 // if in batch mode, use the appending overload of StreamWriter
                 if (ReadFarmSettings.batchMode)
                 {
@@ -217,7 +230,7 @@ namespace CASSYS
                 // Reading the first line and Writing the first line of the output file (Headers of columns)
                 try
                 {
-                    // Skip # of rows that are defined by the User in the XML
+                    // Skip # of rows that are defined by the User in the .CSYX
                     for (int i = 0; i < ReadFarmSettings.ClimateFileRowsToSkip; i++)
                     {
                         InputFileReader.ReadLine();
@@ -303,17 +316,53 @@ namespace CASSYS
                     // Based on the definition of Input file, use Tilted irradiance or transpose the horizontal irradiance
                     if (ReadFarmSettings.UsePOA == true)
                     {
-                        if (SimMet.TGlo < 0)
+                        // Check if the meter tilt and surface tilt 
+                        if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.2")
                         {
-                            SimMet.TGlo = 0;
-
-                            if (negativeIrradFlag == false)
+                            // Checking if the Meter and Panel Tilt are different:
+                            if (ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.WARNING, _VersionNum: "0.9.2") != ReadFarmSettings.GetInnerText("InputFile", "MeterTilt", ErrLevel.WARNING, _VersionNum: "0.9.2"))
                             {
-                                ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
-                                negativeIrradFlag = true;
+                                if (SimMet.TGlo < 0)
+                                {
+                                    SimMet.TGlo = 0;
+
+                                    if (negativeIrradFlag == false)
+                                    {
+                                        ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
+                                        negativeIrradFlag = true;
+                                    }
+                                }
+                                PyranoDetranspose();
+                            }
+                            else
+                            {
+                                if (SimMet.TGlo < 0)
+                                {
+                                    SimMet.TGlo = 0;
+
+                                    if (negativeIrradFlag == false)
+                                    {
+                                        ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
+                                        negativeIrradFlag = true;
+                                    }
+                                }
+                                Detranspose();
                             }
                         }
+                        else
+                        {
+                            if (SimMet.TGlo < 0)
+                            {
+                                SimMet.TGlo = 0;
+
+                                if (negativeIrradFlag == false)
+                                {
+                                    ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
+                                    negativeIrradFlag = true;
+                                }
+                            }
                             Detranspose();
+                        }
                     }
                     else
                     {
@@ -347,48 +396,34 @@ namespace CASSYS
                         Transpose();
                     }
 
-                    // Calculate shading and determine the values of tilted radiation components based on shading factors
-                    SimShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTilter.TDir, SimTilter.TDif, SimTilter.TRef);
-
                 #endregion
 
-                #region PV Array and Inverter calculations
-                    try
+                    // If Irradiance is the only item required by the user do not do the calculations.
+                    if (!ReadFarmSettings.NoSystemDefined)
                     {
-                        // Calculate PV Array Output for inputs read in this loop
-                        for (int j = 0; j < ReadFarmSettings.SubArrayCount; j++)
+                        // Calculate shading and determine the values of tilted radiation components based on shading factors
+                        SimShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTilter.TDir, SimTilter.TDif, SimTilter.TRef);
+
+                        #region PV Array and Inverter calculations
+                        try
                         {
-                            // Adjust the IV Curve based on based on Temperature and Irradiance
-                            SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, MonthOfYear);
-
-                            // Check Inverter status to determine if the Inverter is ON or OFF
-                            GetInverterStatus(j);
-
-                            if (SimInv[j].isON)
+                            // Calculate PV Array Output for inputs read in this loop
+                            for (int j = 0; j < ReadFarmSettings.SubArrayCount; j++)
                             {
-                                // If ON and If the PVArray Voltage in the MPPT Window, calculate the Inverter Output
-                                if (SimInv[j].inMPPTWindow)
-                                {
-                                    SimPVA[j].Calculate(true, 0);
-                                    SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
-                                    // If the Inverter is Clipping, the voltage is increased till the Inverter will not Clip anymore. 
-                                    if (SimInv[j].isClipping)
-                                    {
-                                        GetClippingVoltage(j);
-                                        SimPVA[j].Calculate(false, SimInv[j].VInDC);
-                                        SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
-                                    }
-                                }
-                                else
-                                {
-                                    // If ON and if the PV Array Voltage is NOT in the MPPT Window, re-calculate with the PV Array at Fixed Voltage Mode
-                                    SimPVA[j].Calculate(false, SimInv[j].VInDC);
-                                    GetInverterStatus(j);
+                                // Adjust the IV Curve based on based on Temperature and Irradiance
+                                SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, MonthOfYear);
 
-                                    if ((SimInv[j].isON == true) && (SimInv[j].inMPPTWindow == false))
-                                    {
-                                        SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
+                                // Check Inverter status to determine if the Inverter is ON or OFF
+                                GetInverterStatus(j);
 
+                                if (SimInv[j].isON)
+                                {
+                                    // If ON and If the PVArray Voltage in the MPPT Window, calculate the Inverter Output
+                                    if (SimInv[j].inMPPTWindow)
+                                    {
+                                        SimPVA[j].Calculate(true, 0);
+                                        SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
+                                        // If the Inverter is Clipping, the voltage is increased till the Inverter will not Clip anymore. 
                                         if (SimInv[j].isClipping)
                                         {
                                             GetClippingVoltage(j);
@@ -396,60 +431,80 @@ namespace CASSYS
                                             SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
                                         }
                                     }
+                                    else
+                                    {
+                                        // If ON and if the PV Array Voltage is NOT in the MPPT Window, re-calculate with the PV Array at Fixed Voltage Mode
+                                        SimPVA[j].Calculate(false, SimInv[j].VInDC);
+                                        GetInverterStatus(j);
+
+                                        if ((SimInv[j].isON == true) && (SimInv[j].inMPPTWindow == false))
+                                        {
+                                            SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
+
+                                            if (SimInv[j].isClipping)
+                                            {
+                                                GetClippingVoltage(j);
+                                                SimPVA[j].Calculate(false, SimInv[j].VInDC);
+                                                SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                // If the Inverter is OFF, everything should be 0.
-                                SimPVA[j].VOut = SimInv[j].VInDC;
-                                SimPVA[j].IOut = 0;
-                                SimPVA[j].POut = 0;
-                                SimPVA[j].OhmicLosses = 0;
-                                SimPVA[j].MismatchLoss = 0;
-                                SimPVA[j].ModuleQualityLoss = 0;
-                                SimPVA[j].SoilingLoss = 0;
-                                SimInv[j].IOut = 0;
-                                SimInv[j].ACWiringLoss = 0;
-                            }
+                                else
+                                {
+                                    // If the Inverter is OFF, everything should be 0.
+                                    SimPVA[j].VOut = SimInv[j].VInDC;
+                                    SimPVA[j].IOut = 0;
+                                    SimPVA[j].POut = 0;
+                                    SimPVA[j].OhmicLosses = 0;
+                                    SimPVA[j].MismatchLoss = 0;
+                                    SimPVA[j].ModuleQualityLoss = 0;
+                                    SimPVA[j].SoilingLoss = 0;
+                                    SimInv[j].IOut = 0;
+                                    SimInv[j].ACWiringLoss = 0;
+                                }
 
-                            // Assigning the outputs to the dictionary
-                            ReadFarmSettings.Outputlist["SubArray_Current" + (j + 1).ToString()] = SimPVA[j].IOut;
-                            ReadFarmSettings.Outputlist["SubArray_Voltage" + (j + 1).ToString()] = SimPVA[j].VOut;
-                            ReadFarmSettings.Outputlist["SubArray_Power" + (j + 1).ToString()] = SimPVA[j].POut / 1000;
-                            ReadFarmSettings.Outputlist["SubArray_Current_Inv" + (j + 1).ToString()] = SimInv[j].IOut;
-                            ReadFarmSettings.Outputlist["SubArray_Voltage_Inv" + (j + 1).ToString()] = SimInv[j].itsOutputVoltage;
-                            ReadFarmSettings.Outputlist["SubArray_Power_Inv" + (j + 1).ToString()] = SimInv[j].ACPwrOut / 1000;
+                                // Assigning the outputs to the dictionary
+                                ReadFarmSettings.Outputlist["SubArray_Current" + (j + 1).ToString()] = SimPVA[j].IOut;
+                                ReadFarmSettings.Outputlist["SubArray_Voltage" + (j + 1).ToString()] = SimPVA[j].VOut;
+                                ReadFarmSettings.Outputlist["SubArray_Power" + (j + 1).ToString()] = SimPVA[j].POut / 1000;
+                                ReadFarmSettings.Outputlist["SubArray_Current_Inv" + (j + 1).ToString()] = SimInv[j].IOut;
+                                ReadFarmSettings.Outputlist["SubArray_Voltage_Inv" + (j + 1).ToString()] = SimInv[j].itsOutputVoltage;
+                                ReadFarmSettings.Outputlist["SubArray_Power_Inv" + (j + 1).ToString()] = SimInv[j].ACPwrOut / 1000;
+                            }
                         }
-                    }
-                    catch (CASSYSException ce)
-                    {
-                        ErrorLogger.Log(ce, ErrLevel.FATAL);
-                    }
-
-                    #endregion
-
-                #region Transformer and Net AC Side Calculations
-                    // Calculate total Farm output (AC, W) to Grid
-                    try
-                    {
-                        farmACOutput = 0;
-                        farmACOhmicLoss = 0;
-                        for (int i = 0; i < SimInv.Length; i++)
+                        catch (CASSYSException ce)
                         {
-                            farmACOutput += SimInv[i].ACPwrOut;
-                            farmACOhmicLoss += SimInv[i].ACWiringLoss;
+                            ErrorLogger.Log(ce, ErrLevel.FATAL);
                         }
 
-                        SimTransformer.Calculate(farmACOutput - farmACOhmicLoss);
-                    }
-                    catch (ArithmeticException AE)
-                    {
-                        ErrorLogger.Log(AE, ErrLevel.WARNING);
+                        #endregion
+
+
+                        #region Transformer and Net AC Side Calculations
+                        // Calculate total Farm output (AC, W) to Grid
+                        try
+                        {
+                            farmACOutput = 0;
+                            farmACOhmicLoss = 0;
+                            for (int i = 0; i < SimInv.Length; i++)
+                            {
+                                farmACOutput += SimInv[i].ACPwrOut;
+                                farmACOhmicLoss += SimInv[i].ACWiringLoss;
+                            }
+
+                            SimTransformer.Calculate(farmACOutput - farmACOhmicLoss);
+                        }
+                        catch (ArithmeticException AE)
+                        {
+                            ErrorLogger.Log(AE, ErrLevel.WARNING);
+                        }
+
+                        #endregion
+
                     }
 
-                    #endregion
-
-                #region Writing resultant values to the file and Console Window
+                    #region Writing resultant values to the file and Console Window
                     try
                     {
                         // Assembling and writing the line containing all output values
@@ -460,7 +515,7 @@ namespace CASSYS
                         ErrorLogger.Log(ex, ErrLevel.WARNING);
                     }
                 }
-                
+
                 // Clean out the buffer of the writer to ensure all entries are written to the output file.
                 try
                 {
@@ -505,19 +560,19 @@ namespace CASSYS
             Console.WriteLine("Status: Complete. Simulation took " + timeTaken.ElapsedMilliseconds / 1000D + " seconds.");
 
                     #endregion
-                
+
                 #endregion
         }
-                
+
         #region Methods used in this program
 
         // Calculates the Voltage at which the Inverter will produce Nom AC Power (when Clipping) using Bisection Method.
         void GetClippingVoltage(int j)
         {
             SimInv[j].LossClipping = SimPVA[j].POut;                        // The input power that begins the clipping
-            
+
             SimPVA[j].CalcAtOpenCircuit();                                  // Calculating Open Circuit characteristics to determine upper and lower bound of interpolation
-                        
+
             double InvVR = SimPVA[j].Voc;                                   // The higher bound of the Voltage Range [V]
             double InvVL = SimPVA[j].VOut;                                  // The lower bound of the Voltage Range  [V]
             double trialInvV = (InvVR + InvVL) / 2;                         // Search variable                       [V] 
@@ -652,15 +707,11 @@ namespace CASSYS
 
             // Calculate tilted irradiance
             SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, MonthOfYear);
-
-            SimMet.HGlo = SimSplitter.HGlo;
-            SimMet.TGlo = SimTilter.TGlo;
         }
 
         // De-transposition of the titled irradiance values to the global horizontal values
         void Detranspose()
         {
-
             // Lower bound of bisection
             double HGloLo = 0;
 
@@ -718,6 +769,73 @@ namespace CASSYS
             SimMet.HGlo = SimSplitter.HGlo;
         }
 
+        // De-transposition method to the be used if the meter and panel tilt do not match
+        void PyranoDetranspose()
+        {
+            // Declare a new tilter object to determine horizontal from the meter
+            Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
+            pyranoTilter.ConfigPyranometer();
+
+            // Lower bound of bisection
+            double HGloLo = 0;
+
+            // Higher bound of bisection
+            double HGloHi = SimSun.NExtra;
+
+            // Calculating the Incidence Angle for the current setup
+            double cosInc = Tilt.GetCosIncidenceAngle(SimSun.Zenith, SimSun.Azimuth, pyranoTilter.itsSurfaceSlope, pyranoTilter.itsSurfaceAzimuth);
+
+            // Trivial case
+            if (SimMet.TGlo <= 0)
+            {
+                SimSplitter.Calculate(SimSun.Zenith, 0, NExtra: SimSun.NExtra);
+                pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, MonthOfYear);
+            }
+            else if ((SimSun.Zenith > 87.5 * Util.DTOR) || (cosInc <= Math.Cos(87.5 * Util.DTOR)))
+            {
+                SimMet.HGlo = SimMet.TGlo / ((1 + Math.Cos(pyranoTilter.itsSurfaceSlope)) / 2 + pyranoTilter.itsMonthlyAlbedo[MonthOfYear] * (1 - Math.Cos(pyranoTilter.itsSurfaceSlope)) / 2);
+
+                // Forcing the horizontal irradiance to be composed entirely of diffuse irradiance
+                SimSplitter.HGlo = SimMet.HGlo;
+                SimSplitter.HDif = SimMet.HGlo;
+                SimSplitter.NDir = 0;
+                SimSplitter.HDir = 0;
+
+                //SimSplitter.Calculate(SimSun.Zenith, HGlo, NExtra: SimSun.NExtra);
+                pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, MonthOfYear);
+            }
+            // Otherwise, bisection loop
+            else
+            {
+                // Bisection loop
+                while (Math.Abs(HGloHi - HGloLo) > 0.01)
+                {
+                    // Use the central value between the domain to start the bisection, and then solve for TGlo,
+                    double HGloAv = (HGloLo + HGloHi) / 2;
+                    SimSplitter.Calculate(SimSun.Zenith, _HGlo: HGloAv, NExtra: SimSun.NExtra);
+                    pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, MonthOfYear);
+                    double TGloAv = pyranoTilter.TGlo;
+
+                    // Compare the TGloAv calculated from the Horizontal guess to the acutal TGlo and change the bounds for analysis
+                    // comparing the TGloAv and TGlo
+                    if (TGloAv < SimMet.TGlo)
+                    {
+                        HGloLo = HGloAv;
+                    }
+                    else
+                    {
+                        HGloHi = HGloAv;
+                    }
+                }
+            }
+
+            SimMet.HGlo = SimSplitter.HGlo;
+
+            // This value of the horizontal global should now be transposed to the tilt value from the array. 
+            Transpose();
+        }
+
+        // Gather the information for the output as per user selection.
         String GetOutputLine()
         {
             // Shading each component of the Tilted radiaton
@@ -741,31 +859,34 @@ namespace CASSYS
             farmACClippingPower = 0;                     // Produced power before reduction by Inverter (clipping) [W]
 
             // Calculate and assign values to the outputs required by the program.
-            for (int i = 0; i < SimPVA.Length; i++)
+            if (!ReadFarmSettings.NoSystemDefined)
             {
-                farmDC += SimPVA[i].POut;
-                farmDCCurrent += SimPVA[i].IOut;
-                farmDCMismatchLoss += SimPVA[i].MismatchLoss;
-                farmDCModuleQualityLoss += SimPVA[i].ModuleQualityLoss;
-                farmDCOhmicLoss += SimPVA[i].OhmicLosses;
-                farmDCSoilingLoss += SimPVA[i].SoilingLoss;
-                farmDCTemp += SimPVA[i].TModule * SimPVA[i].itsNumModules;
-                farmTotalModules += SimPVA[i].itsNumModules;
-                farmPNomDC += SimPVA[i].itsPNomDCArray;
-                farmPNomAC += SimInv[i].itsPNomArrayAC;
-                farmArea += SimPVA[i].itsRoughArea;
-                farmACPMinThreshLoss += SimInv[i].LossPMinThreshold;
-                farmACClippingPower += SimInv[i].LossClipping;
-                SimInv[i].LossPMinThreshold = 0;
-                SimInv[i].LossClipping = 0;
+                for (int i = 0; i < SimPVA.Length; i++)
+                {
+                    farmDC += SimPVA[i].POut;
+                    farmDCCurrent += SimPVA[i].IOut;
+                    farmDCMismatchLoss += SimPVA[i].MismatchLoss;
+                    farmDCModuleQualityLoss += SimPVA[i].ModuleQualityLoss;
+                    farmDCOhmicLoss += SimPVA[i].OhmicLosses;
+                    farmDCSoilingLoss += SimPVA[i].SoilingLoss;
+                    farmDCTemp += SimPVA[i].TModule * SimPVA[i].itsNumModules;
+                    farmTotalModules += SimPVA[i].itsNumModules;
+                    farmPNomDC += SimPVA[i].itsPNomDCArray;
+                    farmPNomAC += SimInv[i].itsPNomArrayAC;
+                    farmArea += SimPVA[i].itsRoughArea;
+                    farmACPMinThreshLoss += SimInv[i].LossPMinThreshold;
+                    farmACClippingPower += SimInv[i].LossClipping;
+                    SimInv[i].LossPMinThreshold = 0;
+                    SimInv[i].LossClipping = 0;
+                }
+
+
+                // Averages all PV Array temperature values
+                farmDCTemp /= farmTotalModules;
+                farmPNomDC = Utilities.ConvertWtokW(farmPNomDC);
+                farmPNomAC = Utilities.ConvertWtokW(farmPNomAC);
             }
 
-            // Averages all PV Array temperature values
-            farmDCTemp /= farmTotalModules;
-            farmPNomDC = Utilities.ConvertWtokW(farmPNomDC);
-            farmPNomAC = Utilities.ConvertWtokW(farmPNomAC);
-
-                      
             // Using the TimeSpan function to assemble the String for the modified Time Stamp of calculation
             TimeSpan thisHour = TimeSpan.FromHours(HourOfDay);
             TimeStampAnalyzed = new DateTime(Utilities.CurrentTimeStamp.Year, Utilities.CurrentTimeStamp.Month, Utilities.CurrentTimeStamp.Day, thisHour.Hours, thisHour.Minutes, thisHour.Seconds);
@@ -787,63 +908,68 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimTilter.TDir;
             ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimTilter.TDif;
             ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimTilter.TRef;
-            ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Shading"] = SimShading.ShadTGlo;
-            ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"] = SimTilter.TGlo - SimShading.ShadTGlo;
-            ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Beam"] = ShadBeamLoss;
-            ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Diffuse"] = ShadDiffLoss;
-            ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Ground_Reflected"] = ShadRefLoss;
-            ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Incidence"] = SimPVA[0].IAMTGlo;
-            ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"] = SimShading.ShadTGlo - SimPVA[0].IAMTGlo;
-            ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
-            ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);
-            ReadFarmSettings.Outputlist["Incidence_Loss_for_Ground_Reflected"] = SimShading.ShadTRef * (1 - SimPVA[0].IAMRef);
-            ReadFarmSettings.Outputlist["Incidence_Angle"] = Math.Min(Util.RTOD * SimTilter.IncidenceAngle, 90);
-            ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Global"] = (SimTilter.TGlo > 0 ? SimShading.ShadTGlo / SimTilter.TGlo : 1);
-            ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Beam"] = SimShading.BeamSF;
-            ReadFarmSettings.Outputlist["Near_Shading_Factor_on__Diffuse"] = SimShading.DiffuseSF;
-            ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Ground_Reflected"] = SimShading.ReflectedSF;
-            ReadFarmSettings.Outputlist["IAM_Factor_on_Global"] = (SimShading.ShadTGlo > 0 ? SimPVA[0].IAMTGlo / SimShading.ShadTGlo : 1);
-            ReadFarmSettings.Outputlist["IAM_Factor_on_Beam"] = SimPVA[0].IAMDir;
-            ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
-            ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
-            ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
-            ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;
-            ReadFarmSettings.Outputlist["Ohmic_Wiring_Loss"] = farmDCOhmicLoss / 1000;
-            ReadFarmSettings.Outputlist["Module_Quality_Loss"] = farmDCModuleQualityLoss / 1000;
-            ReadFarmSettings.Outputlist["Effective_Energy_at_the_Output_of_the_Array"] = farmDC / 1000;
-            ReadFarmSettings.Outputlist["Average_Ambient_Temperature_deg_C_"] = SimMet.TAmbient;
-            ReadFarmSettings.Outputlist["Calculated_Module_Temperature__deg_C_"] = farmDCTemp;
-            ReadFarmSettings.Outputlist["Measured_Module_Temperature__deg_C_"] = SimMet.TModMeasured;
-            ReadFarmSettings.Outputlist["Difference_between_Module_and_Ambient_Temp.__deg_C_"] = farmDCTemp - SimMet.TAmbient;
-            ReadFarmSettings.Outputlist["PV_Array_Current"] = farmDCCurrent;
-            ReadFarmSettings.Outputlist["PV_Array_Voltage"] = (farmDCCurrent > 0 ? farmDC / farmDCCurrent : 0);
-            ReadFarmSettings.Outputlist["Available_Energy_at_Inverter_Output"] = farmACOutput / 1000;
-            ReadFarmSettings.Outputlist["AC_Ohmic_Loss"] = farmACOhmicLoss / 1000;
-            ReadFarmSettings.Outputlist["Inverter_Efficiency"] = (farmACOutput > 0 ? farmACOutput / farmDC : 0) * 100;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Power_Threshold"] = farmACPMinThreshLoss / 1000;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Voltage_Threshold"] = 0;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Nominal_Inv._Power"] = farmACClippingPower > 0 ? farmACClippingPower / 1000 : 0;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Nominal_Inv._Voltage"] = 0;
-            ReadFarmSettings.Outputlist["External_transformer_loss"] = SimTransformer.Losses / 1000;
-            ReadFarmSettings.Outputlist["Power_Injected_into_Grid"] = SimTransformer.POut / 1000;
-            ReadFarmSettings.Outputlist["Energy_Injected_into_Grid"] = SimTransformer.EnergyToGrid / 1000;
-            ReadFarmSettings.Outputlist["Profile_Angle"] = Util.RTOD * SimShading.ProfileAng;
-            ReadFarmSettings.Outputlist["PV_Array_Efficiency"] = (SimTilter.TGlo > 0 ? farmDC / (SimTilter.TGlo * farmArea) : 0) * 100;
-            ReadFarmSettings.Outputlist["AC_side_Efficiency"] = (farmACOutput > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / farmACOutput : 0) * 100;
-            ReadFarmSettings.Outputlist["Overall_System_Efficiency"] = (SimTilter.TGlo > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / (SimTilter.TGlo * farmArea) : 0) * 100;
-            ReadFarmSettings.Outputlist["Normalized_System_Production"] = SimTransformer.POut > 0 ? SimTransformer.POut / (farmPNomDC * 1000) : 0;
-            ReadFarmSettings.Outputlist["Array_losses_ratio"] = SimTransformer.POut > 0 ? (farmDCMismatchLoss + farmDCModuleQualityLoss + farmDCOhmicLoss + farmDCSoilingLoss) / SimTransformer.POut : 0;
-            ReadFarmSettings.Outputlist["Inverter_losses_ratio"] = SimTransformer.POut > 0 ? farmACOhmicLoss / SimTransformer.POut : 0;
-            ReadFarmSettings.Outputlist["AC_losses_ratio"] = SimTransformer.Losses / SimTransformer.POut < 0 ? 0 : SimTransformer.Losses / SimTransformer.POut;
-            ReadFarmSettings.Outputlist["Performance_Ratio"] = SimTilter.TGlo > 0 && farmPNomDC > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / SimTilter.TGlo / farmPNomDC : 0;
-            ReadFarmSettings.Outputlist["System_Loss_Incident_Energy_Ratio"] = (SimTransformer.itsPNom - SimTransformer.POut) / (SimTilter.TGlo*1000);
+
+            // If a system is defined get all the other performance characteristics needed
+            if (!ReadFarmSettings.NoSystemDefined)
+            {
+                ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Shading"] = SimShading.ShadTGlo;
+                ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"] = SimTilter.TGlo - SimShading.ShadTGlo;
+                ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Beam"] = ShadBeamLoss;
+                ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Diffuse"] = ShadDiffLoss;
+                ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Ground_Reflected"] = ShadRefLoss;
+                ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Incidence"] = SimPVA[0].IAMTGlo;
+                ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"] = SimShading.ShadTGlo - SimPVA[0].IAMTGlo;
+                ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
+                ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);
+                ReadFarmSettings.Outputlist["Incidence_Loss_for_Ground_Reflected"] = SimShading.ShadTRef * (1 - SimPVA[0].IAMRef);
+                ReadFarmSettings.Outputlist["Incidence_Angle"] = Math.Min(Util.RTOD * SimTilter.IncidenceAngle, 90);
+                ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Global"] = (SimTilter.TGlo > 0 ? SimShading.ShadTGlo / SimTilter.TGlo : 1);
+                ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Beam"] = SimShading.BeamSF;
+                ReadFarmSettings.Outputlist["Near_Shading_Factor_on__Diffuse"] = SimShading.DiffuseSF;
+                ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Ground_Reflected"] = SimShading.ReflectedSF;
+                ReadFarmSettings.Outputlist["IAM_Factor_on_Global"] = (SimShading.ShadTGlo > 0 ? SimPVA[0].IAMTGlo / SimShading.ShadTGlo : 1);
+                ReadFarmSettings.Outputlist["IAM_Factor_on_Beam"] = SimPVA[0].IAMDir;
+                ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
+                ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
+                ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
+                ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;
+                ReadFarmSettings.Outputlist["Ohmic_Wiring_Loss"] = farmDCOhmicLoss / 1000;
+                ReadFarmSettings.Outputlist["Module_Quality_Loss"] = farmDCModuleQualityLoss / 1000;
+                ReadFarmSettings.Outputlist["Effective_Energy_at_the_Output_of_the_Array"] = farmDC / 1000;
+                ReadFarmSettings.Outputlist["Average_Ambient_Temperature_deg_C_"] = SimMet.TAmbient;
+                ReadFarmSettings.Outputlist["Calculated_Module_Temperature__deg_C_"] = farmDCTemp;
+                ReadFarmSettings.Outputlist["Measured_Module_Temperature__deg_C_"] = SimMet.TModMeasured;
+                ReadFarmSettings.Outputlist["Difference_between_Module_and_Ambient_Temp.__deg_C_"] = farmDCTemp - SimMet.TAmbient;
+                ReadFarmSettings.Outputlist["PV_Array_Current"] = farmDCCurrent;
+                ReadFarmSettings.Outputlist["PV_Array_Voltage"] = (farmDCCurrent > 0 ? farmDC / farmDCCurrent : 0);
+                ReadFarmSettings.Outputlist["Available_Energy_at_Inverter_Output"] = farmACOutput / 1000;
+                ReadFarmSettings.Outputlist["AC_Ohmic_Loss"] = farmACOhmicLoss / 1000;
+                ReadFarmSettings.Outputlist["Inverter_Efficiency"] = (farmACOutput > 0 ? farmACOutput / farmDC : 0) * 100;
+                ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Power_Threshold"] = farmACPMinThreshLoss / 1000;
+                ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Voltage_Threshold"] = 0;
+                ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Nominal_Inv._Power"] = farmACClippingPower > 0 ? farmACClippingPower / 1000 : 0;
+                ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Nominal_Inv._Voltage"] = 0;
+                ReadFarmSettings.Outputlist["External_transformer_loss"] = SimTransformer.Losses / 1000;
+                ReadFarmSettings.Outputlist["Power_Injected_into_Grid"] = SimTransformer.POut / 1000;
+                ReadFarmSettings.Outputlist["Energy_Injected_into_Grid"] = SimTransformer.EnergyToGrid / 1000;
+                ReadFarmSettings.Outputlist["Profile_Angle"] = Util.RTOD * SimShading.ProfileAng;
+                ReadFarmSettings.Outputlist["PV_Array_Efficiency"] = (SimTilter.TGlo > 0 ? farmDC / (SimTilter.TGlo * farmArea) : 0) * 100;
+                ReadFarmSettings.Outputlist["AC_side_Efficiency"] = (farmACOutput > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / farmACOutput : 0) * 100;
+                ReadFarmSettings.Outputlist["Overall_System_Efficiency"] = (SimTilter.TGlo > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / (SimTilter.TGlo * farmArea) : 0) * 100;
+                ReadFarmSettings.Outputlist["Normalized_System_Production"] = SimTransformer.POut > 0 ? SimTransformer.POut / (farmPNomDC * 1000) : 0;
+                ReadFarmSettings.Outputlist["Array_losses_ratio"] = SimTransformer.POut > 0 ? (farmDCMismatchLoss + farmDCModuleQualityLoss + farmDCOhmicLoss + farmDCSoilingLoss) / SimTransformer.POut : 0;
+                ReadFarmSettings.Outputlist["Inverter_losses_ratio"] = SimTransformer.POut > 0 ? farmACOhmicLoss / SimTransformer.POut : 0;
+                ReadFarmSettings.Outputlist["AC_losses_ratio"] = SimTransformer.Losses / SimTransformer.POut < 0 ? 0 : SimTransformer.Losses / SimTransformer.POut;
+                ReadFarmSettings.Outputlist["Performance_Ratio"] = SimTilter.TGlo > 0 && farmPNomDC > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / SimTilter.TGlo / farmPNomDC : 0;
+                ReadFarmSettings.Outputlist["System_Loss_Incident_Energy_Ratio"] = (SimTransformer.itsPNom - SimTransformer.POut) / (SimTilter.TGlo * 1000);
+            }
 
             // Constructing the OutputLine to be written to string;
             string OutputLine = null;
             foreach (String required in ReadFarmSettings.OutputScheme)
             {
                 // Check if the required Output Value exists in the dictionary and then print                
-                if (required == "Sub_Array_Performance")
+                if (required == "Sub_Array_Performance" && !ReadFarmSettings.NoSystemDefined)
                 {
                     // Get the power for individual Sub-Arrays
                     for (int subNum = 1; subNum < SimPVA.Length + 1; subNum++)
@@ -852,7 +978,7 @@ namespace CASSYS
                         OutputLine += temp;
                     }
                 }
-                else if (required == "ShowSubInv")
+                else if (required == "ShowSubInv" && !ReadFarmSettings.NoSystemDefined)
                 {
                     // Get the power for individual Sub-Arrays
                     for (int subNum = 1; subNum < SimInv.Length + 1; subNum++)
@@ -861,7 +987,7 @@ namespace CASSYS
                         OutputLine += temp;
                     }
                 }
-                else if (required == "ShowSubInvV")
+                else if (required == "ShowSubInvV" && !ReadFarmSettings.NoSystemDefined)
                 {
                     // Get the voltage for individual Sub-Arrays
                     for (int subNum = 1; subNum < SimInv.Length + 1; subNum++)
@@ -870,7 +996,7 @@ namespace CASSYS
                         OutputLine += temp;
                     }
                 }
-                else if (required == "ShowSubInvC")
+                else if (required == "ShowSubInvC" && !ReadFarmSettings.NoSystemDefined)
                 {
                     // Get the current for individual Sub-Arrays
                     for (int subNum = 1; subNum < SimInv.Length + 1; subNum++)

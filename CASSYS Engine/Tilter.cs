@@ -362,8 +362,36 @@ namespace CASSYS
                 itsTiltAlgorithm = TiltAlgorithm.HAY;
             }
 
+            // Assign the albedo parameters from the .CSYX file
+            ConfigAlbedo();
+        }
+
+        // Config will assign parameter variables their values as obtained from the .CSYX file
+        public void ConfigPyranometer()
+        {
+            try
+            {
+                // Getting the parameter values
+                itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterTilt", ErrLevel.FATAL));
+                itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterAzimuth", ErrLevel.FATAL));
+            }
+            catch
+            {
+                ErrorLogger.Log("Irradiance Meter Tilt or Azimuth were not specified. CASSYS will assume these values are the same as the Array Tilt and Azimuth. This can be changed in the Climate File Sheet in the interface.", ErrLevel.WARNING);
+                // Getting the parameter values
+                itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+            }
+
+            // Assign the albedo parameters from the .CSYX file
+            ConfigAlbedo();
+        }
+        
+        // Config the albedo value based on monthly/yearly values defined on file
+        public void ConfigAlbedo()
+        {
             // Getting the Albedo values either at a monthly or yearly level
-            if (ReadFarmSettings.GetXMLAttribute("Albedo","Frequency", ErrLevel.WARNING) == "Monthly")
+            if (ReadFarmSettings.GetAttribute("Albedo", "Frequency", ErrLevel.WARNING) == "Monthly")
             {
                 // Initializing the expected list
                 itsMonthlyAlbedo = new double[13];

@@ -8,6 +8,7 @@
 // Revision History:
 // AP - 2014-10-14: Version 0.9
 // AP - 2015-04-23: Version 0.9.1 - Added the User defined IAM Profile Option.
+// AP - 2015-06-10: Version 0.9.2 - Added the gamma temp coefficient determination method.
 //
 // Description:
 // The PV Array Class evaluates the performance of a solar module using the 
@@ -56,7 +57,7 @@ namespace CASSYS
         double itsIPhiRef;                    // Reference photo-current determined from the Isc Point [A]
         double itsGammaRef;                   // Diode ideality factor, evaluated using CalcGammaIPhhirefIrsref method []
         double itsGamma;                      // Temperature adjusted gamma value [Unit-less]
-        double itsGammaCoeff = -0.001;        // The gamma coefficient for a c-Si module [1/C] 
+        double itsGammaCoeff;                 // The gamma coefficient for a c-Si module [1/C] 
         double itsTref;                       // Reference temperature [C]
         public double itsHref;                // Reference irradiance level [W/m2]
         double itsRs;                         // Series resistance [ohms];
@@ -74,6 +75,7 @@ namespace CASSYS
         double[][] itsUserIAMProfile = new double[2][];     // The IAM profile entered by the user.
         double itsTCoefIsc;                                 // Temperature coefficient for Isc [1/C]
         double itsTCoefVoc;                                 // Temperature coefficient for Voc [1/C]
+        double itsTCoefP;                                   // Temperature coefficient for Power [%/C]
         bool useMeasuredTemp;                               // Override boolean, true uses measured values, false calculates values using the Faiman Module Temperature Model
 
         // Array losses related variables
@@ -393,7 +395,7 @@ namespace CASSYS
             moduleP = (moduleI * v);
         }
 
-        // Calculates the Module Temperature (in C, in K or keep Measured based on user preferences found from XML)
+        // Calculates the Module Temperature (in C, in K or keep Measured based on user preferences found from .CSYX)
         void CalcTemperature
             (
               double TAmbient                         // Ambient temperature [C]
@@ -436,7 +438,7 @@ namespace CASSYS
             }
         }
 
-        // Config will assign parameter variables their values as obtained from the XML file
+        // Config will assign parameter variables their values as obtained from the .CSYX file
         public void Config
             (
               int ArrayNum                            // SubArray Number as determined in the Main Program [#]
@@ -461,7 +463,7 @@ namespace CASSYS
             itsRs = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rserie", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsRshZero = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rsh0", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: (4*itsRpRef).ToString()));
             itsRshExp = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rshexp", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "5.5"));
-            itsRw = double.Parse(ReadFarmSettings.GetInnerText("PV", "GlobWireResist", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "1")) / 1000;
+            itsTCoefP = double.Parse(ReadFarmSettings.GetInnerText("PV", "mPmpp", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             cellArea = itsNParallel * itsNSeries * itsCellCount * double.Parse(ReadFarmSettings.GetInnerText("PV", "Cellarea", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.01")) / 10000;
 
             // Defining all thermal loss variables for the PV Array
@@ -486,7 +488,7 @@ namespace CASSYS
             }
             else
             {
-                if ((ReadFarmSettings.GetXMLAttribute("Losses", "IAMSelection", _Adder: "/IncidenceAngleModifier", _VersionNum: "0.9.1", _ArrayNum: ArrayNum) == "ASHRAE"))
+                if ((ReadFarmSettings.GetAttribute("Losses", "IAMSelection", _Adder: "/IncidenceAngleModifier", _VersionNum: "0.9.1", _ArrayNum: ArrayNum) == "ASHRAE"))
                 {
                     itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL, _default: "0.05"));
                 }
@@ -517,7 +519,7 @@ namespace CASSYS
 
             // If soiling losses are defined on a monthly basis, then populate an array with values for each month
             // Based on month number
-            if (ReadFarmSettings.GetXMLAttribute("Losses", "Frequency", _Adder: "/SoilingLosses") == "Monthly")
+            if (ReadFarmSettings.GetAttribute("Losses", "Frequency", _Adder: "/SoilingLosses") == "Monthly")
             {
                 // Initializing the array for the soiling losses; index numbers correspond to the months (therefore index 0 must be included in array size but is not used for assigning values
                 itsMonthlySoilingPC = new double[13];
@@ -556,6 +558,9 @@ namespace CASSYS
             itsRoughArea = itsArea * itsNSeries * itsNParallel;
             itsNumModules = itsNParallel * itsNSeries;
             CalcGammaIPhiIrsRef();
+
+            // Gathering wiring losses from the CSYX File
+            itsRw = double.Parse(ReadFarmSettings.GetInnerText("PV", "GlobWireResist", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "1")) / 1000;
         }
 
         // Calculate Gamma, IrsRef, IphiRef for the module provided using equations for Impp condition and Voc condition with N-R method to calculate Gamma
@@ -653,6 +658,97 @@ namespace CASSYS
             itsGammaRef = Math.Round(gNew, 3);
             itsIrsRef = Utilities.Truncate((c1 - c2) / (Math.Exp(d1 / itsGammaRef) - Math.Exp(d2 / itsGammaRef)), 4);
             itsIPhiRef = Math.Round(itsIrsRef * (Math.Exp(d1 / itsGammaRef) - 1) - c1, 3);
+
+            // Calculate the Gamma Temperature Coefficient Parameter for the module
+            CalcGammaCoeff();
         }
+
+        // Calculate GammaCoefficient Parameters for the module using the Temperature Coefficient for Power provided in the database. 
+        // This is done using the Bisection method for Gamma. For every change in Gamma, the reverse saturation current must be calculated as well 
+        // as it is dependent on Gamma.
+        // Calculation of power is done at reference Irradiance but 2 * Reference Temperature.
+        void CalcGammaCoeff()
+        {
+            // The temperature for which Gamma must be calculated.
+            double TrialTModule = itsTref + 25;
+            double tolerance = 1 / 10000D;
+
+            // Converting to Kelvin and assigning TModule to the correct value.
+            double TrialTModuleK = Utilities.ConvertCtoK(TrialTModule);
+            double itsTrefK = Utilities.ConvertCtoK(itsTref);
+            TModule = TrialTModule;
+
+            // Module Iphi calculation based on irradiance and temperature (Ref 1 - Eq 2) 
+            mIPhi = itsIPhiRef + itsTCoefIsc * (TModule - itsTref);
+
+            // Adjust Voc based on temperature (similar to current adjustment above)
+            mVoc = itsVocref + itsTCoefVoc * (TModule - itsTref);
+
+            // The shunt resistance will be at reference levels.
+            itsRsh = itsRpRef;
+
+            // Variables required to use the bisection method to match gamma to the target Pnom
+            double targetPNom = itsPNom * (1 + itsTCoefP/100 * (TrialTModule - itsTref));         // The target power is Pnom corrected to TrialTModule using uPMPP
+            double gammaL = itsGammaRef - 0.5D;                                                     // Lower bound: The uGamma is a small adjustment for TModule, so Gamma should lie within +/- 0.5 of the refGamma    
+            double gammaH = itsGammaRef + 0.5D;                                                     // Higher bound: The uGamma is a small adjustment for TModule, so Gamma should lie within +/- 0.5 of the refGamma
+
+            // Set the value of gamma L to 0.1 if the gammaL is negative. This avoids any unrealistic values for GammaL and allows user to proceed with analysis.
+            if (gammaL < 0)
+            {
+                gammaL = 0.1;
+            }
+            
+            double powGammaL = 0;                                                                   // Power at lower value of Gamma
+            double powGammaH = 0;                                                                   // Power at higher value of Gamma
+            double gammaTrial = 0;                                                                  // Gamma value at bisection
+            double powGammaTrial = 0;                                                               // Power at bisection value of Gamma
+
+            // Calculating the Lower Gamma boundary power value and calculation of reverse saturation current (Ref 1 - Eq 3)
+            itsGamma = gammaL;
+            Irs = itsIrsRef * Math.Pow(TrialTModuleK / itsTrefK, 3) * Math.Exp(Util.ELEMCHARGE * Util.SiBANDGAP / itsGamma / Util.BOLTZMANNCONST * (1 / itsTrefK - 1 / TrialTModuleK));
+            CalcAtMaximumPowerPoint();
+            powGammaL = mPower;
+
+            // Calculating the higher Gamma boundary power value and calculation of reverse saturation current (Ref 1 - Eq 3)
+            itsGamma = gammaH;
+            Irs = itsIrsRef * Math.Pow(TrialTModuleK / itsTrefK, 3) * Math.Exp(Util.ELEMCHARGE * Util.SiBANDGAP / itsGamma / Util.BOLTZMANNCONST * (1 / itsTrefK - 1 / TrialTModuleK));
+            CalcAtMaximumPowerPoint();
+            powGammaH = mPower;
+
+            // Checking to make sure bisection actual takes place by implementing 
+            if ((powGammaL - itsPNom) * (powGammaH - itsPNom) < 0)
+            {
+                // Iterate to find where the two gamma match the target power as long as the difference is above the tolerance level
+                while (Math.Abs(gammaH - gammaL) > tolerance)
+                {
+                    // Assigning the new trial value
+                    gammaTrial = (gammaL + gammaH) / 2;
+
+                    // Determining the maximum power obtained the new trial Gamma
+                    itsGamma = gammaTrial;
+                    Irs = itsIrsRef * Math.Pow(TrialTModuleK / itsTrefK, 3) * Math.Exp(Util.ELEMCHARGE * Util.SiBANDGAP / itsGamma / Util.BOLTZMANNCONST * (1 / itsTrefK - 1 / TrialTModuleK));
+                    CalcAtMaximumPowerPoint();
+                    powGammaTrial = mPower;
+
+                    // A higher than target Pnom value of powGammaTrial implies your gamma must be reduced,
+                    // therefore the boundary must move to a lower window.
+                    if (powGammaTrial < targetPNom)
+                    {
+                        gammaL = gammaTrial;
+                    }
+                    else
+                    {
+                        gammaH = gammaTrial;
+                    }
+                }
+            }
+            else
+            {
+                ErrorLogger.Log("The calculation for Gamma did not have the correct boundries. CASSYS cannot configure the module, and has stopped.", ErrLevel.FATAL);
+            }
+
+            // Determining the resulting coefficient. Linear assumption allows a calculation with one temperature change to determine the coefficient.
+            itsGammaCoeff = (gammaTrial - itsGammaRef) / (TrialTModule - itsTref);
+        }        
     }
 }

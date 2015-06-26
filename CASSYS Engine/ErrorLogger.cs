@@ -79,7 +79,7 @@ namespace CASSYS
         }
     }
 
-    // Blank Inner-node value for a given XML node
+    // Blank Inner-node value for a given .CSYX node
     class CASSYSBlankXMLException : Exception, ISerializable
     {
         public CASSYSBlankXMLException()
@@ -88,7 +88,7 @@ namespace CASSYS
         }
 
         public CASSYSBlankXMLException(string message)
-            : base("The value for " + message + " is missing in the XML. Simulation assumed 0 value.")
+            : base("The value for " + message + " is missing in the definition file. Simulation assumed 0 value.")
         {
         }
 
@@ -110,7 +110,7 @@ namespace CASSYS
     public static class ErrorLogger
     {
         // Locally used variables for the static class
-        public static String RunFileName;                              // This is the name of the XML file for this simulation (set during beginning of run)
+        public static String RunFileName;                              // This is the name of the .CSYX file for this simulation (set during beginning of run)
         public static int numWarnings;                                 // Number of warnings issued to the User
         public static int iterationCount;                              // Number of iterations [#] 
 

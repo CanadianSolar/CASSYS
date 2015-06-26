@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <StartWorkingDirectory>C:\Users\abhijeet.pai\Desktop\</StartWorkingDirectory>
-    <StartArguments>SSM.csyx</StartArguments>
+    <StartWorkingDirectory>U:\CASS\Engineering\Monitoring\Solar Farms\FTL\CASSYS\</StartWorkingDirectory>
+    <StartArguments>FTL.csyx</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <StartWorkingDirectory>C:\Users\abhijeet.pai\Desktop\</StartWorkingDirectory>
-    <StartArguments>SSM.csyx</StartArguments>
+    <StartWorkingDirectory>U:\CASS\Engineering\Monitoring\Solar Farms\FTL\CASSYS\</StartWorkingDirectory>
+    <StartArguments>FTL.csyx</StartArguments>
   </PropertyGroup>
   <PropertyGroup>
     <PublishUrlHistory>publish\</PublishUrlHistory>

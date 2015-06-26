@@ -192,7 +192,7 @@ namespace CASSYS
             }
         }
 
-        // Config will assign parameter variables their values as obtained from the XML file              
+        // Config will assign parameter variables their values as obtained from the .CSYX file              
         public void Config(int ArrayNum, XmlDocument doc)
         {
             itsNomOutputPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "PNomAC", _ArrayNum: ArrayNum)) * 1000;
@@ -263,11 +263,11 @@ namespace CASSYS
             ConfigEffCurves(doc, ArrayNum, threeCurves);
         }
 
-        // Obtaining and Setting efficiency curve values from XML file
+        // Obtaining and Setting efficiency curve values from .CSYX file
         public void ConfigEffCurves(XmlDocument doc, int ArrayNum, bool threeCurves)
         {
             // Configuration begins with a check if the Inverter has three efficiency curves or just one
-            // Once determined, relevant values are collected from the XML file
+            // Once determined, relevant values are collected from the .CSYX file
             if (threeCurves)
             {
                 // Initiating an Array to hold Interpolated Values and the three voltage levels
@@ -275,11 +275,11 @@ namespace CASSYS
                 itsPresentEfficiencies[1] = new double[3];             // To hold the three efficiencies from interpolation [Array, %, Computed in Calculate Method]
 
                 // Getting the Low, Medium and High Voltage Values used in the Curve
-                itsLowVoltage = double.Parse(ReadFarmSettings.GetXMLAttribute("Inverter", "Voltage", _Adder: "/Efficiency/Low", _ArrayNum: ArrayNum));
+                itsLowVoltage = double.Parse(ReadFarmSettings.GetAttribute("Inverter", "Voltage", _Adder: "/Efficiency/Low", _ArrayNum: ArrayNum));
                 itsPresentEfficiencies[0][0] = itsLowVoltage;
-                itsMedVoltage = double.Parse(ReadFarmSettings.GetXMLAttribute("Inverter", "Voltage", _Adder: "/Efficiency/Med", _ArrayNum: ArrayNum));
+                itsMedVoltage = double.Parse(ReadFarmSettings.GetAttribute("Inverter", "Voltage", _Adder: "/Efficiency/Med", _ArrayNum: ArrayNum));
                 itsPresentEfficiencies[0][1] = itsMedVoltage;
-                itsHighVoltage = double.Parse(ReadFarmSettings.GetXMLAttribute("Inverter", "Voltage", _Adder: "/Efficiency/High", _ArrayNum: ArrayNum));
+                itsHighVoltage = double.Parse(ReadFarmSettings.GetAttribute("Inverter", "Voltage", _Adder: "/Efficiency/High", _ArrayNum: ArrayNum));
                 itsPresentEfficiencies[0][2] = itsHighVoltage;
 
                 // Setting the lowest efficiency (i.e. at Threshold Power)
@@ -321,7 +321,7 @@ namespace CASSYS
                 itsOnlyEff[0][0] = itsThresholdPwr * itsNumInverters;
                 itsOnlyEff[1][0] = 0;
 
-                // Go through all XML Nodes with Efficiency values and assign them into Array
+                // Go through all .CSYX Nodes with Efficiency values and assign them into Array
                 for (int eff = 1; eff < itsOnlyEff[0].Length; eff++)
                 {
                     ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/EffCurve/Effic." + (eff + 1).ToString(), _ArrayNum: ArrayNum)) <100, ErrLevel.FATAL);

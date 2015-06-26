@@ -109,7 +109,7 @@ namespace CASSYS
             Losses = itsPIronLoss + itsPResLss;
         }
 
-        //Config will determine and assign values for the losses at the transformer using an XML file
+        //Config will determine and assign values for the losses at the transformer using an .CSYX file
         public void Config()
         {
             // Config will find the Iron Losses, and Global losses from the file. The resistive loss, etc are calculated by the program from these two values.

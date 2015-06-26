@@ -7,9 +7,10 @@
 // 
 // Revision History:
 // AP - 2014-11-27: Version 0.9
+// AP - 2015-05-21: Version 0.9.2 Added reading capability for 0.9.2
 //
 // Description:
-// This class uses the information provided in the XML file and dictates the number
+// This class uses the information provided in the .CSYX file and dictates the number
 // of Sub-Arrays, the Input File Scheme, the Output File Scheme and general simulation
 // settings used in the program file.
 // The class also collects the Input and Output file paths and assigns them to 
@@ -34,9 +35,9 @@ namespace CASSYS
     static class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String[] SupportedVersion = { "0.9", "0.9.1" };  // The supported versions of CASSYS XML.
-        public static XmlDocument doc;                              // The XML document that contains the Site, System, etc. definitions
-        public static String CASSYSCSYXVersion;                     // The CASSYS XML Version Number obtained from the XML file
+        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2" };  // The supported versions of CASSYS CSYX Files.
+        public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
+        public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
         public static bool UseMeasuredTemp;                         // Using measured temperature for the panels
         public static bool UsePOA;                                  // Boolean that indicates if the program should use tilted irradiance to simulate
@@ -53,6 +54,7 @@ namespace CASSYS
         public static int TMYType;                                  // If a TMY file is loaded, it specifies either 2 or 3 for .tm2 or .tm3 format
         public static string delim;                                 // The character used in the input file between adjacent values
         public static int[] ClimateRefPos;                          // The positions of input data from the user input file
+        public static bool NoSystemDefined = false;                 // Checks if no system was defined and allow user to simulate irradiance values only
 
         // Output configuration for the Program
         public static Dictionary<String, dynamic> Outputlist;       // Creating a dictionary to hold all output values;
@@ -72,7 +74,16 @@ namespace CASSYS
         public static void AssignSubArrayCount()
         {
             // Getting the Number of Sub-Arrays for this file
-            SubArrayCount = int.Parse(GetXMLAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
+            SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
+            
+            // Check if the user has defined the system or wants only Irradiance values (New for Version 0.9.2)
+            if (CASSYSCSYXVersion == "0.9.2")
+            {
+                if (double.Parse(GetInnerText("System", "SystemDC", ErrLevel.WARNING, _VersionNum: "0.9.2", _default: "1")) == 0)
+                {
+                    NoSystemDefined = true;
+                }
+            }
         }
 
         // Finding and Assigning the Input file style as per the SimSettingsFile
@@ -124,7 +135,7 @@ namespace CASSYS
                     }
 
                     // Check if at least one type of temperature is available to continue with the simulation.
-                    if (tempAmbDefined == false && UseMeasuredTemp == false)
+                    if (tempAmbDefined == false && UseMeasuredTemp == false && !NoSystemDefined)
                     {
                         ErrorLogger.Log("CASSYS did not find definitions for a temperature column in the Climate File. Please define a measured panel temperature or measured ambient temperature column.", ErrLevel.FATAL);
                     }
@@ -239,7 +250,7 @@ namespace CASSYS
             {
                 if (SupportedVersion.Contains(_VersionNum))
                 {
-                    // Determine the Path of the XML requested
+                    // Determine the Path of the .CSYX requested
                     switch (Path)
                     {
                         case "Site":
@@ -273,7 +284,7 @@ namespace CASSYS
                             Path = "/Site/OutputFileStyle/" + NodeName;
                             break;
                     }
-                    // Check if the XML Blank, if it is, return the default value
+                    // Check if the .CSYX Blank, if it is, return the default value
                     if (doc.SelectSingleNode(Path).InnerText == "")
                     {
                         if (_Error == ErrLevel.FATAL)
@@ -283,7 +294,7 @@ namespace CASSYS
                         }
                         else
                         {
-                            ErrorLogger.Log(NodeName + " is not defined for this file. CASSYS assigned " + _default + " for this value.", ErrLevel.WARNING);
+                            ErrorLogger.Log("Warning: " + NodeName + " is not defined for this file. CASSYS assigned " + _default + " for this value.", ErrLevel.WARNING);
                             return _default;
                         }
                     }
@@ -294,7 +305,7 @@ namespace CASSYS
                 }
                 else
                 {
-                    ErrorLogger.Log(NodeName + " is not supported in this version of CASSYS. Please update to the latest version available at https://github.com/CanadianSolar/CASSYS", ErrLevel.WARNING);
+                    ErrorLogger.Log(NodeName + " is not supported in this version of CASSYS. Please update your CASSYS Site file using the latest version available at https://github.com/CanadianSolar/CASSYS", ErrLevel.WARNING);
                     return null;
                 }
             }
@@ -310,7 +321,7 @@ namespace CASSYS
                         }
                         else
                         {
-                            ErrorLogger.Log(NodeName + "in" + Path + " is not defined. CASSYS will assume a default of " + _default + " to run.", ErrLevel.WARNING);
+                            ErrorLogger.Log(NodeName + " in" + Path + " is not defined. CASSYS will assume a default of " + _default + " to run.", ErrLevel.WARNING);
                             return _default;
                         }
                     }
@@ -323,7 +334,7 @@ namespace CASSYS
         }
 
         // Returns the attribute of the node, if the node and an attribute exist
-        public static String GetXMLAttribute(String Path, String AttributeName, ErrLevel _Error = ErrLevel.WARNING, String _VersionNum = "0.9", String _Adder = null, int _ArrayNum = 0)
+        public static String GetAttribute(String Path, String AttributeName, ErrLevel _Error = ErrLevel.WARNING, String _VersionNum = "0.9", String _Adder = null, int _ArrayNum = 0)
         {
             try
             {
