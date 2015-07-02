@@ -32,7 +32,7 @@ The installer lets you specify the directory in which you want the program to be
 ### Documentation ##
 --------------------
 [Documents and Help](https://github.com/CanadianSolar/CASSYS/tree/master/Documents%20and%20Help "Documents and Help")
-contains a user's manual and various documents to better understand the models used in the simulation engine.
+contains a user's manual and various documents to better understand the models used in the simulation engine. See the CASSYS Wiki: [Release Notes](https://github.com/CanadianSolar/CASSYS/wiki/Release-Notes "Release Notes") for a list of changes made in newer versions of CASSYS.
 
 ### Licensing ##
 ----------------
