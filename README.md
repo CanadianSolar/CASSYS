@@ -1,7 +1,7 @@
 # CASSYS - Canadian Solar System Simulator#
 *A Simulation Tool for Grid-Connected Photovoltaic Systems*
 
-*Current Version: 0.9.2*
+*Current Version: 0.9.3*
 
 <p align="center">
 <img src =https://github.com/CanadianSolar/CASSYS/blob/gh-pages/images/CASSYS-logo.png alt="CASSYS Logo"></img>
@@ -38,8 +38,3 @@ contains a user's manual and various documents to better understand the models u
 ----------------
 That's the best part: CASSYS is free and open source software. You are free to use it and explore the code, subject to the conditions expressed in the  [Licensing Agreement](https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE "Licensing Agreement"). Feel free to send your comments (positive or negative) or provide suggestions using the 
 [Report Issues](https://github.com/CanadianSolar/CASSYS/issues "Report Issues") Link.
-
- 
-
-
-
