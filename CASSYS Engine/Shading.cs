@@ -34,7 +34,7 @@ using CASSYS;
 
 namespace CASSYS
 {
-    public enum ShadModel { FT, UR };                 // Different Array Types
+    public enum ShadModel { FT, UR, None };                 // Different Array Types
 
     class Shading
     {
@@ -199,12 +199,12 @@ namespace CASSYS
                     itsShadModel = ShadModel.UR;
                     break;
 
-                case "Fixed Tilted":
+                case "Fixed Tilted Plane":
                     itsShadModel = ShadModel.FT;
                     break;
-
+                
                 default:
-                    itsShadModel = ShadModel.FT;
+                    itsShadModel = ShadModel.None;
                     break;
             }
 
@@ -254,13 +254,30 @@ namespace CASSYS
 
                     // Defining the parameters for the shading for a fixed tilt configuration 
                     itsShadingLimitAngle = 0;
-                    itsCollTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
-                    itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+                    if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.3")
+                    {
+                        itsCollTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
+                        itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthFix", ErrLevel.FATAL));
+                    }
+                    else
+                    {
+                        itsCollTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                        itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+                    }
 
                     // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant and 1.
                     DiffuseSF = 1;
                     ReflectedSF = 1;
                     break;
+            
+                case ShadModel.None:
+                    // No shading applies.
+                    DiffuseSF = 1;
+                    ReflectedSF = 1;
+                    BeamSF = 1;
+                    break;
+
+
             }
         }
     }

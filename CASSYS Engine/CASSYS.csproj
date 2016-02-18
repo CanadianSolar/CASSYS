@@ -78,6 +78,7 @@
     <Compile Include="Sun.cs" />
     <Compile Include="Tilt.cs" />
     <Compile Include="Tilter.cs" />
+    <Compile Include="Tracker.cs" />
     <Compile Include="Transformer.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>

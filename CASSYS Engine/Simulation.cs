@@ -44,7 +44,9 @@ namespace CASSYS
         // Instance of all one-time objects, i.e. weather and radiation related objects
         Sun SimSun = new Sun();
         Splitter SimSplitter = new Splitter();
+        Tracker SimTracker = new Tracker();
         Tilter SimTilter = new Tilter();
+        Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
         Shading SimShading = new Shading();
         Transformer SimTransformer = new Transformer();
         SimMeteo SimMet = new SimMeteo();
@@ -132,7 +134,12 @@ namespace CASSYS
             try
             {
                 // Weather and radiation related objects.
+                // The sun class requires the configuration of the surface slope to calculate the apparent sunset and sunrise hours.
+                SimTracker.Config();
+                SimSun.itsSurfaceSlope = SimTracker.SurfSlope;
                 SimSun.Config();
+                
+                pyranoTilter.ConfigPyranometer();
                 SimTilter.Config();
             }
             catch (XPathException ex)
@@ -316,11 +323,11 @@ namespace CASSYS
                     // Based on the definition of Input file, use Tilted irradiance or transpose the horizontal irradiance
                     if (ReadFarmSettings.UsePOA == true)
                     {
-                        // Check if the meter tilt and surface tilt 
+                        // Check if the meter tilt and surface tilt are equal, if not detranspose the pyranometer
                         if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.2")
                         {
                             // Checking if the Meter and Panel Tilt are different:
-                            if (ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.WARNING, _VersionNum: "0.9.2") != ReadFarmSettings.GetInnerText("InputFile", "MeterTilt", ErrLevel.WARNING, _VersionNum: "0.9.2"))
+                            if ((pyranoTilter.itsSurfaceAzimuth != SimTracker.SurfAzimuth) || (pyranoTilter.itsSurfaceSlope != SimTracker.SurfSlope))
                             {
                                 if (SimMet.TGlo < 0)
                                 {
@@ -693,6 +700,11 @@ namespace CASSYS
         void Transpose()
         {
             SimSun.Calculate(DayOfYear, HourOfDay);
+            
+            // Calculating the Surface Slope and Azimuth based on the Tracker Chosen
+            SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth);
+            SimTilter.itsSurfaceSlope = SimTracker.SurfSlope;
+            SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
 
             if (double.IsNaN(SimMet.HDiff))
             {
@@ -717,6 +729,12 @@ namespace CASSYS
 
             // Higher bound of bisection
             double HGloHi = SimSun.NExtra;
+
+            // Calculating the Surface Slope and Azimuth based on the Tracker Chosen
+            SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth);
+            SimTilter.itsSurfaceSlope = SimTracker.SurfSlope;
+            SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
+            SimTilter.IncidenceAngle = SimTracker.IncidenceAngle;
 
             // Calculating the Incidence Angle for the current setup
             double cosInc = Tilt.GetCosIncidenceAngle(SimSun.Zenith, SimSun.Azimuth, SimTilter.itsSurfaceSlope, SimTilter.itsSurfaceAzimuth);
@@ -772,9 +790,13 @@ namespace CASSYS
         // De-transposition method to the be used if the meter and panel tilt do not match
         void PyranoDetranspose()
         {
-            // Declare a new tilter object to determine horizontal from the meter
-            Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
-            pyranoTilter.ConfigPyranometer();
+            if (pyranoTilter.NoPyranoAnglesDefined)
+            {
+                SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth);
+                pyranoTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
+                pyranoTilter.itsSurfaceSlope = SimTracker.SurfSlope;
+                pyranoTilter.IncidenceAngle = SimTracker.IncidenceAngle;
+            }
 
             // Lower bound of bisection
             double HGloLo = 0;
@@ -834,7 +856,7 @@ namespace CASSYS
             // This value of the horizontal global should now be transposed to the tilt value from the array. 
             Transpose();
         }
-
+        
         // Gather the information for the output as per user selection.
         String GetOutputLine()
         {
@@ -913,6 +935,11 @@ namespace CASSYS
             if (!ReadFarmSettings.NoSystemDefined)
             {
                 ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Shading"] = SimShading.ShadTGlo;
+                ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;
+                ReadFarmSettings.Outputlist["Tracker_Azimuth"] = SimTracker.itsTrackerAzimuth * Util.RTOD;
+                ReadFarmSettings.Outputlist["Tracker_Rotation_Angle"] = SimTracker.RotAngle * Util.RTOD;
+                ReadFarmSettings.Outputlist["Collector_Surface_Slope"] = SimTracker.SurfSlope*Util.RTOD;
+                ReadFarmSettings.Outputlist["Collector_Surface_Azimuth"] = SimTracker.SurfAzimuth * Util.RTOD;
                 ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"] = SimTilter.TGlo - SimShading.ShadTGlo;
                 ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Beam"] = ShadBeamLoss;
                 ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Diffuse"] = ShadDiffLoss;

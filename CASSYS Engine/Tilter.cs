@@ -52,6 +52,7 @@ namespace CASSYS
         public double TDif;                        // Diffuse irradiance in tilted plane [W/m2]
         public double TRef;                        // Reflected irradiance in tilted plane [W/m2]
         public double IncidenceAngle;              // Incidence angle [radians]
+        public bool NoPyranoAnglesDefined;         // Boolean to track if the angles for the pyranometer are defined.            
 
         // Blank constructor
         public Tilter()
@@ -343,10 +344,6 @@ namespace CASSYS
         // Config will assign parameter variables their values as obtained from the XML file            
         public void Config()
         {
-            // Getting the parameter values
-            itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
-            itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
-            
             // Getting the Tilt Algorithm for the Simulation
             if (ReadFarmSettings.GetInnerText("Site", "TransEnum", ErrLevel.WARNING) == "0")
             {
@@ -374,13 +371,12 @@ namespace CASSYS
                 // Getting the parameter values
                 itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterTilt", ErrLevel.FATAL));
                 itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterAzimuth", ErrLevel.FATAL));
+                NoPyranoAnglesDefined = false;
             }
             catch
             {
                 ErrorLogger.Log("Irradiance Meter Tilt or Azimuth were not specified. CASSYS will assume these values are the same as the Array Tilt and Azimuth. This can be changed in the Climate File Sheet in the interface.", ErrLevel.WARNING);
-                // Getting the parameter values
-                itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
-                itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+                NoPyranoAnglesDefined = true;
             }
 
             // Assign the albedo parameters from the .CSYX file

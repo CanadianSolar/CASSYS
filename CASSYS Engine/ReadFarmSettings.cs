@@ -35,7 +35,7 @@ namespace CASSYS
     static class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2" };  // The supported versions of CASSYS CSYX Files.
+        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2", "0.9.3" };  // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -77,7 +77,7 @@ namespace CASSYS
             SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
             
             // Check if the user has defined the system or wants only Irradiance values (New for Version 0.9.2)
-            if (CASSYSCSYXVersion == "0.9.2")
+            if (CASSYSCSYXVersion == "0.9.2" || CASSYSCSYXVersion == "0.9.3")
             {
                 if (double.Parse(GetInnerText("System", "SystemDC", ErrLevel.WARNING, _VersionNum: "0.9.2", _default: "1")) == 0)
                 {

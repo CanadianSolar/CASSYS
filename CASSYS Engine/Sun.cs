@@ -158,7 +158,7 @@ namespace CASSYS
         public void Config()
         {
             // Gathering the parameters for the Sun Class
-            itsSurfaceSlope = Util.DTOR * double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt"));
+            //itsSurfaceSlope = Util.DTOR * double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt")); TODO: Re-evaluate.
             itsSLat = double.Parse(ReadFarmSettings.GetInnerText("Site", "Latitude"));
             itsSLong = double.Parse(ReadFarmSettings.GetInnerText("Site", "Longitude"));
             itsLSTFlag = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Site", "UseLocTime"));
