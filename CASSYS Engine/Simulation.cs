@@ -295,9 +295,16 @@ namespace CASSYS
                         MetReader.ParseCSVLine(InputFileReader, SimMet);
                     }
 
+
+
                     // Analyse the TimeStamp for use in Solar Calculations.
                     // Get the value for the Day of the Year, and Hour from Time Stamp [# 1->365,# 0->24, # 1->12]
                     Utilities.TSBreak(SimMet.TimeStamp, out DayOfYear, out HourOfDay, out MonthOfYear, out TimeStepEnd, out TimeStepBeg);
+
+                    // Calculating Sun position
+                    // Calculate the Solar Azimuth, and Zenith angles [radians]
+                    SimSun.itsSurfaceSlope = SimTracker.SurfSlope;
+                    SimSun.Calculate(DayOfYear, HourOfDay);
 
                     // The time stamp must be adjusted for sunset and sunrise hours such that the position of the sun is only calculated
                     // for the middle of the interval where the sun is above the horizon.
@@ -315,16 +322,12 @@ namespace CASSYS
                         // The sun has risen, so the transformer should now be Connected (only used if transformer is disconnected at night)
                         SimTransformer.isDisconnectedNow = false;
                     }
-
-                    // Calculating Sun position
-                    // Calculate the Solar Azimuth, and Zenith angles [radians]
-                    SimSun.Calculate(DayOfYear, HourOfDay);
-
+                    
                     // Based on the definition of Input file, use Tilted irradiance or transpose the horizontal irradiance
                     if (ReadFarmSettings.UsePOA == true)
                     {
                         // Check if the meter tilt and surface tilt are equal, if not detranspose the pyranometer
-                        if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.2")
+                        if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.2" || ReadFarmSettings.CASSYSCSYXVersion == "0.9.3")
                         {
                             // Checking if the Meter and Panel Tilt are different:
                             if ((pyranoTilter.itsSurfaceAzimuth != SimTracker.SurfAzimuth) || (pyranoTilter.itsSurfaceSlope != SimTracker.SurfSlope))
@@ -335,7 +338,7 @@ namespace CASSYS
 
                                     if (negativeIrradFlag == false)
                                     {
-                                        ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
+                                        ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will set the value to 0.", ErrLevel.WARNING);
                                         negativeIrradFlag = true;
                                     }
                                 }
@@ -349,7 +352,7 @@ namespace CASSYS
 
                                     if (negativeIrradFlag == false)
                                     {
-                                        ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will the value to 0.", ErrLevel.WARNING);
+                                        ErrorLogger.Log("Global Plane of Array Irradiance contains negative values. CASSYS will set the value to 0.", ErrLevel.WARNING);
                                         negativeIrradFlag = true;
                                     }
                                 }
@@ -409,7 +412,7 @@ namespace CASSYS
                     if (!ReadFarmSettings.NoSystemDefined)
                     {
                         // Calculate shading and determine the values of tilted radiation components based on shading factors
-                        SimShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTilter.TDir, SimTilter.TDif, SimTilter.TRef);
+                        SimShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTilter.TDir, SimTilter.TDif, SimTilter.TRef, SimTracker.SurfSlope, SimTracker.SurfAzimuth);
 
                         #region PV Array and Inverter calculations
                         try
@@ -930,16 +933,19 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimTilter.TDir;
             ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimTilter.TDif;
             ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimTilter.TRef;
+            // NB: moved these outputs so they are processed with or without a system
+            ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;
+            ReadFarmSettings.Outputlist["Tracker_Azimuth"] = SimTracker.itsTrackerAzimuth * Util.RTOD;
+            ReadFarmSettings.Outputlist["Tracker_Rotation_Angle"] = SimTracker.RotAngle * Util.RTOD;
+            ReadFarmSettings.Outputlist["Collector_Surface_Slope"] = SimTilter.itsSurfaceSlope * Util.RTOD;
+            ReadFarmSettings.Outputlist["Collector_Surface_Azimuth"] = SimTilter.itsSurfaceAzimuth * Util.RTOD;
+            ReadFarmSettings.Outputlist["Incidence_Angle"] = Math.Min(Util.RTOD * SimTilter.IncidenceAngle, 90);
+            
 
             // If a system is defined get all the other performance characteristics needed
             if (!ReadFarmSettings.NoSystemDefined)
             {
-                ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Shading"] = SimShading.ShadTGlo;
-                ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;
-                ReadFarmSettings.Outputlist["Tracker_Azimuth"] = SimTracker.itsTrackerAzimuth * Util.RTOD;
-                ReadFarmSettings.Outputlist["Tracker_Rotation_Angle"] = SimTracker.RotAngle * Util.RTOD;
-                ReadFarmSettings.Outputlist["Collector_Surface_Slope"] = SimTracker.SurfSlope*Util.RTOD;
-                ReadFarmSettings.Outputlist["Collector_Surface_Azimuth"] = SimTracker.SurfAzimuth * Util.RTOD;
+                ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Shading"] = SimShading.ShadTGlo;                
                 ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"] = SimTilter.TGlo - SimShading.ShadTGlo;
                 ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Beam"] = ShadBeamLoss;
                 ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Diffuse"] = ShadDiffLoss;
@@ -949,7 +955,7 @@ namespace CASSYS
                 ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
                 ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);
                 ReadFarmSettings.Outputlist["Incidence_Loss_for_Ground_Reflected"] = SimShading.ShadTRef * (1 - SimPVA[0].IAMRef);
-                ReadFarmSettings.Outputlist["Incidence_Angle"] = Math.Min(Util.RTOD * SimTilter.IncidenceAngle, 90);
+                ReadFarmSettings.Outputlist["Profile_Angle"] = Util.RTOD * SimShading.ProfileAng;
                 ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Global"] = (SimTilter.TGlo > 0 ? SimShading.ShadTGlo / SimTilter.TGlo : 1);
                 ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Beam"] = SimShading.BeamSF;
                 ReadFarmSettings.Outputlist["Near_Shading_Factor_on__Diffuse"] = SimShading.DiffuseSF;
@@ -979,7 +985,6 @@ namespace CASSYS
                 ReadFarmSettings.Outputlist["External_transformer_loss"] = SimTransformer.Losses / 1000;
                 ReadFarmSettings.Outputlist["Power_Injected_into_Grid"] = SimTransformer.POut / 1000;
                 ReadFarmSettings.Outputlist["Energy_Injected_into_Grid"] = SimTransformer.EnergyToGrid / 1000;
-                ReadFarmSettings.Outputlist["Profile_Angle"] = Util.RTOD * SimShading.ProfileAng;
                 ReadFarmSettings.Outputlist["PV_Array_Efficiency"] = (SimTilter.TGlo > 0 ? farmDC / (SimTilter.TGlo * farmArea) : 0) * 100;
                 ReadFarmSettings.Outputlist["AC_side_Efficiency"] = (farmACOutput > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / farmACOutput : 0) * 100;
                 ReadFarmSettings.Outputlist["Overall_System_Efficiency"] = (SimTilter.TGlo > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / (SimTilter.TGlo * farmArea) : 0) * 100;
@@ -1045,6 +1050,7 @@ namespace CASSYS
                     }
                 }
             }
+
             return OutputLine;
         }
         #endregion

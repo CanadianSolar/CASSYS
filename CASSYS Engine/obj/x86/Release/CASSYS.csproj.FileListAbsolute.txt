@@ -7,8 +7,5 @@ U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Re
 U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Release\CASSYS.exe
 U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Release\CASSYS.pdb
 U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Release\CASSYS.csprojResolveAssemblyReference.cache
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASSYS.exe
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASSYS.pdb
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\bin\Release\CASSYS.exe
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\bin\Release\CASSYS.pdb
-C:\Users\abhijeet.pai\Documents\GitHub\CASSYS\CASSYS Engine\obj\x86\Release\CASSYS.csprojResolveAssemblyReference.cache
+\\ca01a9003\UserData\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Release\CASSYS.exe
+\\ca01a9003\UserData\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Release\CASSYS.pdb

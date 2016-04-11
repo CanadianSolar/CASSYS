@@ -1,5 +1,9 @@
-CASSYS - Simulation Error Log for : Sydney_CASSYS.csyx
-Site Configuration File: Sydney_CASSYS.csyx
+CASSYS - Simulation Error Log for : C:\CASSYS_3\Toronto\Sample Site - Toronto.csyx
+Site Configuration File: C:\CASSYS_3\Toronto\Sample Site - Toronto.csyx
 Input File line: 0
 Error Description: WARNING: Irradiance Meter Tilt or Azimuth were not specified. CASSYS will assume these values are the same as the Array Tilt and Azimuth. This can be changed in the Climate File Sheet in the interface.
+--------------------------------------------------------
+Site Configuration File: C:\CASSYS_3\Toronto\Sample Site - Toronto.csyx
+Input File line: 0
+Error Description: FATAL: The input file name input/Toronto Input.csv or volume label syntax is incorrect.
 --------------------------------------------------------

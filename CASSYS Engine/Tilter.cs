@@ -158,7 +158,7 @@ namespace CASSYS
                 AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsSurfaceAzimuth < -Math.PI || itsSurfaceAzimuth > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
                 {
                     throw new CASSYSException("GetTiltCompIrradiance: Arguments were out of range.");
-                }
+               }
                 cosZenith = Math.Cos(SunZenith);
                 cosInc = Math.Cos(SunZenith) * Math.Cos(itsSurfaceSlope)
                          + Math.Sin(SunZenith) * Math.Sin(itsSurfaceSlope) * Math.Cos(itsSurfaceAzimuth - SunAzimuth);

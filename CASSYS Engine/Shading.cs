@@ -8,6 +8,8 @@
 // Revision History:
 // AP - 2014-11-10: Version 0.9
 //
+// NB - 2016-03-17: Version 0.9.3
+//
 // Description:
 // This class calculates the shading factors on the beam, diffuse and ground-reflected 
 // components of incident irradiance based on the sun position throughout the day 
@@ -34,14 +36,14 @@ using CASSYS;
 
 namespace CASSYS
 {
-    public enum ShadModel { FT, UR, None };                 // Different Array Types
+    public enum ShadModel { FT, UR, TE, TS, None };                 // Different Array Types
 
     class Shading
     {
         // Parameters for the shading class
         double itsCollTilt;                         // Tilt of the collector [radians]
         double itsCollAzimuth;                      // Collector Azimuth [radians]
-        double itsShadingLimitAngle;                // The shading limit angle [radians]
+        public double itsShadingLimitAngle;         // The shading limit angle [radians]
         double itsCollBW;                           // Collector Distance [m]
         double itsPitch;                            // The distance between the rows [m]
         double itsRowsBlock;                        // The number of rows used in the farm set-up [#]
@@ -68,6 +70,7 @@ namespace CASSYS
         {
         }
 
+
         // Calculate Method will solve for the shading factor as it applies to the Beam component of incident irradiance
         public void Calculate
             (
@@ -75,15 +78,35 @@ namespace CASSYS
             , double SunAzimuth             // Azimuth angle of sun [radians]
             , double TDir                   // Tilted direct irradiance [W/m^2]
             , double TDif                   // Tilted diffuse irradiance [W/m^2]
-            , double TRef
+            , double TRef                   // Ground Reflected Irradiance [W/m^2]
+            , double CollectorTilt          // Tilt of the collector [radians]
+            , double CollectorAzimuth       // Azimuth of the collector [radians]
             )
         {
+            // Redefining the collector position (dynamic for Trackers, static for other types)
+            itsCollTilt = CollectorTilt;
+            itsCollAzimuth = CollectorAzimuth;
+
             switch (itsShadModel)
             {
                 case ShadModel.UR:
-                    // Calculating the shading fractions that apply to the beam irradiance (Diffuse and ground reflected component remain constant - calculated in Config)
-                    GetBeamShadingFraction(SunZenith, SunAzimuth);
+                    GetBeamShadingFraction(SunZenith, SunAzimuth, CollectorTilt);
+                    GetDiffuseShadingFraction();
+                    GetGroundReflectedShadingFraction();
                     break;
+
+                case ShadModel.TE:
+                    GetBeamShadingFraction(SunZenith, SunAzimuth, CollectorTilt);
+                    GetDiffuseShadingFraction();
+                    GetGroundReflectedShadingFraction();
+                    break;
+
+                case ShadModel.TS:
+                    GetBeamShadingFraction(SunZenith, SunAzimuth, CollectorTilt);
+                    GetDiffuseShadingFraction();
+                    GetGroundReflectedShadingFraction();
+                    break;
+
                 case ShadModel.FT:
                     // Calculating the shading fractions that apply to the beam irradiance (Diffuse and ground reflected component remain constant - calculated in Config)
                     BeamSF = 1;
@@ -107,6 +130,31 @@ namespace CASSYS
             DiffuseSF = itsRowBlockFactor*(1 + Math.Cos(itsShadingLimitAngle)) / 2;
         }
 
+        // Returns the shading limit angle which is needed to calculate beam and diffuse shading fractions
+        public void GetShadingLimitAngle
+        (
+        double CollectorTilt
+        )
+        {
+            if (CollectorTilt == 0)
+            {
+                itsShadingLimitAngle = 0;
+            }
+
+            else if (itsPitch == 0)
+            {
+                itsShadingLimitAngle = 0;
+            }
+            else
+            {
+                double aux = Math.Sqrt(Math.Pow(itsPitch, 2.0) + Math.Pow(itsCollBW, 2.0) - 2.0 * (itsCollBW * itsPitch * Math.Cos(CollectorTilt)));
+                itsShadingLimitAngle = Math.Acos((Math.Pow(itsPitch, 2.0) + Math.Pow(aux, 2.0) - Math.Pow(itsCollBW, 2.0)) / (2 * itsPitch * aux));
+
+                itsShadingLimitAngle = Math.Max(0, itsShadingLimitAngle);
+                itsShadingLimitAngle = Math.Min(Math.PI, itsShadingLimitAngle);
+            }
+        }
+
         // Returns the shading fraction that must be applied to the albedo or ground-reflected component of POA irradiance
         public void GetGroundReflectedShadingFraction
             (
@@ -122,8 +170,12 @@ namespace CASSYS
             (
             double SunZenith                // Zenith angle of sun [radians] 
             , double SunAzimuth             // Azimuth angle of sun [radians]
+            , double CollectorTilt          // Tilt of the module [radians]
             )
         {
+            // NB: getting shading limit angle for shading calculations
+            GetShadingLimitAngle(CollectorTilt);
+
             // Returns the shading factor for Beam using the GetShadedRow method
             BeamSF = 1 - GetShadedFraction(SunZenith, SunAzimuth)*itsRowBlockFactor;
         }
@@ -151,7 +203,8 @@ namespace CASSYS
                 // Compute profile angle (see Ref 1.)
                 ProfileAng = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsCollAzimuth);
 
-                if (itsShadingLimitAngle <= ProfileAng)
+                // NB: Added small tolerance since shading limit angle and profile angle are found through different methods and could have a small difference
+                if (itsShadingLimitAngle - ProfileAng <= 0.000001)
                 {
                     return 0; // No shading possible as the light reaching the panel behind the row is not limited by the preceding row
                 }
@@ -202,6 +255,14 @@ namespace CASSYS
                 case "Fixed Tilted Plane":
                     itsShadModel = ShadModel.FT;
                     break;
+
+                case "Single Axis Elevation Tracking (E-W)":
+                    itsShadModel = ShadModel.TE;
+                    break;
+
+                case "Single Axis Horizontal Tracking (N-S)":
+                    itsShadModel = ShadModel.TS;
+                    break;
                 
                 default:
                     itsShadModel = ShadModel.None;
@@ -218,13 +279,14 @@ namespace CASSYS
                     itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
                     itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL));
                     itsCollBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
-                    itsShadingLimitAngle = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "ShadingLimit", ErrLevel.FATAL));
+                    
                     itsRowsBlock = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RowsBlock", ErrLevel.FATAL));
                     itsRowBlockFactor = (itsRowsBlock - 1) / itsRowsBlock;
 
-                    // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant throughout the simulation
-                    GetDiffuseShadingFraction();
-                    GetGroundReflectedShadingFraction();
+                    //// Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant throughout the simulation
+                    //GetShadingLimitAngle();
+                    //GetDiffuseShadingFraction();
+                    //GetGroundReflectedShadingFraction();
 
                     // Collecting definitions for cell based shading models or preparing for its absence
                     useCellBasedShading = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S","UseCellVal", ErrLevel.WARNING, _default: "false"));
@@ -250,20 +312,81 @@ namespace CASSYS
                     }
                     break;
 
+                case ShadModel.TE:
+                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL));
+                    itsCollBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
+                    itsRowsBlock = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RowsBlockSAET", ErrLevel.FATAL));
+                    
+                    
+                    itsRowBlockFactor = (itsRowsBlock - 1) / itsRowsBlock;
+
+                    
+
+                    // NB: Using same formula as Unlimited Rows, with SAET added to variable names
+                    // Collecting definitions for cell based shading models or preparing for its absence
+                    useCellBasedShading = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "UseCellValSAET", ErrLevel.WARNING, _default: "false"));
+
+                    // Set up the arrays to allow for shading calculations according to electrical effect
+                    if (useCellBasedShading)
+                    {
+                        CellSize = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CellSizeSAET", ErrLevel.FATAL)) / 100D;
+                        itsNumModTransverseStrings = int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAET", ErrLevel.FATAL));
+                        itsRowBlockFactor = 1; // No row related shading adjustments should be applied.
+
+                        // Use cell based shading to calculate the effect on the beam shading factor
+                        // The shading factor gets worse in steps based on how much of the collector bandwidth is currently under shadowed length
+                        cellSetup = new double[itsNumModTransverseStrings + 1];
+                        shadingPC = new double[itsNumModTransverseStrings + 1];
+
+                        // Defining the arrays needed for Number of cells in each string (transverse) and shading %
+                        for (int i = 1; i <= itsNumModTransverseStrings; i++)
+                        {
+                            cellSetup[i] = (double)i / (double)itsNumModTransverseStrings * (itsCollBW / CellSize);
+                            shadingPC[i] = (double)i / (double)itsNumModTransverseStrings;
+                        }
+                    }
+                    
+                    break;
+
+                case ShadModel.TS:
+                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL));
+                    itsCollBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
+                    itsRowsBlock = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RowsBlockSAST", ErrLevel.FATAL));
+                    
+                    itsRowBlockFactor = (itsRowsBlock - 1) / itsRowsBlock;
+
+                    
+                    // NB: Using same formula as Unlimited Rows, with SAST added to variable names
+                    // Collecting definitions for cell based shading models or preparing for its absence
+                    useCellBasedShading = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "UseCellValSAST", ErrLevel.WARNING, _default: "false"));
+                    
+                    // Set up the arrays to allow for shading calculations according to electrical effect
+                    if (useCellBasedShading)
+                    {
+                        CellSize = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CellSizeSAST", ErrLevel.FATAL)) / 100D;
+                        itsNumModTransverseStrings = int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAST", ErrLevel.FATAL));
+                        itsRowBlockFactor = 1; // No row related shading adjustments should be applied.
+
+                        // Use cell based shading to calculate the effect on the beam shading factor
+                        // The shading factor gets worse in steps based on how much of the collector bandwidth is currently under shadowed length
+                        cellSetup = new double[itsNumModTransverseStrings + 1];
+                        shadingPC = new double[itsNumModTransverseStrings + 1];
+                        
+                        // Defining the arrays needed for Number of cells in each string (transverse) and shading %
+                        for (int i = 1; i <= itsNumModTransverseStrings; i++)
+                        {
+                            cellSetup[i] = (double)i / (double)itsNumModTransverseStrings * (itsCollBW / CellSize);
+                            shadingPC[i] = (double)i / (double)itsNumModTransverseStrings;
+                        }
+                    }
+                    
+                    break;
+
                 case ShadModel.FT:
 
                     // Defining the parameters for the shading for a fixed tilt configuration 
                     itsShadingLimitAngle = 0;
-                    if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.3")
-                    {
-                        itsCollTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
-                        itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthFix", ErrLevel.FATAL));
-                    }
-                    else
-                    {
-                        itsCollTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
-                        itsCollAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
-                    }
+                    
 
                     // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant and 1.
                     DiffuseSF = 1;

@@ -8,6 +8,7 @@
 // Revision History:
 // AP - 2016-01-26: Version 0.9.3
 // NB - 2016-02-17: Updated equations for Tilt and Roll tracker
+// NB - 2016-02-24: Addition of backtracking options for horizontal axis cases
 //
 // Description:
 // This class is reponsible for the simulation of trackers, specifically the 
@@ -25,6 +26,10 @@
 //
 // Rotation Angle for the Optimum Tracking of One-Axis Trackers - Marion and Dobos
 //          NREL, http://www.nrel.gov/docs/fy13osti/58891.pdf
+//
+// Tracking and back-tracking - Lorenzo, Narvarte, and Munoz
+//          Progress in Photovoltaics: Research and Applications, Vol. 19,
+//          Issue 6, pp. 747-753, 2011
 //
 ///////////////////////////////////////////////////////////////////////////////
 // Notes
@@ -77,12 +82,21 @@ namespace CASSYS
         double itsMaxRotationAngle;
         double itsMinAzimuth;
         double itsMaxAzimuth;
+        double itsAzimuthRef;
+        public Boolean useBackTracking;
+        public double itsTrackerPitch;
+        public double itsTrackerBW;
+       
+
 
         // Output Variables
         public double SurfSlope;
         public double SurfAzimuth;
         public double IncidenceAngle;
         public double RotAngle;
+        public double AngleCorrection;
+       
+
 
         // Constructor for the tracker
         public Tracker()
@@ -101,12 +115,24 @@ namespace CASSYS
                     {
                         // For east-west tracking, the absolute value of the sun-azimuth is checked against the tracker azimuth
                         // This is from Duffie and Beckman Page 22.
-                        if (itsTrackerAzimuth == Math.PI / 2)
+                        if (itsTrackerAzimuth == Math.PI / 2 || itsTrackerAzimuth == -Math.PI/2)
                         {
-                            if (Math.Abs(SunAzimuth) >= itsTrackerAzimuth)
+                            // NB: If the user inputs a minimum tilt less than 0, the tracker is able to face the non-dominant direction, so the surface azimuth will change based on the sun azimuth.
+                            // However, if the minimum tilt is greater than zero, the tracker can only face the dominant direction.
+                            if (itsMinTilt <= 0)
                             {
-                                SurfAzimuth = itsTrackerAzimuth + Math.PI / 2;
+                                // TODO: simplify surface azimuth
+                                // NB: Math.Abs is used so that the surface azimuth is set to 0 degrees if the sun azimuth is between -90 and 90, and set to 180 degrees if the sun azimuth is between -180 and -90 or between 90 and 180
+                                if (Math.Abs(SunAzimuth) >= Math.Abs(itsTrackerAzimuth))
+                                {
+                                    SurfAzimuth = Math.PI;
+                                }
+                                else
+                                {
+                                    SurfAzimuth = 0;
+                                }
                             }
+
                             else
                             {
                                 SurfAzimuth = itsTrackerAzimuth - Math.PI / 2;
@@ -114,46 +140,100 @@ namespace CASSYS
                         }
                         else if (itsTrackerAzimuth == 0)
                         {
+                            // TODO: simplify surface azimuth equations
                             // For north-south tracking, the sign of the sun-azimuth is checked against the tracker azimuth
                             // This is from Duffie and Beckman Page 22.
                             if (SunAzimuth >= itsTrackerAzimuth)
                             {
-                                SurfAzimuth = itsTrackerAzimuth + Math.PI / 2;
+                                SurfAzimuth = Math.PI / 2;                            
                             }
                             else
                             {
-                                SurfAzimuth = itsTrackerAzimuth - Math.PI / 2;
+                                SurfAzimuth = -Math.PI / 2;
                             }
                         }
 
-                        SurfSlope = Math.Atan(Math.Tan(SunZenith) * Math.Cos(SurfAzimuth - SunAzimuth));
+                        // TODO: see if atan2() can be used
+                        SurfSlope = Math.Atan2(Math.Sin(SunZenith) * Math.Cos(SurfAzimuth - SunAzimuth),Math.Cos(SunZenith));
 
-                        if (SurfSlope < 0.0)
+                        // NB: to put surface slope into the correct quadrant
+                        // Correction should not be needed if atan2() works in statement above
+                        //if (SurfSlope < 0.0)
+                        //{
+                        //    SurfSlope += Math.PI;
+                        //}
+
+ 
+                        // If the shadow is greater than the Pitch and backtracking is selected
+                        if (useBackTracking)
                         {
-                            SurfSlope += Math.PI;
+                            if (itsTrackerBW / (Math.Cos(SurfSlope)) > itsTrackerPitch)
+                            {
+                                // NB: From Lorenzo, Narvarte, and Munoz
+                                AngleCorrection = Math.Acos((itsTrackerPitch * (Math.Cos(SurfSlope))) / itsTrackerBW);
+                                SurfSlope = SurfSlope - AngleCorrection;
+                            }
                         }
+
+                        // NB: Adjusting limits for elevation tracking, so if positive min tilt, the tracker operates within limits properly
+                        if (itsTrackerAzimuth == Math.PI / 2 || itsTrackerAzimuth == -Math.PI / 2)
+                        {
+                            if (itsMinTilt <= 0)
+                            {
+                                if (Math.Abs(SunAzimuth) <= itsTrackerAzimuth)
+                                {
+                                    SurfSlope = Math.Min(itsMaxTilt, SurfSlope);
+                                }
+                                else if (Math.Abs(SunAzimuth) > itsTrackerAzimuth)
+                                {
+                                    SurfSlope = Math.Min(Math.Abs(itsMinTilt), SurfSlope);
+                                }
+                            }
+
+                            else if (itsMinTilt > 0)
+                            {
+                                SurfSlope = Math.Min(SurfSlope, itsMaxTilt);
+                                SurfSlope = Math.Max(SurfSlope, itsMinTilt);
+                            }
+                        }
+
+                        else if (itsTrackerAzimuth == 0)
+                        {
+                            SurfSlope = Math.Min(itsMaxTilt, SurfSlope);
+                        }
+
+
+                       
                     }
                     else
                     {
                         // Tilt and Roll.
                         double aux = Tilt.GetCosIncidenceAngle(SunZenith, SunAzimuth, itsTrackerSlope, itsTrackerAzimuth);
-                        // Equation given by NREL paper
+                        // Equation (7) from Marion and Dobos
                         RotAngle =  Math.Atan2((Math.Sin(SunZenith) * Math.Sin(SunAzimuth - itsTrackerAzimuth)), aux);
-                        
-                        // Slope from NREL paper
+
+                        //NB: enforcing rotation limits on tracker
+                        RotAngle = Math.Min(itsMaxRotationAngle, RotAngle);
+                        RotAngle = Math.Max(itsMinRotationAngle, RotAngle);
+
+
+                        // Slope from equation (1) in Marion and Dobos
                         SurfSlope = Math.Acos(Math.Cos(RotAngle) * Math.Cos(itsTrackerSlope));
 
                         // Surface Azimuth from NREL paper
                         if (SurfSlope != 0)
                         {
+                            // Equation (3) in Marion and Dobos
                             if ((-Math.PI <= RotAngle) && (RotAngle < -Math.PI/2))
                             {
                                 SurfAzimuth = itsTrackerAzimuth - Math.Asin(Math.Sin(RotAngle) / Math.Sin(SurfSlope)) - Math.PI;
                             }
+                            // Equation (4) in Marion and Dobos
                             else if ((Math.PI / 2 < RotAngle) && (RotAngle <= Math.PI))
                             {
                                 SurfAzimuth = itsTrackerAzimuth - Math.Asin(Math.Sin(RotAngle) / Math.Sin(SurfSlope)) + Math.PI;
                             }
+                            // Equation (2) in Marion and Dobos
                             else
                             {
                                 SurfAzimuth = itsTrackerAzimuth + Math.Asin(Math.Sin(RotAngle) / Math.Sin(SurfSlope));
@@ -173,24 +253,72 @@ namespace CASSYS
 
                 // Two Axis Tracking
                 case TrackMode.TAXT:
-                    // Forcing the Slope to be within tilt limits
+                    // Defining the surface slope
                     SurfSlope = SunZenith;
                     SurfSlope = Math.Max(itsMinTilt, SurfSlope);
                     SurfSlope = Math.Min(itsMaxTilt, SurfSlope);
 
-                    // Forcing the Azimuth to be within the limits
+                    // Defining the surface azimuth
                     SurfAzimuth = SunAzimuth;
+                    
+                    // Changes the reference frame to be with respect to the reference azimuth
+                    if (SurfAzimuth >= 0)
+                    {
+                        SurfAzimuth -= itsAzimuthRef;
+                    }
+                    else
+                    {
+                        SurfAzimuth += itsAzimuthRef;
+                    }
+
+                    // Enforcing the rotation limits with respect to the reference azimuth
                     SurfAzimuth = Math.Max(itsMinAzimuth, SurfAzimuth);
                     SurfAzimuth = Math.Min(itsMaxAzimuth, SurfAzimuth);
+
+                    // Moving the surface azimuth back into the azimuth variable convention
+                    if (SurfAzimuth >= 0)
+                    {
+                        SurfAzimuth -= itsAzimuthRef;
+                    }
+
+                    else
+                    {
+                        SurfAzimuth += itsAzimuthRef;
+                    }
                     break;
 
                 // Azimuth Vertical Axis Tracking
                 case TrackMode.AVAT:
                     // Slope is constant.
-                    // Forcing the Azimuth to be within the limits
+                    // Defining the surface azimuth
                     SurfAzimuth = SunAzimuth;
+
+
+                    // Changes the reference frame to be with respect to the reference azimuth
+                    if (SurfAzimuth >= 0)
+                    {
+                        SurfAzimuth -= itsAzimuthRef;
+                    }
+                    else
+                    {
+                        SurfAzimuth += itsAzimuthRef;
+                    }
+
+                    // Enforcing the rotation limits with respect to the reference azimuth
                     SurfAzimuth = Math.Max(itsMinAzimuth, SurfAzimuth);
                     SurfAzimuth = Math.Min(itsMaxAzimuth, SurfAzimuth);
+
+                    // Moving the surface azimuth back into the azimuth variable convention
+                    if (SurfAzimuth >= 0)
+                    {
+                        SurfAzimuth -= itsAzimuthRef;
+                    }
+
+                    else
+                    {
+                        SurfAzimuth += itsAzimuthRef;
+                    }
+
                     break;
 
                 case TrackMode.NOAT:
@@ -213,11 +341,17 @@ namespace CASSYS
             {
                 case "Fixed Tilted Plane":
                     itsTrackMode = TrackMode.NOAT;
-                    // Defining all the parameters for the shading of a unlimited row array configuration
-                    SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
-                    SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthFix", ErrLevel.FATAL));
+                    if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.3")
+                    {
+                        SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
+                        SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthFix", ErrLevel.FATAL));
+                    }
+                    else
+                    {
+                        SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                        SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+                    }
                     break;
-
                 case "Unlimited Rows":
                     itsTrackMode = TrackMode.NOAT;
                     // Defining all the parameters for the shading of a unlimited row array configuration
@@ -234,6 +368,15 @@ namespace CASSYS
                     // Operational Limits
                     itsMinTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MinTiltSAET", ErrLevel.FATAL));
                     itsMaxTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MaxTiltSAET", ErrLevel.FATAL));
+
+                    
+                    // Backtracking Options
+                    useBackTracking = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BacktrackOptSAET", ErrLevel.WARNING, _default: "false"));
+                    if (useBackTracking)
+                    {
+                        itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL));
+                        itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
+                    }
                     break;
 
                 case "Single Axis Horizontal Tracking (N-S)":
@@ -243,8 +386,17 @@ namespace CASSYS
                     itsTrackerAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisAzimuthSAST", ErrLevel.FATAL));
 
                     // Operational Limits
-                    itsMinRotationAngle = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMinSAST", ErrLevel.FATAL));
-                    itsMaxRotationAngle = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMaxSAST", ErrLevel.FATAL));
+                    itsMaxTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMaxSAST", ErrLevel.FATAL));
+
+                    
+                    // Backtracking Options
+                    useBackTracking = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BacktrackOptSAST", ErrLevel.WARNING, _default: "false"));
+                    if (useBackTracking)
+                    {
+                        itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL));
+                        itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
+                        
+                    }
                     break;
 
                 
@@ -257,6 +409,7 @@ namespace CASSYS
                     // Operational Limits
                     itsMinRotationAngle = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMinTART", ErrLevel.FATAL));
                     itsMaxRotationAngle = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMaxTART", ErrLevel.FATAL));
+
                     break;
                 
                 case "Two Axis Tracking":
@@ -264,6 +417,7 @@ namespace CASSYS
                     // Operational Limits
                     itsMinTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MinTiltTAXT", ErrLevel.FATAL));
                     itsMaxTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MaxTiltTAXT", ErrLevel.FATAL));
+                    itsAzimuthRef = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthRefTAXT", ErrLevel.FATAL));
                     itsMinAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MinAzimuthTAXT", ErrLevel.FATAL));
                     itsMaxAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MaxAzimuthTAXT", ErrLevel.FATAL));
                     break;
@@ -273,6 +427,7 @@ namespace CASSYS
                     // Surface Parameters
                     SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltAVAT", ErrLevel.FATAL));
                     // Operational Limits
+                    itsAzimuthRef = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthRefAVAT", ErrLevel.FATAL));
                     itsMinAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MinAzimuthAVAT", ErrLevel.FATAL));
                     itsMaxAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MaxAzimuthAVAT", ErrLevel.FATAL));
                     break;

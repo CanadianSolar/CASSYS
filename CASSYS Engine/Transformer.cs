@@ -66,7 +66,14 @@ namespace CASSYS
             }
 
             // Calculating the Resistive Losses that result from the Input Power to the Transformer. 
-            itsPResLss = (itsPGlobLoss - itsPIronLoss) * Math.Pow((InputPwr / itsPNom), 2);
+            if (itsPNom > 0 && itsPResLss > 0)
+            {
+                itsPResLss = (itsPGlobLoss - itsPIronLoss) * Math.Pow((InputPwr / itsPNom), 2);
+            }
+            else
+            {
+                itsPResLss = 0;
+            }
 
             // If the incoming power is more than 0 calculate the output using that and the losses
             if (isNightlyDisconnected)
@@ -116,7 +123,8 @@ namespace CASSYS
             itsPIronLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PIronLoss", ErrLevel.WARNING)) * 1000;
             itsPGlobLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PGlobLossTrf", ErrLevel.WARNING)) * 1000;
             itsPNom = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PNomTrf", ErrLevel.WARNING)) * 1000;
-
+            itsPResLss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PResLssTrf", ErrLevel.WARNING)) * 1000;
+            
             // Parameters that determine if the transformer remains ON at night, and initializing the disconnection of the transformer. 
             isNightlyDisconnected = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Transformer", "NightlyDisconnect", ErrLevel.WARNING, _default: "False"));
             if (isNightlyDisconnected)

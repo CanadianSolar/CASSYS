@@ -422,20 +422,30 @@ namespace CASSYS
             }
             else
             {
+
+
+                // NB: throw an error so temp. model does not error
+                if (itsConstHTC <= 0)
+                {
+                    throw new CASSYSException("CASSYS: Constant Heat Loss Factor is negative or is not specified for Temperature Model. This is required as a positive value for the selected temperature model.");
+                }
+                
                 // Checks if WindSpeed is available, forgives if the Convective Heat Transfer Constant is 0.
-                if (double.IsNaN(WindSpeed) && (itsConvHTC != 0))
+                else if (double.IsNaN(WindSpeed) && (itsConvHTC != 0))
                 {
                     throw new CASSYSException("CASSYS: Wind Speed is not specified for Temperature Model. This is a required value for the selected temperature model.");
                 }
-                else
+                else if (itsConvHTC == 0 && double.IsNaN(WindSpeed))
                 {
-                    // Assigning the WindSpeed as zero because calculation is still possible because the product for WindSpeed *itsConvHTC is 0. Warn User.
+                    // Forgives the fact that no Wind Speed was specified.
                     WindSpeed = 0;
-
-                    // Calculate temperature based on values provided by the User
-                    TModule = TAmbient + itsAdsorp * TGloAkt * (1 - itsEfficiencyRef) / (itsConstHTC + itsConvHTC * WindSpeed); // Faiman's module temperature model
                 }
-            }
+                
+                
+                // Calculate temperature based on values provided by the User
+                TModule = TAmbient + itsAdsorp * TGloAkt * (1 - itsEfficiencyRef) / (itsConstHTC + itsConvHTC * WindSpeed); // Faiman's module temperature model
+
+             }
         }
 
         // Config will assign parameter variables their values as obtained from the .CSYX file

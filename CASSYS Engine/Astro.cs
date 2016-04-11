@@ -285,11 +285,11 @@ namespace CASSYS
             {
                 throw new System.ArgumentException("GetAirMass: Invalid zenith value.");
             }
-  
-          if (Zenith < Math.PI/2) 
-            return 1/(Math.Cos(Zenith) + 0.15*Math.Pow(93.885-RTOD*Zenith, -1.253));
-          else
-            return 1/(0.15*Math.Pow(3.885, -1.253));
+
+            if (Zenith < Math.PI / 2)
+                return Math.Max(1 / (Math.Cos(Zenith) + 0.15 * Math.Pow(93.885 - RTOD * Zenith, -1.253)), 1);
+            else
+                return 1 / (0.15 * Math.Pow(3.885, -1.253));
         }
 
         // Sunset and day length, Sunset hour angle [radians]. See Duffie and Beckman (1991) eq. 1.6.10

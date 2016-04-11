@@ -214,6 +214,10 @@ namespace CASSYS
                 // Bi-phase inverter
                 outputPhases = 2;
             }
+            else if (ReadFarmSettings.GetInnerText("Inverter", "Type", _ArrayNum: ArrayNum) == "Mono")
+            {
+                outputPhases = 1;
+            }
             else
             {
                 ErrorLogger.Log("The Inverter output phase definition was not found. Please check the Inverter in the Inverter database.", ErrLevel.FATAL);
