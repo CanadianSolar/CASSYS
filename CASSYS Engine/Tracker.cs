@@ -76,25 +76,25 @@ namespace CASSYS
         
 
         // Operational Limits (as they apply to the surface, typically)
-        double itsMinTilt;
-        double itsMaxTilt;
-        double itsMinRotationAngle;
-        double itsMaxRotationAngle;
-        double itsMinAzimuth;
-        double itsMaxAzimuth;
-        double itsAzimuthRef;
-        public Boolean useBackTracking;
-        public double itsTrackerPitch;
-        public double itsTrackerBW;
+        double itsMinTilt;					// Min. slope of tracker surface with respect to horizontal [radians]
+        double itsMaxTilt;					// Max. slope of tracker surface with respect to horizontal [radians]
+        double itsMinRotationAngle;			// Min. angle of rotation of surface about tracker axis [radians]
+        double itsMaxRotationAngle;			// Max. angle of rotation of surface about tracker axis [radians]
+        double itsMinAzimuth;				// Min. angle of horizontal proj. of normal to module surface and true South [radians]
+        double itsMaxAzimuth;				// Max. angle of horizontal proj. of normal to module surface and true South [radians]
+        double itsAzimuthRef;				// Describes whether the tracker is in the northern or southern hemisphere
+        public Boolean useBackTracking;	    // Boolean used to determine if backtracking is enabled
+        public double itsTrackerPitch;		// Distance between two rows of trackers [m]
+        public double itsTrackerBW;			// Width of single tracker array [m]
        
 
 
         // Output Variables
-        public double SurfSlope;
-        public double SurfAzimuth;
-        public double IncidenceAngle;
-        public double RotAngle;
-        public double AngleCorrection;
+        public double SurfSlope;			// Angle of tracker surface with respect to horizontal [radians]
+        public double SurfAzimuth;			// Angle between horizontal projection of normal to module surface and true South [radians]
+        public double IncidenceAngle;       // Angle of a ray of light incident on the normal of panel surface [radians]
+        public double RotAngle;				// Angle of rotation of surface about tracker axis [radians]
+        public double AngleCorrection;		// With backtracking enabled, this angle adjustment is applied to the surface slope angle [radians]
        
 
 
@@ -117,12 +117,11 @@ namespace CASSYS
                         // This is from Duffie and Beckman Page 22.
                         if (itsTrackerAzimuth == Math.PI / 2 || itsTrackerAzimuth == -Math.PI/2)
                         {
-                            // NB: If the user inputs a minimum tilt less than 0, the tracker is able to face the non-dominant direction, so the surface azimuth will change based on the sun azimuth.
+                            // If the user inputs a minimum tilt less than 0, the tracker is able to face the non-dominant direction, so the surface azimuth will change based on the sun azimuth.
                             // However, if the minimum tilt is greater than zero, the tracker can only face the dominant direction.
                             if (itsMinTilt <= 0)
                             {
-                                // TODO: simplify surface azimuth
-                                // NB: Math.Abs is used so that the surface azimuth is set to 0 degrees if the sun azimuth is between -90 and 90, and set to 180 degrees if the sun azimuth is between -180 and -90 or between 90 and 180
+                                // Math.Abs is used so that the surface azimuth is set to 0 degrees if the sun azimuth is between -90 and 90, and set to 180 degrees if the sun azimuth is between -180 and -90 or between 90 and 180
                                 if (Math.Abs(SunAzimuth) >= Math.Abs(itsTrackerAzimuth))
                                 {
                                     SurfAzimuth = Math.PI;
@@ -132,7 +131,6 @@ namespace CASSYS
                                     SurfAzimuth = 0;
                                 }
                             }
-
                             else
                             {
                                 SurfAzimuth = itsTrackerAzimuth - Math.PI / 2;
@@ -140,7 +138,6 @@ namespace CASSYS
                         }
                         else if (itsTrackerAzimuth == 0)
                         {
-                            // TODO: simplify surface azimuth equations
                             // For north-south tracking, the sign of the sun-azimuth is checked against the tracker azimuth
                             // This is from Duffie and Beckman Page 22.
                             if (SunAzimuth >= itsTrackerAzimuth)
@@ -152,8 +149,8 @@ namespace CASSYS
                                 SurfAzimuth = -Math.PI / 2;
                             }
                         }
-
-                        // TODO: see if atan2() can be used
+						
+						// Surface slope calculated from eq. 31 of reference guide
                         SurfSlope = Math.Atan2(Math.Sin(SunZenith) * Math.Cos(SurfAzimuth - SunAzimuth),Math.Cos(SunZenith));
 
                         // NB: to put surface slope into the correct quadrant
@@ -175,7 +172,7 @@ namespace CASSYS
                             }
                         }
 
-                        // NB: Adjusting limits for elevation tracking, so if positive min tilt, the tracker operates within limits properly
+                        // Adjusting limits for elevation tracking, so if positive min tilt, the tracker operates within limits properly
                         if (itsTrackerAzimuth == Math.PI / 2 || itsTrackerAzimuth == -Math.PI / 2)
                         {
                             if (itsMinTilt <= 0)

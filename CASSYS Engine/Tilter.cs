@@ -7,6 +7,12 @@
 // 
 // Revision History:
 // DT - 2014-11-11: Version 0.1
+// DT - 2016-04-26: Version 0.9.4 Harmonized treatment of beam irradiance 
+//                  between Perez and Hay model by limiting to 90% of extra-
+//                  terrestrial irradiance in both cases. Harmonized
+//                  treatment of zenith > 90 degrees.
+// DT - 2016-05-31: Version 0.9.5 Further hazmonization and fixed bug in Hay
+//                  model when sun is above horizon but behind panel
 //
 // Description: 
 // Implementation of the Hay and Perez transposition models
@@ -109,8 +115,7 @@ namespace CASSYS
         // isotropic assumption is employed.
 
         double GetTiltCompIrradPerez        // (o) global irradiance on tilted surface [W/m2] 
-            (
-              out double TDir               // (o) beam //   on tilted surface [W/m2] 
+            ( out double TDir               // (o) beam //   on tilted surface [W/m2] 
             , out double TDif               // (o) diffuse irradiance on tilted surface [W/m2] 
             , out double TRef               // (o) reflected irradiance on tilted surface [W/m2] 
             , double HDir                   // (i) direct irradiance on horizontal surface [W/m2] 
@@ -152,30 +157,40 @@ namespace CASSYS
             TGlo = TDif = TDir = TRef = 0;
 
             // Check arguments
-            try
-           {
-                if (SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI ||
-                AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsSurfaceAzimuth < -Math.PI || itsSurfaceAzimuth > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
-                {
-                    throw new CASSYSException("GetTiltCompIrradiance: Arguments were out of range.");
-               }
-                cosZenith = Math.Cos(SunZenith);
-                cosInc = Math.Cos(SunZenith) * Math.Cos(itsSurfaceSlope)
-                         + Math.Sin(SunZenith) * Math.Sin(itsSurfaceSlope) * Math.Cos(itsSurfaceAzimuth - SunAzimuth);
-                HGlo = HDif + HDir;
-                rd1 = (1.0 + Math.Cos(itsSurfaceSlope)) / 2;
-                rd2 = (1.0 - Math.Cos(itsSurfaceSlope)) / 2;
+            if (NExtra < 0 || SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI || 
+            AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsSurfaceAzimuth < -Math.PI || itsSurfaceAzimuth > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
+            {
+                ErrorLogger.Log("GetTiltCompIrradPerez: out of range arguments.", ErrLevel.FATAL);
+            }
+
+            //  Compute cosine of incidence angle and cosine of zenith angle
+            //  cos(Zenith) is bound by cos(89 degrees) to avoid large values
+            //  near sunrise and sunset. 
+            cosZenith = Math.Max(Math.Cos(SunZenith), Math.Cos(89.0 * Util.DTOR));
+            cosInc = Math.Cos(SunZenith) * Math.Cos(itsSurfaceSlope)
+                        + Math.Sin(SunZenith) * Math.Sin(itsSurfaceSlope) * Math.Cos(itsSurfaceAzimuth - SunAzimuth);
+            HGlo = HDif + HDir;
+            rd1 = (1.0 + Math.Cos(itsSurfaceSlope)) / 2;
+            rd2 = (1.0 - Math.Cos(itsSurfaceSlope)) / 2;
 
 
-                // negative values or sun below horizon 
-                if (HDif <= 0 && HDir <= 0) return 0.0;
-                if (SunZenith > Math.PI / 2 || NExtra < 0) return HGlo;
+            //  Negative values: return zero
+            if (HDif <= 0 && HDir <= 0) return 0.0;
 
+            // If sun below horizon, treat all irradiance as diffuse isotropic
+            if (SunZenith >= Math.PI / 2)
+            {
+                TDif = HGlo * (1 + Math.Cos(itsSurfaceSlope)) / 2;
+            }
+
+            // Normal case
+            else
+            {
                 //  Compute delta, eps, and bin number
                 //  delta = parametrization of sky's brightness
                 //  eps = parametrization of sky's clearness
                 //  ibin: bin number
-                //  normally delta is in the range 0.08-0.048 (see Perez et al., 1990, fig. 5)
+                //  normally delta is in the range 0.08-0.48 (see Perez et al., 1990, fig. 5)
                 //  but if the input data is wrong the values could be much higher, which can
                 //  then cause problems in the calculation of tilted diffuse irradiance (TDif).
                 //  Therefore we limit delta to 1.
@@ -193,29 +208,24 @@ namespace CASSYS
 
                 // calculation of diffuse irradiance on the sloping surface 
                 TDif = HDif * ((1 - fone) * rd1 + fone * a / b + ftwo * Math.Sin(itsSurfaceSlope));
-
-                // calculation of direct irradiance on a sloping surface
-                //  this is just a trigonometric transformation
-                //  note: to avoid problems at low sun angles, HDir/cosZenith is limited
-                //  to 90% of solar constant 
-                TDir = Math.Max(Math.Min(HDir / cosZenith, 0.9 * Util.SOLAR_CONST) * cosInc, 0);
-
-                // calculation of reflected irradiance onto the slope
-                //  from Ineichen.  P.et al., Solar Energy, 41(4), 371-377, 1988
-                //  a simple assumption of isotropic reflection is used 
-                TRef = (HDir + HDif) * itsMonthlyAlbedo[MonthNum] * rd2;
-
-                // summation for global irradiance on slope 
-                TGlo = TDir + TDif + TRef;
-
-                // end of subroutine 
-                return TGlo;
             }
-            catch (CASSYSException cs)
-            {
-                ErrorLogger.Log(cs, ErrLevel.WARNING);
-                return Util.BADDATA;
-            }
+
+            // calculation of direct irradiance on a sloping surface
+            // this is just a trigonometric transformation
+            // note: to avoid problems at low sun angles, HDir/cosZenith is limited
+            // to 90% of solar constant 
+            TDir = Math.Max(Math.Min(HDir / cosZenith, 0.9 * Util.SOLAR_CONST) * cosInc, 0);
+
+            // calculation of reflected irradiance onto the slope
+            //  from Ineichen.  P.et al., Solar Energy, 41(4), 371-377, 1988
+            //  a simple assumption of isotropic reflection is used 
+            TRef = (HDir + HDif) * itsMonthlyAlbedo[MonthNum] * rd2;
+
+            // summation for global irradiance on slope 
+            TGlo = TDir + TDif + TRef;
+
+            // end of subroutine 
+            return TGlo;
         }
 
         ///////////////////////////////////////////////////////////////////////////////
@@ -246,8 +256,7 @@ namespace CASSYS
         // isotropic assumption is employed.
 
         double GetTiltCompIrradHay      // (o) global irradiance on tilted surface [W/m2] 
-            (
-            out double TDir             // (o) beam irradiance on tilted surface [W/m2] 
+            ( out double TDir           // (o) beam irradiance on tilted surface [W/m2] 
             , out double TDif           // (o) diffuse irradiance on tilted surface [W/m2] 
             , out double TRef           // (o) reflected irradiance on tilted surface [W/m2] 
             , double HDir               // (i) direct irradiance on horizontal surface [W/m2] 
@@ -269,9 +278,6 @@ namespace CASSYS
             //  Initialize values 
             TGlo = TDif = TDir = TRef = 0;
 
-            //  Negative values or sun below horizon 
-            if (HDif <= 0 && HDir <= 0) return 0.0;
-
             //  Check arguments
             if (NExtra < 0 || SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI ||
                 itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsSurfaceAzimuth < -Math.PI || itsSurfaceAzimuth > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
@@ -280,24 +286,25 @@ namespace CASSYS
                 ErrorLogger.Log("GetTiltCompIrradHay: out of range arguments.", ErrLevel.FATAL);
             }
 
-            //  Negative values or sun below horizon 
+            //  Negative values: return zero
             if (HDif <= 0 && HDir <= 0) return 0.0;
 
             //  Compute cosine of incidence angle and cosine of zenith angle
-            //  cos(Zenith) is bound by cos(86.25 degrees) to avoid large values
+            //  cos(Zenith) is bound by cos(89 degrees) to avoid large values
             //  near sunrise and sunset. 
-            cosInc = Tilt.GetCosIncidenceAngle(SunZenith, SunAzimuth,
-                itsSurfaceSlope, itsSurfaceAzimuth);
-
+            cosInc = Math.Cos(SunZenith) * Math.Cos(itsSurfaceSlope)
+                        + Math.Sin(SunZenith) * Math.Sin(itsSurfaceSlope) * Math.Cos(itsSurfaceAzimuth - SunAzimuth);
             cosZenith = Math.Max(Math.Cos(SunZenith), Math.Cos(89.0 * Util.DTOR));
 
             //  Compute tilted beam irradiance
             //  Rb is the ratio of beam radiation on the tilted surface to that on
             //  a horizontal surface. Duffie and Beckman (1991) eqn 1.8.1 
+            // note: to avoid problems at low sun angles, HDir/cosZenith is limited
+            // to 90% of solar constant 
             Rb = 0;
             if (SunZenith < Math.PI / 2 && cosInc > 0)
                 Rb = cosInc / cosZenith;
-            TDir = HDir * Rb;
+            TDir = Math.Max(Math.Min( HDir * Rb, 0.9 * Util.SOLAR_CONST * cosInc) , 0);
 
             // Compute anisotropy index AI and diffuse radiation
             //  Duffie and Beckman (1991) eqn. 2.16.2 and 2.16.3 
@@ -305,15 +312,8 @@ namespace CASSYS
 
 
 			// Calculate diffuse irradiance
-            // If sun below horizon or sun behind panel, treat all irradiance as diffuse isotropic
-            if (SunZenith >= Math.PI / 2 || cosInc <= 0)
-            {
-                TDif = HGlo * (1 + Math.Cos(itsSurfaceSlope)) / 2;
-            }
-            else
-            {
-                TDif = HDif * (AI * Rb + (1 - AI) * (1 + Math.Cos(itsSurfaceSlope)) / 2);
-            }
+            // There is no special treatment for sun below horizon or sun behind panel, as Rb = 0 then
+            TDif = HDif * (AI * Rb + (1 - AI) * (1 + Math.Cos(itsSurfaceSlope)) / 2);
 
             // Compute ground-reflected irradiance 
             TRef = HGlo * itsMonthlyAlbedo[MonthNum] * (1 - Math.Cos(itsSurfaceSlope)) / 2;
