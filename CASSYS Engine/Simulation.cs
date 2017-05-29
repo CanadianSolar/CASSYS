@@ -45,6 +45,7 @@ namespace CASSYS
         Sun SimSun = new Sun();
         Splitter SimSplitter = new Splitter();
         Tracker SimTracker = new Tracker();
+        HorizonShading SimHorizonShading = new HorizonShading();
         Tilter SimTilter = new Tilter();
         Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
         Shading SimShading = new Shading();
@@ -56,6 +57,9 @@ namespace CASSYS
         Inverter[] SimInv;
 
         // Calculations for Writing to Output
+
+        
+
         // Local variable declarations
         double ShadBeamLoss;                            // Shading Losses to Beam
         double ShadDiffLoss;                            // Shading Losses to Diffuse
@@ -136,9 +140,10 @@ namespace CASSYS
                 // Weather and radiation related objects.
                 // The sun class requires the configuration of the surface slope to calculate the apparent sunset and sunrise hours.
                 SimTracker.Config();
+                SimHorizonShading.Config(SimTracker.SurfSlope, SimTracker.SurfAzimuth, SimTracker.itsTrackMode);
                 SimSun.itsSurfaceSlope = SimTracker.SurfSlope;
                 SimSun.Config();
-                
+               
                 pyranoTilter.ConfigPyranometer();
                 SimTilter.Config();
             }
@@ -269,8 +274,7 @@ namespace CASSYS
                 {
                     InputFileReader.SetDelimiters(ReadFarmSettings.delim);
                 }
-
-
+                
                 // Read through the Input File 
                 while (!InputFileReader.EndOfData)
                 {
@@ -311,17 +315,12 @@ namespace CASSYS
                     if ((TimeStepEnd > SimSun.TrueSunSetHour) && (TimeStepBeg < SimSun.TrueSunSetHour))
                     {
                         HourOfDay = TimeStepBeg + (SimSun.TrueSunSetHour - TimeStepBeg) / 2;
-
-                        // The sun has set, so the transformer should now be disconnected (only used if transformer is disconnected at night)
-                        SimTransformer.isDisconnectedNow = true;
                     }
                     else if ((TimeStepBeg < SimSun.TrueSunRiseHour) && (TimeStepEnd > SimSun.TrueSunRiseHour))
                     {
                         HourOfDay = SimSun.TrueSunRiseHour + (TimeStepEnd - SimSun.TrueSunRiseHour) / 2;
-
-                        // The sun has risen, so the transformer should now be Connected (only used if transformer is disconnected at night)
-                        SimTransformer.isDisconnectedNow = false;
                     }
+
                     
                     // Based on the definition of Input file, use Tilted irradiance or transpose the horizontal irradiance
                     if (ReadFarmSettings.UsePOA == true)
@@ -404,15 +403,19 @@ namespace CASSYS
                         }
 
                         Transpose();
+                        
                     }
-
+                    
+                    // Calculate horizon shading effects
+                    SimHorizonShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTracker.SurfSlope, SimTracker.SurfAzimuth, SimTilter.TDir, SimTilter.TDif, SimTilter.TRef, SimSplitter.HDir, SimSplitter.HDif, SimTracker.itsTrackMode);
+                                   
                 #endregion
 
                     // If Irradiance is the only item required by the user do not do the calculations.
                     if (!ReadFarmSettings.NoSystemDefined)
                     {
                         // Calculate shading and determine the values of tilted radiation components based on shading factors
-                        SimShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTilter.TDir, SimTilter.TDif, SimTilter.TRef, SimTracker.SurfSlope, SimTracker.SurfAzimuth);
+                        SimShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimHorizonShading.TDir, SimHorizonShading.TDif, SimHorizonShading.TRef, SimTracker.SurfSlope, SimTracker.SurfAzimuth);
 
                         #region PV Array and Inverter calculations
                         try
@@ -719,9 +722,17 @@ namespace CASSYS
                 // Split global into direct and diffuse
                 SimSplitter.Calculate(SimSun.Zenith, SimMet.HGlo, _HDif: SimMet.HDiff, NExtra: SimSun.NExtra);
             }
+           
 
             // Calculate tilted irradiance
             SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, MonthOfYear);
+
+            //if (ReadFarmSettings.UsePOA != true)
+            //{
+            //    // Calculate horizon shading effects
+            //    SimHorizonShading.Calculate(SimSun.Zenith, SimSun.Azimuth, SimTracker.itsTrackerSlope, SimTracker.itsTrackerAzimuth);
+            //}
+
         }
 
         // De-transposition of the titled irradiance values to the global horizontal values
@@ -864,9 +875,10 @@ namespace CASSYS
         String GetOutputLine()
         {
             // Shading each component of the Tilted radiaton
-            ShadBeamLoss = SimTilter.TDir - SimShading.ShadTDir;
-            ShadDiffLoss = SimTilter.TDif > 0 ? SimTilter.TDif - SimShading.ShadTDif : 0;
-            ShadRefLoss = SimTilter.TRef > 0 ? SimTilter.TRef - SimShading.ShadTRef : 0;
+            // Using horizon affected tilted radiation
+            ShadBeamLoss = SimHorizonShading.TDir - SimShading.ShadTDir;
+            ShadDiffLoss = SimTilter.TDif > 0 ? SimHorizonShading.TDif - SimShading.ShadTDif : 0;
+            ShadRefLoss = SimTilter.TRef > 0 ? SimHorizonShading.TRef - SimShading.ShadTRef : 0;
 
             // Setting all output variables to 0 to enable calculations
             farmDC = 0;                                  // Farm/PVArray DC Output [W]
@@ -929,11 +941,12 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Horizontal_beam_irradiance"] = SimSplitter.HDir;
             ReadFarmSettings.Outputlist["Ambient_Temperature"] = SimMet.TAmbient;
             ReadFarmSettings.Outputlist["Wind_Velocity"] = SimMet.WindSpeed;
-            ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Plane"] = SimTilter.TGlo;
-            ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimTilter.TDir;
-            ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimTilter.TDif;
-            ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimTilter.TRef;
-            // NB: moved these outputs so they are processed with or without a system
+            
+            // Testing currently, just putting in horizon values for this
+            ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Plane"] = SimHorizonShading.TGlo;
+            ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimHorizonShading.TDir;
+            ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimHorizonShading.TDif;
+            ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimHorizonShading.TRef;
             ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;
             ReadFarmSettings.Outputlist["Tracker_Azimuth"] = SimTracker.itsTrackerAzimuth * Util.RTOD;
             ReadFarmSettings.Outputlist["Tracker_Rotation_Angle"] = SimTracker.RotAngle * Util.RTOD;

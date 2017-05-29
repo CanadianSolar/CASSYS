@@ -1,7 +1,9 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual C# Express 2010
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CASSYS", "CASSYS Engine\CASSYS.csproj", "{B095D539-D9D0-4C36-A513-EAD9D1DF7491}"
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CASSYS", "CASSYS.csproj", "{B095D539-D9D0-4C36-A513-EAD9D1DF7491}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

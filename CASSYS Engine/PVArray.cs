@@ -72,6 +72,10 @@ namespace CASSYS
         // Module Temperature and Irradiance Coefficients
         double itsBo;                                       // ASHARE Parameter used for IAM calculation (see Ref 5)
         bool userIAMModel;                                  // If a userIAM profile is defined or the ASHRAE model is used.
+        bool panIAMModel;                                   // If a panIAM profile is defined
+        bool panAOIModel;
+        bool panModelExists;
+        double[][] itsPANIAMProfile = new double[2][];      // The IAM profile from the .PAN file
         double[][] itsUserIAMProfile = new double[2][];     // The IAM profile entered by the user.
         double itsTCoefIsc;                                 // Temperature coefficient for Isc [1/C]
         double itsTCoefVoc;                                 // Temperature coefficient for Voc [1/C]
@@ -106,7 +110,7 @@ namespace CASSYS
         public double IAMTGlo;                // IAM TGlo [W/m^2]
         public double IAMDir;                 // IAM Factor applied to Beam [#]
         public double IAMDif;                 // IAM Factor applied to Diffuse [#]
-        public double IAMRef;                // IAM factor applied to ground reflected component of tilted irradiance [#]
+        public double IAMRef;                 // IAM factor applied to ground reflected component of tilted irradiance [#]
         public double VOut;                   // PV array voltage at maximum power [V] 
         public double IOut;                   // PV array current at maximum power [A] 
         public double POut;                   // PV array power produced [W]  
@@ -190,7 +194,9 @@ namespace CASSYS
             mIPhi = TGloEff / itsHref * (itsIPhiRef + itsTCoefIsc * (TModule - itsTref));
 
             // Adjust Voc based on temperature (similar to current adjustment above)
-            mVoc = itsVocref + itsTCoefVoc * (TModule - itsTref);
+            CalcAtOpenCircuit();
+            mVoc = Voc / itsNSeries;
+
         }
 
         // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred
@@ -204,7 +210,16 @@ namespace CASSYS
             )
         {
             // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component (Calculated using ASHRAE Parameter, see Ref 5 in PV Array Class)
-            if (userIAMModel)
+            if (panModelExists)
+            {
+                InciAng = Math.Max(0, InciAng);
+                InciAng = Math.Min(InciAng, Math.PI / 2);
+
+                IAMDir = Interpolate.Bezier(itsPANIAMProfile[0], itsPANIAMProfile[1], InciAng * Util.RTOD, itsPANIAMProfile[0].Length);
+                IAMDif = Interpolate.Bezier(itsPANIAMProfile[0], itsPANIAMProfile[1], Util.DiffInciAng * Util.RTOD, itsPANIAMProfile[0].Length);
+                IAMRef = IAMDif;
+            }
+            else if (userIAMModel)
             {
                 InciAng = Math.Max(0, InciAng);
                 InciAng = Math.Min(InciAng, Math.PI / 2);
@@ -312,10 +327,10 @@ namespace CASSYS
         public void CalcAtOpenCircuit()
         {
             // Finding Voc (Using N-R method)
-            double TModuleK = Utilities.ConvertCtoK(TModule);                                           // Converting the Temperature from C to K [K]
+            double TModuleK = Utilities.ConvertCtoK(TModule);                                                     // Converting the Temperature from C to K [K]
             double expArg = Util.ELEMCHARGE / (itsCellCount * itsGamma * Util.BOLTZMANNCONST * TModuleK);         // Argument for the exponential - constant
-            double vocNew = mVoc;                                                                       // First guess for Voc [V]
-            double vocGuess = 0;                                                                        // Iteration variable for Voc - Initialized [V]
+            double vocNew = itsVocref;                                                                            // First guess for Voc [V]
+            double vocGuess = 0;                                                                                  // Iteration variable for Voc - Initialized [V]
             double vocTol = 0.0001;                                                                     // Tolerated Voc Error [V]
             double fVoc = 0;                                                                            // Voc function initialized
             double fpVoc = 0;                                                                           // Voc function derivative initialized
@@ -379,7 +394,6 @@ namespace CASSYS
                     iterCounter++;
                     if (iterCounter > Util.NRLIMIT)
                     {
-
                         throw new NRException("Current at a given voltage.");
                     }
                 }
@@ -445,7 +459,7 @@ namespace CASSYS
                 // Calculate temperature based on values provided by the User
                 TModule = TAmbient + itsAdsorp * TGloAkt * (1 - itsEfficiencyRef) / (itsConstHTC + itsConvHTC * WindSpeed); // Faiman's module temperature model
 
-             }
+            }
         }
 
         // Config will assign parameter variables their values as obtained from the .CSYX file
@@ -498,33 +512,67 @@ namespace CASSYS
             }
             else
             {
-                if ((ReadFarmSettings.GetAttribute("Losses", "IAMSelection", _Adder: "/IncidenceAngleModifier", _VersionNum: "0.9.1", _ArrayNum: ArrayNum) == "ASHRAE"))
+                double placeholder;
+                panModelExists = double.TryParse(ReadFarmSettings.GetInnerText("PV", "IAMDefinition/AOI1", _VersionNum: "0.9.3", _ArrayNum: ArrayNum, _default: null), out placeholder);
+                if (panModelExists)
+                {
+                    List<double> PANAOI = new List<double>();
+                    List<double> PANIAM = new List<double>();
+                    if (placeholder != 0)
+                    {
+                        PANAOI.Add(0);
+                        PANIAM.Add(1);
+                    }
+                    double aoiplaceholder;
+                    double iamplaceholder;
+
+                    // Using the Angle of incidence as an iteration variable
+                    // Gettings values from the IAM list
+                    for (int i = 1; i <= 9; i += 1)
+                    {
+                        panIAMModel = double.TryParse(ReadFarmSettings.GetInnerText("PV", "IAMDefinition/Mod" + i.ToString(), _VersionNum: "0.9.3", _ArrayNum: ArrayNum, _default: null), out iamplaceholder);
+                        panAOIModel = double.TryParse(ReadFarmSettings.GetInnerText("PV", "IAMDefinition/AOI" + i.ToString(), _VersionNum: "0.9.3", _ArrayNum: ArrayNum, _default: null), out aoiplaceholder);
+
+                        if (panIAMModel && panAOIModel)
+                        {
+                            PANAOI.Add(aoiplaceholder);
+                            PANIAM.Add(iamplaceholder);
+                        }
+                    }
+
+                    itsPANIAMProfile[0] = PANAOI.ToArray();
+                    itsPANIAMProfile[1] = PANIAM.ToArray();
+                }
+
+                else if (ReadFarmSettings.GetAttribute("Losses", "IAMSelection", _Adder: "/IncidenceAngleModifier", _VersionNum: "0.9.1", _ArrayNum: ArrayNum) == "ASHRAE")
                 {
                     itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL, _default: "0.05"));
                 }
-                else
+
+                else if (ReadFarmSettings.GetAttribute("Losses", "IAMSelection", _Adder: "/IncidenceAngleModifier", _VersionNum: "0.9.1", _ArrayNum: ArrayNum) == "User Defined")
                 {
                     List<double> UserAOI = new List<double>();
                     List<double> UserIAM = new List<double>();
 
-                    double placeholder;
+                    double userplaceholder;
 
                     // Using the Angle of incidence as an iteration variable
                     // Gettings values from the IAM list
-                    for (int AOI = 0; AOI <= 90; AOI +=5)
+                    for (int AOI = 0; AOI <= 90; AOI += 5)
                     {
-                        userIAMModel = double.TryParse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/IAM_" + AOI.ToString(), _VersionNum: "0.9.1", _ArrayNum: ArrayNum, _default: null), out placeholder);
+                        userIAMModel = double.TryParse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/IAM_" + AOI.ToString(), _VersionNum: "0.9.1", _ArrayNum: ArrayNum, _default: null), out userplaceholder);
 
                         if (userIAMModel)
                         {
                             UserAOI.Add(Convert.ToDouble(AOI));
-                            UserIAM.Add(placeholder);
+                            UserIAM.Add(userplaceholder);
                         }
                     }
 
                     itsUserIAMProfile[0] = UserAOI.ToArray();
                     itsUserIAMProfile[1] = UserIAM.ToArray();
                 }
+
             }
 
             // If soiling losses are defined on a monthly basis, then populate an array with values for each month
@@ -671,6 +719,7 @@ namespace CASSYS
 
             // Calculate the Gamma Temperature Coefficient Parameter for the module
             CalcGammaCoeff();
+
         }
 
         // Calculate GammaCoefficient Parameters for the module using the Temperature Coefficient for Power provided in the database. 
@@ -692,7 +741,7 @@ namespace CASSYS
             mIPhi = itsIPhiRef + itsTCoefIsc * (TModule - itsTref);
 
             // Adjust Voc based on temperature (similar to current adjustment above)
-            mVoc = itsVocref + itsTCoefVoc * (TModule - itsTref);
+            mVoc = itsVocref;
 
             // The shunt resistance will be at reference levels.
             itsRsh = itsRpRef;

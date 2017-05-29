@@ -41,12 +41,18 @@ namespace CASSYS
 
             // Declaring a new simulation object
             Simulation PVPlant = new Simulation();
+            // Testing horizon shading
+            //HorizonShading Shading = new HorizonShading();
             
             if (args.Length == 1)
             {
                 // Running the Simulation based on the CASSYS Configuration File provided
                 ReadFarmSettings.batchMode = false;
                 PVPlant.Simulate(args[0]);
+                
+                // For testing the horizon shading
+                //Shading.TestSuite(args[0]);
+                            
 
                 // Show the end of simulation message, window should be kept open for longer
                 ReadFarmSettings.ShowFooter();
@@ -64,12 +70,14 @@ namespace CASSYS
                 String SimOutputFilePath = Console.ReadLine();
                 
                 // Send arguments to simulation object and run.
+
                 PVPlant.Simulate(SimFilePath.Replace("\\", "/"), _Input: SimInputFilePath.Replace("\\", "/"), _Output: SimOutputFilePath.Replace("\\", "/"));
             }
             else if (args.Length == 3)
             {
                 // Set batch mode to true, and Run from command prompt arguments directly
                 ReadFarmSettings.batchMode = true;
+
                 PVPlant.Simulate(args[0], _Input: args[1], _Output: args[2]);
             }
             else

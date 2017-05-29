@@ -70,7 +70,7 @@ namespace CASSYS
     {
         // Local variables
         // Tracker Variables (Made public to write to output file)
-        TrackMode itsTrackMode;
+        public TrackMode itsTrackMode;
         public double itsTrackerSlope;
         public double itsTrackerAzimuth;
         
@@ -204,7 +204,7 @@ namespace CASSYS
                     }
                     else
                     {
-                        // Tilt and Roll.
+                        // Tilt and Roll
                         double aux = Tilt.GetCosIncidenceAngle(SunZenith, SunAzimuth, itsTrackerSlope, itsTrackerAzimuth);
                         // Equation (7) from Marion and Dobos
                         RotAngle =  Math.Atan2((Math.Sin(SunZenith) * Math.Sin(SunAzimuth - itsTrackerAzimuth)), aux);

@@ -304,7 +304,8 @@ namespace CASSYS
             Rb = 0;
             if (SunZenith < Math.PI / 2 && cosInc > 0)
                 Rb = cosInc / cosZenith;
-            TDir = Math.Max(Math.Min( HDir * Rb, 0.9 * Util.SOLAR_CONST * cosInc) , 0);
+            TDir = Math.Max(Math.Min(HDir * Rb, 0.9 * Util.SOLAR_CONST * cosInc), 0);
+           
 
             // Compute anisotropy index AI and diffuse radiation
             //  Duffie and Beckman (1991) eqn. 2.16.2 and 2.16.3 
@@ -369,8 +370,8 @@ namespace CASSYS
             try
             {
                 // Getting the parameter values
-                itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterTilt", ErrLevel.FATAL));
-                itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterAzimuth", ErrLevel.FATAL));
+                itsSurfaceSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterTilt", ErrLevel.WARNING, _default:"N/A"));
+                itsSurfaceAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("InputFile", "MeterAzimuth", ErrLevel.WARNING, _default:"N/A"));
                 NoPyranoAnglesDefined = false;
             }
             catch

@@ -39,8 +39,9 @@ namespace CASSYS
         private double windSpeed = double.NaN;                      // Measured wind speed [m/s]
         private double tModMeasured = double.NaN;                   // Module Temperature Measured [deg C]
         private String timeStamp = null;                            // Time stamp Initializer [yyyy-mm-dd hh:mm:ss]
+        
 
-        // Set properties
+        // Set properties   
         public double HGlo { get { return hGlo; } set { hGlo = value; } }
         public double HDiff { get { return hDiff; } set { hDiff = value; } }
         public double TGlo { get { return tGlo; } set { tGlo = value; } }
@@ -48,12 +49,13 @@ namespace CASSYS
         public double WindSpeed { get { return windSpeed; } set { windSpeed = value; } }
         public double TModMeasured { get { return tModMeasured; } set { tModMeasured = value; } }
         public String TimeStamp { get { return timeStamp; } set { timeStamp = value; } }
+        public int lastDOY = 0;                                     // Holds the day of year that was simulated in the last interval.
 
     }
 
     // This is a reader that will read TMY file types, and also read Measured/User defined Input Files
     static class MetReader
-    {  
+    {
         // Reads .TM2 files and provides the values to Simulation Object
         public static void ParseTM2Line(TextFieldParser InputFileReader,SimMeteo SimEnvironment)
         {
@@ -141,7 +143,7 @@ namespace CASSYS
                     }
                     else
                     {
-                        SimEnvironment.TModMeasured = double.NaN;
+                        SimEnvironment.TModMeasured = double.NaN;  
                     }
 
                     SimEnvironment.TAmbient = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[3] - 1]);
@@ -182,16 +184,25 @@ namespace CASSYS
             {
                 // Get the Inputs from the Input file as assigned by the .CSYX file
                 // The Input order is set up in weatherRefPos and then the input line is broken into its constituents based on the user assignment
-                if (SimEnvironment.TimeStamp == null)
+
+                
+                simDateTime = DateTime.Parse(inputLineDelimited[0]).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
+                simDateTime = new DateTime(1990, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
+
+                if (simDateTime.DayOfYear >= SimEnvironment.lastDOY)
                 {
-                    simDateTime = DateTime.Parse(inputLineDelimited[0]);
+                    SimEnvironment.lastDOY = simDateTime.DayOfYear;
                 }
                 else
                 {
-                    simDateTime = DateTime.Parse(SimEnvironment.TimeStamp).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
+                    simDateTime = new DateTime(simDateTime.Year + 1, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
+                    SimEnvironment.lastDOY = simDateTime.DayOfYear;
                 }
-
+                
+                
+                                                               
                 SimEnvironment.TimeStamp = simDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+
                 Util.timeFormat = "yyyy-MM-dd HH:mm:ss";
                 SimEnvironment.TAmbient = double.Parse(inputLineDelimited[31]);
                 SimEnvironment.HDiff = double.Parse(inputLineDelimited[10]);

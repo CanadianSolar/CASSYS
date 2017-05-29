@@ -35,7 +35,7 @@ namespace CASSYS
     static class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2", "0.9.3" };  // The supported versions of CASSYS CSYX Files.
+        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2", "0.9.3", "1.0.0" };  // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -73,19 +73,30 @@ namespace CASSYS
         // Finding and assigning the SubArray Count from the attribute of the SubArray Tag
         public static void AssignSubArrayCount()
         {
-            // Getting the Number of Sub-Arrays for this file
-            SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
-            
-            // Check if the user has defined the system or wants only Irradiance values (New for Version 0.9.2)
-            if (CASSYSCSYXVersion == "0.9.2" || CASSYSCSYXVersion == "0.9.3")
-            {
-                if (double.Parse(GetInnerText("System", "SystemDC", ErrLevel.WARNING, _VersionNum: "0.9.2", _default: "1")) == 0)
+            // If the ModeSelect node is available, the mode of the simulation is determined from the node value. 
+                // If the node is unavailable, it is determined to be a grid connected system by default.
+                if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "Grid-Connected System", _VersionNum: "0.9.3") == "Radiation Mode")
                 {
                     NoSystemDefined = true;
                 }
-            }
-        }
 
+                // In older versions the ModeSelect Node is not available, and the SystemDC node is checked.
+                if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "N/A", _VersionNum: "0.9.3") == "N/A")
+                {
+                    if (double.Parse(GetInnerText("System", "SystemDC", ErrLevel.WARNING, _VersionNum: "0.9.2", _default: "1")) == 0)
+                    {
+                        NoSystemDefined = true;
+                    }
+                }
+
+                if (!NoSystemDefined)
+                {
+
+                    // Getting the Number of Sub-Arrays for this file
+                    SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
+                }
+            }
+        
         // Finding and Assigning the Input file style as per the SimSettingsFile
         public static void AssignInputFileSchema()
         {
@@ -101,6 +112,12 @@ namespace CASSYS
 
                 // Initializing the array to use as a holder for column numbers.
                 ClimateRefPos = new int[30];
+
+                // Notifying the user of the year change in the dates from the TMY3 file.
+                if (TMYType == 3)
+                {
+                    ErrorLogger.Log("This is a TMY3 file. The year will be changed to 1990 to ensure the climate data is in choronological order.", ErrLevel.WARNING);
+                }
 
                 // Collecting weather variable locations in the file
                 if ((TMYType != 2) && (TMYType != 3))
@@ -311,24 +328,14 @@ namespace CASSYS
             }
             catch (NullReferenceException)
             {
-                if (_default != null)
+                if (_Error == ErrLevel.WARNING)
                 {
-                    {
-                        if (_Error == ErrLevel.FATAL)
-                        {
-                            ErrorLogger.Log(NodeName + " in " + Path + " is not defined. CASSYS requires this value to run.", ErrLevel.FATAL);
-                            return "N/A";
-                        }
-                        else
-                        {
-                            ErrorLogger.Log(NodeName + " in" + Path + " is not defined. CASSYS will assume a default of " + _default + " to run.", ErrLevel.WARNING);
-                            return _default;
-                        }
-                    }
-                }
+                    return _default;               
+                } 
                 else
                 {
-                    return _default;
+                    ErrorLogger.Log(NodeName + " is not defined. CASSYS requires this value to run.", ErrLevel.FATAL);
+                    return "N/A";
                 }
             }
         }
@@ -426,6 +433,7 @@ namespace CASSYS
             Console.WriteLine("-------------------------------------------------------------------------------");
             Console.WriteLine("CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems");
             Console.WriteLine("Copyright 2015 CanadianSolar, All rights reserved.");
+            Console.WriteLine("CASSYS Engine Version: 1.0.0");
             Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE");
             Console.WriteLine("-------------------------------------------------------------------------------");
         }

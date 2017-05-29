@@ -66,6 +66,7 @@
     <Compile Include="Astro.cs" />
     <Compile Include="CASSYS.cs" />
     <Compile Include="ErrorLogger.cs" />
+    <Compile Include="HorizonShading.cs" />
     <Compile Include="Interpolate.cs" />
     <Compile Include="Inverter.cs" />
     <Compile Include="MetReader.cs" />

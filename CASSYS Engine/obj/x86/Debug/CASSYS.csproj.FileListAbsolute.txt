@@ -1,9 +1,5 @@
-C:\Users\abhijeet.pai\AppData\Local\Temporary Projects\CASSYS\bin\Debug\CASSYS.exe
-C:\Users\abhijeet.pai\AppData\Local\Temporary Projects\CASSYS\bin\Debug\CASSYS.pdb
-C:\Users\abhijeet.pai\AppData\Local\Temporary Projects\CASSYS\obj\x86\Debug\CASSYS.exe
-C:\Users\abhijeet.pai\AppData\Local\Temporary Projects\CASSYS\obj\x86\Debug\CASSYS.pdb
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Debug\CASSYS.exe
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Debug\CASSYS.pdb
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Debug\CASSYS.csprojResolveAssemblyReference.cache
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Debug\CASSYS.exe
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Debug\CASSYS.pdb
+U:\CASS\Engineering\Monitoring\Simulation\CASSYS v6 Compatible\v6 Compatible Engine\bin\Debug\CASSYS.exe
+U:\CASS\Engineering\Monitoring\Simulation\CASSYS v6 Compatible\v6 Compatible Engine\bin\Debug\CASSYS.pdb
+U:\CASS\Engineering\Monitoring\Simulation\CASSYS v6 Compatible\v6 Compatible Engine\obj\x86\Debug\CASSYS.exe
+U:\CASS\Engineering\Monitoring\Simulation\CASSYS v6 Compatible\v6 Compatible Engine\obj\x86\Debug\CASSYS.pdb
+U:\CASS\Engineering\Monitoring\Simulation\CASSYS v6 Compatible\v6 Compatible Engine\obj\x86\Debug\CASSYS.csprojResolveAssemblyReference.cache

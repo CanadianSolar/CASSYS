@@ -42,7 +42,6 @@ namespace CASSYS
         bool isNightlyDisconnected;                     // Determines if the transformer is disconnected at night [true for nightly disconnect, false otherwise]
 
         // Output variables
-        public bool isDisconnectedNow = true;           // Determines if the transformer is disconnected at the current time stamp
         public double POut;                             // The transformer power output [W]
         public double EnergyToGrid;                     // Energy supplied to the grid [Wh]
         public double itsPResLss;                       // The resistive loss of the transformer [W] 
@@ -66,7 +65,7 @@ namespace CASSYS
             }
 
             // Calculating the Resistive Losses that result from the Input Power to the Transformer. 
-            if (itsPNom > 0 && itsPResLss > 0)
+            if (itsPNom > 0 && (itsPGlobLoss - itsPIronLoss) > 0)
             {
                 itsPResLss = (itsPGlobLoss - itsPIronLoss) * Math.Pow((InputPwr / itsPNom), 2);
             }
@@ -80,13 +79,17 @@ namespace CASSYS
             {
                 // If the Transformer is disconnected now, the Power should be 0, else both constant 
                 // and ohmic losses are applied and the output is determined.
-                if (isDisconnectedNow)
+                // Whether or not the transformer is disconnected is determined by whether the power 
+                // to the transformer is greater than the transformer losses
+                if (InputPwr < (itsPIronLoss + itsPResLss))
                 {
                     POut = 0;
+                    Losses = 0;
                 }
                 else
                 {
                     POut = InputPwr - itsPIronLoss - itsPResLss;
+                    Losses = itsPIronLoss + itsPResLss;
                 }
             }
             else
@@ -101,6 +104,8 @@ namespace CASSYS
                 {
                     POut = -itsPIronLoss;
                 }
+
+                Losses = itsPIronLoss + itsPResLss;
             }
 
             // Calculating Energy to Grid.
@@ -112,8 +117,7 @@ namespace CASSYS
             {
                 EnergyToGrid = 0;
             }
-
-            Losses = itsPIronLoss + itsPResLss;
+            
         }
 
         //Config will determine and assign values for the losses at the transformer using an .CSYX file
@@ -127,15 +131,7 @@ namespace CASSYS
             
             // Parameters that determine if the transformer remains ON at night, and initializing the disconnection of the transformer. 
             isNightlyDisconnected = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Transformer", "NightlyDisconnect", ErrLevel.WARNING, _default: "False"));
-            if (isNightlyDisconnected)
-            {
-                isDisconnectedNow = true;
-            }
-            else
-            {
-                isDisconnectedNow = false;
-            }
-
+            
         }
     }
 }

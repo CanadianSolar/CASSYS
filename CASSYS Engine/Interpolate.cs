@@ -57,7 +57,7 @@ namespace CASSYS
             {
                 slope = (y[1] - y[0]) / (x[1] - x[0]);
                 dx = xvalue - x[0];
-                return (y[0] + dx * slope)/xvalue;
+                return (y[0] + dx * slope);
             }
 
             // Linear extrapolation to the right
@@ -65,7 +65,7 @@ namespace CASSYS
             {
                 slope = (y[npts - 1] - y[npts - 2]) / (x[npts - 1] - x[npts - 2]);
                 dx = xvalue - x[npts - 1];
-                return (y[npts - 1] + dx * slope)/xvalue;
+                return (y[npts - 1] + dx * slope);
             }
 
             // Other cases: bracket spot
@@ -80,8 +80,8 @@ namespace CASSYS
                     i = k;
             }
 
-            // Interpolate 
-            return (y[i] * (x[j] - xvalue) + y[j] * (xvalue - x[i])) / (xvalue * (x[j] - x[i]));
+            // Interpolate
+            return (y[i] * (x[j] - xvalue) + y[j] * (xvalue - x[i])) / ((x[j] - x[i]));
         }
 
         // QUADRATIC INTERPOLATION

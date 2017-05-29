@@ -58,6 +58,9 @@ namespace CASSYS
         double[][] itsMedEff = new double[2][];             // Medium voltage efficiency curve values [P DC in, %]
         double[][] itsHighEff = new double[2][];            // High voltage efficiency curve values [P DC in, %]
         public double[][] itsOnlyEff = new double[2][];     // Its only efficiency curve [P DC in, %]
+        bool effIn;
+        bool effFrac;
+        
 
         // Inverter wiring losses related variable
         double itsACWiringLossPC;                           // The AC wiring loss specified as a percentage [%]
@@ -112,9 +115,9 @@ namespace CASSYS
 
                 // Calculating the Efficiency Value for given DCPwrIn and Efficiency
                 // Obtaining the Efficiency value for each efficiency curve provided on the basis of Power In (DC)          
-                itsPresentEfficiencies[1][0] = Interpolate.Linear(itsLowEff[0], itsLowEff[1], DCPwrIn);
-                itsPresentEfficiencies[1][1] = Interpolate.Linear(itsMedEff[0], itsMedEff[1], DCPwrIn);
-                itsPresentEfficiencies[1][2] = Interpolate.Linear(itsHighEff[0], itsHighEff[1], DCPwrIn);
+                itsPresentEfficiencies[1][0] = Interpolate.Linear(itsLowEff[0], itsLowEff[1], DCPwrIn)/DCPwrIn;
+                itsPresentEfficiencies[1][1] = Interpolate.Linear(itsMedEff[0], itsMedEff[1], DCPwrIn)/ DCPwrIn;
+                itsPresentEfficiencies[1][2] = Interpolate.Linear(itsHighEff[0], itsHighEff[1], DCPwrIn)/ DCPwrIn;
 
                 // Obtaining the efficiency given the VOut of the Inverter
                 Efficiency = Interpolate.Quadratic(itsPresentEfficiencies[0], itsPresentEfficiencies[1], Vin);
@@ -123,7 +126,7 @@ namespace CASSYS
             {
                 // Calculating the Efficiency Value for given DCPwrIn and Efficiency
                 // Obtaining the Efficiency value using the Efficiency Curve on the basis of Power In (DC)
-                Efficiency = Interpolate.Linear(itsOnlyEff[0], itsOnlyEff[1], DCPwrIn);
+                Efficiency = Interpolate.Linear(itsOnlyEff[0], itsOnlyEff[1], DCPwrIn)/DCPwrIn;
             }
 
             // Calculating AC Power Out of the Inverter
@@ -202,7 +205,9 @@ namespace CASSYS
             itsACWiringLossPC = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "LossFraction", _ArrayNum: ArrayNum));
             itsOutputVoltage = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Output", _ArrayNum: ArrayNum));
             itsPNomArrayAC = itsNomOutputPwr * itsNumInverters;
+            itsThresholdPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Threshold", _ArrayNum: ArrayNum));
             
+
             // Assigning the number of output phases;
             if (ReadFarmSettings.GetInnerText("Inverter", "Type", _ArrayNum: ArrayNum) == "Tri")
             {
@@ -237,23 +242,23 @@ namespace CASSYS
             }
 
             // Assigning if the Inverter is Bipolar or not
-            if ((ReadFarmSettings.GetInnerText("Inverter", "BipolarInput", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL) == "Yes") || (ReadFarmSettings.GetInnerText("Inverter", "BipolarInput", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL) == "True") || (ReadFarmSettings.GetInnerText("Inverter", "BipolarInput", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL) == "Bipolar inputs"))
+            if ((ReadFarmSettings.GetInnerText("Inverter", "BipolarInput", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "false") == "Yes") || (ReadFarmSettings.GetInnerText("Inverter", "BipolarInput", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "false") == "True") || (ReadFarmSettings.GetInnerText("Inverter", "BipolarInput", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "false") == "Bipolar inputs"))
             {
                 isBipolar = true;
-                itsThresholdPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Threshold", _ArrayNum: ArrayNum));
+                // itsThresholdPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Threshold", _ArrayNum: ArrayNum));
             }
             else
             {
                 isBipolar = false;
-                itsThresholdPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Threshold", _ArrayNum: ArrayNum));
+                // itsThresholdPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Threshold", _ArrayNum: ArrayNum));
             }
 
             // Inverter Efficiency Curve Configuration
             threeCurves = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Inverter", "MultiCurve", _ArrayNum: ArrayNum));
 
             // Initialization of efficiency curve arrays
-            itsLowEff[0] = new double[8];
-            itsLowEff[1] = new double[8];
+            //itsLowEff[0] = new double[8];
+            //itsLowEff[1] = new double[8];
             itsMedEff[0] = new double[8];
             itsMedEff[1] = new double[8];
             itsHighEff[0] = new double[8];
@@ -287,36 +292,66 @@ namespace CASSYS
                 itsPresentEfficiencies[0][2] = itsHighVoltage;
 
                 // Setting the lowest efficiency (i.e. at Threshold Power)
-                itsLowEff[0][0] = itsThresholdPwr * itsNumInverters;
-                itsLowEff[1][0] = 0;
-                itsMedEff[0][0] = itsThresholdPwr * itsNumInverters;
-                itsMedEff[1][0] = 0;
-                itsHighEff[0][0] = itsThresholdPwr * itsNumInverters;
-                itsHighEff[1][0] = 0;
+                
+                List<double> lowEffIn = new List<double>();
+                List<double> lowEffFrac = new List<double>();
+                List<double> medEffIn = new List<double>();
+                List<double> medEffFrac = new List<double>();
+                List<double> highEffIn = new List<double>();
+                List<double> highEffFrac = new List<double>();
+                double effInPlaceholder;
+                double effFracPlaceholder;
 
+                lowEffIn.Add(itsThresholdPwr * itsNumInverters);
+                lowEffFrac.Add(0);
+                medEffIn.Add(itsThresholdPwr * itsNumInverters);
+                medEffFrac.Add(0);
+                highEffIn.Add(itsThresholdPwr * itsNumInverters);
+                highEffFrac.Add(0);
                 // Get Low Voltage Efficiency Curve
-                for (int eff = 1; eff < itsLowEff[0].Length; eff++)
-                {
-                    ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Low/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) < 100, ErrLevel.FATAL);
-                    itsLowEff[0][eff] = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Low/IN" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) * itsNumInverters * 1000;
-                    itsLowEff[1][eff] = itsLowEff[0][eff]*double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Low/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 100;
+                for (int eff = 1; eff < 8; eff++)
+                {                   
+                    effIn = double.TryParse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Low/IN" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _default: null), out effInPlaceholder);
+                    effFrac = double.TryParse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Low/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _default:null), out effFracPlaceholder);
+                    if (effIn && effFrac)
+                    {
+                        ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Low/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) < 100, ErrLevel.FATAL);
+                        lowEffIn.Add(effInPlaceholder * itsNumInverters * 1000);
+                        lowEffFrac.Add(effInPlaceholder * effFracPlaceholder * itsNumInverters * 10);
+                    }
                 }
+                itsLowEff[0] = lowEffIn.ToArray();
+                itsLowEff[1] = lowEffFrac.ToArray();
 
                 // Get Med Voltage Efficiency Curve
-                for (int eff = 1; eff < itsMedEff[0].Length; eff++)
-                {
-                    ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Med/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) < 100, ErrLevel.FATAL);
-                    itsMedEff[0][eff] = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Med/IN" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) * itsNumInverters * 1000;
-                    itsMedEff[1][eff] = itsMedEff[0][eff] * double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Med/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 100;
+                for (int eff = 1; eff < 8; eff++)
+                {                   
+                    effIn = double.TryParse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Med/IN" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _default: null), out effInPlaceholder);
+                    effFrac = double.TryParse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Med/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _default: null), out effFracPlaceholder);
+                    if (effIn && effFrac)
+                    {
+                        ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/Med/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) < 100, ErrLevel.FATAL);
+                        medEffIn.Add(effInPlaceholder * itsNumInverters * 1000);
+                        medEffFrac.Add(effInPlaceholder * effFracPlaceholder * itsNumInverters * 10);
+                    }
                 }
+                itsMedEff[0] = medEffIn.ToArray();
+                itsMedEff[1] = medEffFrac.ToArray();
 
                 // Get High Voltage Efficiency Curve
-                for (int eff = 1; eff < itsHighEff[0].Length; eff++)
-                {
-                    ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/High/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) < 100, ErrLevel.FATAL);
-                    itsHighEff[0][eff] = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/High/IN" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) * itsNumInverters * 1000;
-                    itsHighEff[1][eff] = itsHighEff[0][eff] * double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/High/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 100;
+                for (int eff = 1; eff < 8; eff++)
+                {                    
+                    effIn = double.TryParse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/High/IN" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _default: null), out effInPlaceholder);
+                    effFrac = double.TryParse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/High/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum, _default: null), out effFracPlaceholder);
+                    if (effIn && effFrac)
+                    {
+                        ErrorLogger.Assert("The Inverter Efficiency Curve is Incorrectly defined. Check Inverter in Sub-Array " + ArrayNum + ".", double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/High/Effic" + (eff + 1).ToString(), _ArrayNum: ArrayNum)) < 100, ErrLevel.FATAL);
+                        highEffIn.Add(effInPlaceholder * itsNumInverters * 1000);
+                        highEffFrac.Add(effInPlaceholder * effFracPlaceholder * itsNumInverters * 10);
+                    }
                 }
+                itsHighEff[0] = highEffIn.ToArray();
+                itsHighEff[1] = highEffFrac.ToArray();
             }
             else
             {

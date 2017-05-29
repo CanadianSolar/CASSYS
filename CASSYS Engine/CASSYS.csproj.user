@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <StartWorkingDirectory>C:\CASSYS_3\Toronto\input\</StartWorkingDirectory>
-    <StartArguments>"C:\CASSYS_3\Toronto\Sample Site - Toronto.csyx"</StartArguments>
+    <StartWorkingDirectory>U:\CASS\Engineering\Monitoring\Simulation\Studies\CASSYS Trackers\Toronto\</StartWorkingDirectory>
+    <StartArguments>"C:\Users\abhijeet.pai\Desktop\CASSYS-Test\FL2_Test.csyx" "C:\Users\abhijeet.pai\Desktop\CASSYS-Test\FTL_Input.csv" "C:\Users\abhijeet.pai\Desktop\CASSYS-Test\FTL_output.csv"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <StartWorkingDirectory>C:\CASSYS_3\Toronto\input\</StartWorkingDirectory>
-    <StartArguments>"C:\CASSYS_3\Toronto\Sample Site - Toronto.csyx"</StartArguments>
+    <StartWorkingDirectory>U:\CASS\Engineering\Monitoring\Simulation\Far Shading\CASSYS Horizon Shading\</StartWorkingDirectory>
+    <StartArguments>"U:\CASS\Engineering\Monitoring\Simulation\Far Shading\CASSYS Horizon Shading\Toronto Sample Site II.csyx"</StartArguments>
   </PropertyGroup>
   <PropertyGroup>
     <PublishUrlHistory>publish\</PublishUrlHistory>
