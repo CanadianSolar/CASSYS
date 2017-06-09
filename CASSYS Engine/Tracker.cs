@@ -338,7 +338,7 @@ namespace CASSYS
             {
                 case "Fixed Tilted Plane":
                     itsTrackMode = TrackMode.NOAT;
-                    if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.3")
+                    if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.3" || ReadFarmSettings.CASSYSCSYXVersion == "1.0.0")
                     {
                         SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
                         SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthFix", ErrLevel.FATAL));
