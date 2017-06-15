@@ -1,4 +1,4 @@
-# CASSYS - Canadian Solar System Simulator#
+# CASSYS - Canadian Solar System Simulator #
 *A Simulation Tool for Grid-Connected Photovoltaic Systems*
 
 *Current Version: 1.0.0*
