@@ -13,6 +13,7 @@
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -25,7 +26,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -34,7 +34,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -63,15 +63,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ASTME2848.cs" />
     <Compile Include="Astro.cs" />
     <Compile Include="CASSYS.cs" />
     <Compile Include="ErrorLogger.cs" />
+    <Compile Include="GridConnectedSystem.cs" />
     <Compile Include="HorizonShading.cs" />
     <Compile Include="Interpolate.cs" />
     <Compile Include="Inverter.cs" />
     <Compile Include="MetReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PVArray.cs" />
+    <Compile Include="RadiationProc.cs" />
     <Compile Include="ReadFarmSettings.cs" />
     <Compile Include="Shading.cs" />
     <Compile Include="Simulation.cs" />

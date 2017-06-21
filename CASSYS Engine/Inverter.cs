@@ -1,5 +1,4 @@
 ﻿// CASSYS - Grid connected PV system modelling software 
-// Version 0.9  
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -196,7 +195,7 @@ namespace CASSYS
         }
 
         // Config will assign parameter variables their values as obtained from the .CSYX file              
-        public void Config(int ArrayNum, XmlDocument doc)
+        public void Config(int ArrayNum)
         {
             itsNomOutputPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "PNomAC", _ArrayNum: ArrayNum)) * 1000;
             itsMinVoltage = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Min.V", _ArrayNum: ArrayNum));
@@ -269,11 +268,11 @@ namespace CASSYS
             itsOnlyEff[1] = new double[8];
 
             // Configuration of the Efficiency Curves for the Inverter
-            ConfigEffCurves(doc, ArrayNum, threeCurves);
+            ConfigEffCurves(ArrayNum, threeCurves);
         }
 
         // Obtaining and Setting efficiency curve values from .CSYX file
-        public void ConfigEffCurves(XmlDocument doc, int ArrayNum, bool threeCurves)
+        public void ConfigEffCurves(int ArrayNum, bool threeCurves)
         {
             // Configuration begins with a check if the Inverter has three efficiency curves or just one
             // Once determined, relevant values are collected from the .CSYX file

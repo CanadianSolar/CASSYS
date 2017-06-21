@@ -1,5 +1,4 @@
 ﻿// CASSYS - Grid connected PV system modelling software 
-// Version 0.9  
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -20,15 +19,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Xml;
-using System.IO;
-using System.Text;
-using System.Windows.Forms;
-using System.Diagnostics;
-using CASSYS;
-using System.Xml.XPath;
 
 namespace CASSYS
 {
@@ -41,18 +31,12 @@ namespace CASSYS
 
             // Declaring a new simulation object
             Simulation PVPlant = new Simulation();
-            // Testing horizon shading
-            //HorizonShading Shading = new HorizonShading();
             
             if (args.Length == 1)
             {
                 // Running the Simulation based on the CASSYS Configuration File provided
                 ReadFarmSettings.batchMode = false;
                 PVPlant.Simulate(args[0]);
-                
-                // For testing the horizon shading
-                //Shading.TestSuite(args[0]);
-                            
 
                 // Show the end of simulation message, window should be kept open for longer
                 ReadFarmSettings.ShowFooter();

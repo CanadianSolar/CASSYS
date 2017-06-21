@@ -1,5 +1,4 @@
 ﻿// CASSYS - Grid connected PV system modelling software 
-// Version 0.9.3  
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //

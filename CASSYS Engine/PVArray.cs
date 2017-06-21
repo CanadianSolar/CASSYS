@@ -1,5 +1,4 @@
-﻿// CASSYS - Grid connected PV system modelling software 
-// Version 0.9 
+﻿// CASSYS - Grid connected PV system modelling software
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -506,7 +505,7 @@ namespace CASSYS
             itsMismatchFixedVLoss = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ModuleMismatchLosses/LossFixedVoltage", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0"));
 
             // Defining the Incidence Angle Modifier
-            if (ReadFarmSettings.CASSYSCSYXVersion == "0.9")
+            if (string.Compare(ReadFarmSettings.CASSYSCSYXVersion,"0.9") <= 0)
             {
                 itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.05"));
             }

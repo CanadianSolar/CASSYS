@@ -1,5 +1,4 @@
-﻿// CASSYS - Grid connected PV system modelling software 
-// Version 0.9 
+﻿// CASSYS - Grid connected PV system modelling software  
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -8,6 +7,7 @@
 // Revision History:
 // AP - 2014-11-27: Version 0.9
 // AP - 2015-05-21: Version 0.9.2 Added reading capability for 0.9.2
+// NA - 2017-06-09: Version 1.1  Changes made to the structure of the file to include system mode parameter and addition of ASTM Mode
 //
 // Description:
 // This class uses the information provided in the .CSYX file and dictates the number
@@ -35,7 +35,7 @@ namespace CASSYS
     static class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2", "0.9.3", "1.0.0" };  // The supported versions of CASSYS CSYX Files.
+        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2", "0.9.3", "1.0.0", "1.0.1", "1.1.0" };  // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -54,7 +54,8 @@ namespace CASSYS
         public static int TMYType;                                  // If a TMY file is loaded, it specifies either 2 or 3 for .tm2 or .tm3 format
         public static string delim;                                 // The character used in the input file between adjacent values
         public static int[] ClimateRefPos;                          // The positions of input data from the user input file
-        public static bool NoSystemDefined = false;                 // Checks if no system was defined and allow user to simulate irradiance values only
+        //public static bool NoSystemDefined = false;                 // Checks if no system was defined and allow user to simulate irradiance values only
+        public static string SystemMode = "GridConnected";         //The system type will determine which calculations are required
 
         // Output configuration for the Program
         public static Dictionary<String, dynamic> Outputlist;       // Creating a dictionary to hold all output values;
@@ -70,33 +71,42 @@ namespace CASSYS
             SimOutputFile = GetInnerText("Site", "OutputFilePath", _Error: ErrLevel.FATAL);
         }
 
+        // Finding the mode of the simulation
+        public static void GetSimulationMode()
+        {
+            // If the ModeSelect node is available, the mode of the simulation is determined from the node value. 
+            // If the node is unavailable, it is determined to be a grid connected system by default.
+            if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "GridConnected", _VersionNum: "0.9.3") == "Radiation Mode")
+            {
+                SystemMode = "Radiation";
+            }
+            else if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "GridConnected", _VersionNum: "1.0.1") == "ASTM E2848 Regression")
+            {
+                SystemMode = "ASTME2848Regression";
+            }
+
+            // In older versions the ModeSelect Node is not available, and the SystemDC node is checked.
+            if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "N/A", _VersionNum: "0.9.3") == "N/A")
+            {
+                if (double.Parse(GetInnerText("System", "SystemDC", ErrLevel.WARNING, _VersionNum: "0.9.2", _default: "1")) == 0)
+                {
+                    SystemMode = "Radiation";
+                }
+            }
+
+
+        }
+
         // Finding and assigning the SubArray Count from the attribute of the SubArray Tag
         public static void AssignSubArrayCount()
         {
-            // If the ModeSelect node is available, the mode of the simulation is determined from the node value. 
-                // If the node is unavailable, it is determined to be a grid connected system by default.
-                if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "Grid-Connected System", _VersionNum: "0.9.3") == "Radiation Mode")
-                {
-                    NoSystemDefined = true;
-                }
-
-                // In older versions the ModeSelect Node is not available, and the SystemDC node is checked.
-                if (GetInnerText("Site", "ModeSelect", _Error: ErrLevel.WARNING, _default: "N/A", _VersionNum: "0.9.3") == "N/A")
-                {
-                    if (double.Parse(GetInnerText("System", "SystemDC", ErrLevel.WARNING, _VersionNum: "0.9.2", _default: "1")) == 0)
-                    {
-                        NoSystemDefined = true;
-                    }
-                }
-
-                if (!NoSystemDefined)
-                {
-
-                    // Getting the Number of Sub-Arrays for this file
-                    SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
-                }
+            if (string.Compare(SystemMode, "GridConnected") == 0)
+            {
+                // Getting the Number of Sub-Arrays for this file
+                SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
             }
-        
+        }
+
         // Finding and Assigning the Input file style as per the SimSettingsFile
         public static void AssignInputFileSchema()
         {
@@ -126,8 +136,8 @@ namespace CASSYS
                     UsePOA = Int32.TryParse(GetInnerText("InputFile", "GlobalRad", _Error: ErrLevel.WARNING, _default: "N/A"), out ClimateRefPos[2]);
                     UseGHI = Int32.TryParse(GetInnerText("InputFile", "HorIrradiance", _Error: ErrLevel.WARNING, _default: "N/A"), out ClimateRefPos[1]);
                     tempAmbDefined = Int32.TryParse(GetInnerText("InputFile", "TempAmbient", _Error: ErrLevel.FATAL), out ClimateRefPos[3]);
-                    UseMeasuredTemp = Int32.TryParse(GetInnerText("InputFile", "TempPanel", _Error: ErrLevel.WARNING), out ClimateRefPos[4]);
-                    UseWindSpeed = Int32.TryParse(GetInnerText("InputFile", "WindSpeed", _Error: ErrLevel.WARNING), out ClimateRefPos[5]);
+                    UseMeasuredTemp = Int32.TryParse(GetInnerText("InputFile", "TempPanel", _default: "N/A", _Error: ErrLevel.WARNING), out ClimateRefPos[4]);
+                    UseWindSpeed = Int32.TryParse(GetInnerText("InputFile", "WindSpeed", _default: "N/A", _Error: ErrLevel.WARNING), out ClimateRefPos[5]);
 
                     // Check if Horizontal Irradiance is provided for use in simulation.
                     if (UseGHI)
@@ -152,7 +162,7 @@ namespace CASSYS
                     }
 
                     // Check if at least one type of temperature is available to continue with the simulation.
-                    if (tempAmbDefined == false && UseMeasuredTemp == false && !NoSystemDefined)
+                    if (tempAmbDefined == false && UseMeasuredTemp == false && string.Compare(SystemMode, "GridConnected") == 0)
                     {
                         ErrorLogger.Log("CASSYS did not find definitions for a temperature column in the Climate File. Please define a measured panel temperature or measured ambient temperature column.", ErrLevel.FATAL);
                     }
@@ -273,6 +283,15 @@ namespace CASSYS
                         case "Site":
                             Path = "/Site/" + NodeName;
                             break;
+                        case "ASTM":
+                            Path = "/Site/ASTMRegress/" + NodeName;
+                            break;
+                        case "ASTM/Coeffs":
+                            Path = "/Site/ASTMRegress/ASTMCoeffs/" + NodeName;
+                            break;
+                        case "ASTM/EAF":
+                            Path = "/Site/ASTMRegress/EAF/" + NodeName;
+                            break;
                         case "Albedo":
                             Path = "/Site/Albedo/" + NodeName;
                             break;
@@ -330,8 +349,8 @@ namespace CASSYS
             {
                 if (_Error == ErrLevel.WARNING)
                 {
-                    return _default;               
-                } 
+                    return _default;
+                }
                 else
                 {
                     ErrorLogger.Log(NodeName + " is not defined. CASSYS requires this value to run.", ErrLevel.FATAL);
@@ -433,7 +452,7 @@ namespace CASSYS
             Console.WriteLine("-------------------------------------------------------------------------------");
             Console.WriteLine("CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems");
             Console.WriteLine("Copyright 2015 CanadianSolar, All rights reserved.");
-            Console.WriteLine("CASSYS Engine Version: 1.0.0");
+            Console.WriteLine("CASSYS Engine Version: 1.1.0");
             Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE");
             Console.WriteLine("-------------------------------------------------------------------------------");
         }

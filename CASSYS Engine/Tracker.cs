@@ -1,5 +1,4 @@
 ﻿// CASSYS - Grid connected PV system modelling software 
-// Version 0.9.3  
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -87,8 +86,6 @@ namespace CASSYS
         public double itsTrackerPitch;		// Distance between two rows of trackers [m]
         public double itsTrackerBW;			// Width of single tracker array [m]
        
-
-
         // Output Variables
         public double SurfSlope;			// Angle of tracker surface with respect to horizontal [radians]
         public double SurfAzimuth;			// Angle between horizontal projection of normal to module surface and true South [radians]
@@ -338,7 +335,7 @@ namespace CASSYS
             {
                 case "Fixed Tilted Plane":
                     itsTrackMode = TrackMode.NOAT;
-                    if (ReadFarmSettings.CASSYSCSYXVersion == "0.9.3" || ReadFarmSettings.CASSYSCSYXVersion == "1.0.0")
+                    if (String.Compare(ReadFarmSettings.CASSYSCSYXVersion,"0.9.3") >= 0)
                     {
                         SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
                         SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthFix", ErrLevel.FATAL));
