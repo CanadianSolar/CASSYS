@@ -1,4 +1,0 @@
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Release\CASSYS Engine.exe
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\bin\Release\CASSYS Engine.pdb
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Release\CASSYS Engine.exe
-U:\CASS\Engineering\Monitoring\Simulation\CASSYS Engine\CASSYS Engine\obj\x86\Release\CASSYS Engine.pdb

@@ -352,8 +352,15 @@ namespace CASSYS
             SimHorizonShading.Config(SimTracker.SurfSlope, SimTracker.SurfAzimuth, SimTracker.itsTrackMode);
             SimSun.itsSurfaceSlope = SimTracker.SurfSlope;
             SimSun.Config();
-            pyranoTilter.ConfigPyranometer();
             SimTilter.Config();
+
+            // Configure a pyranometer tilter, only if the input file has tilted irradiance as an input.
+            if (ReadFarmSettings.UsePOA)
+            {
+                pyranoTilter.ConfigPyranometer();
+            }
+
+            
         }
     }
 }
