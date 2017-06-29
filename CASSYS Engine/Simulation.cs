@@ -89,6 +89,8 @@ namespace CASSYS
             // Creating the SimMeteo Object to process the input file, and streamWriter to Write to the Output File
             try
             {
+                // Reading and assigning the input file schema
+                ReadFarmSettings.AssignInputFileSchema();
 
                 // Instantiating the relevant simulation class based on the simulation mode
                 switch (ReadFarmSettings.SystemMode)
@@ -115,9 +117,9 @@ namespace CASSYS
                         break;
                 }
 
-                // Reading and assigning the input file schema and the output file schema
+                // Reading and assigning the output file schema
                 ReadFarmSettings.AssignOutputFileSchema();
-                ReadFarmSettings.AssignInputFileSchema();
+                
 
                 // Notifying user of the Configuration status
                 if (ErrorLogger.numWarnings == 0)
