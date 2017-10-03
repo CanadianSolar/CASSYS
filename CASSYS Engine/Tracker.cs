@@ -59,10 +59,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Globalization;
 
 namespace CASSYS
 {
-    public enum TrackMode { NOAT, SAXT, AVAT, TAXT }             // See description in header for expanded form.
+    public enum TrackMode { NOAT, SAXT, AVAT, TAXT, FTSA }             // See description in header for expanded form.
 
 
     class Tracker
@@ -81,7 +82,7 @@ namespace CASSYS
         double itsMaxRotationAngle;			// Max. angle of rotation of surface about tracker axis [radians]
         double itsMinAzimuth;				// Min. angle of horizontal proj. of normal to module surface and true South [radians]
         double itsMaxAzimuth;				// Max. angle of horizontal proj. of normal to module surface and true South [radians]
-        double itsAzimuthRef;				// Describes whether the tracker is in the northern or southern hemisphere
+        double itsAzimuthRef;               // Describes whether the tracker is in the northern or southern hemisphere
         public Boolean useBackTracking;	    // Boolean used to determine if backtracking is enabled
         public double itsTrackerPitch;		// Distance between two rows of trackers [m]
         public double itsTrackerBW;			// Width of single tracker array [m]
@@ -91,8 +92,18 @@ namespace CASSYS
         public double SurfAzimuth;			// Angle between horizontal projection of normal to module surface and true South [radians]
         public double IncidenceAngle;       // Angle of a ray of light incident on the normal of panel surface [radians]
         public double RotAngle;				// Angle of rotation of surface about tracker axis [radians]
-        public double AngleCorrection;		// With backtracking enabled, this angle adjustment is applied to the surface slope angle [radians]
-       
+        public double AngleCorrection;      // With backtracking enabled, this angle adjustment is applied to the surface slope angle [radians]
+
+        // Variables used for "Fixed Tilted Plane Seasonal Adjustment" orientation mode
+        int itsSummerMonth;                 // Month in which meter tilt is adjusted for summer
+        int itsWinterMonth;                 // Month in which meter tilt is adjusted for winter
+        int itsSummerDay;                   // Day in which meter tilt is adjusted for summer
+        int itsWinterDay;                   // Day in which meter tilt is adjusted for winter
+        double itsPlaneTiltSummer;          // Tilt used during summer timespan
+        double itsPlaneTiltWinter;          // Tilt used during winter timespan
+        DateTime SummerDate;                // Holds Year, Month, and Day of summer date
+        DateTime WinterDate;                // Holds Year, Month, and Day of winter date
+        int previousYear = 0;               // Holds the year of the previous timestamp
 
 
         // Constructor for the tracker
@@ -102,7 +113,7 @@ namespace CASSYS
 
 
         // Calculate the tracker slope, azimuth and incidence angle using
-        public void Calculate(double SunZenith, double SunAzimuth)
+        public void Calculate(double SunZenith, double SunAzimuth, int Year, int DayOfYear)
         {
             switch (itsTrackMode)
             {
@@ -149,14 +160,6 @@ namespace CASSYS
 						
 						// Surface slope calculated from eq. 31 of reference guide
                         SurfSlope = Math.Atan2(Math.Sin(SunZenith) * Math.Cos(SurfAzimuth - SunAzimuth),Math.Cos(SunZenith));
-
-                        // NB: to put surface slope into the correct quadrant
-                        // Correction should not be needed if atan2() works in statement above
-                        //if (SurfSlope < 0.0)
-                        //{
-                        //    SurfSlope += Math.PI;
-                        //}
-
  
                         // If the shadow is greater than the Pitch and backtracking is selected
                         if (useBackTracking)
@@ -287,7 +290,6 @@ namespace CASSYS
                     // Defining the surface azimuth
                     SurfAzimuth = SunAzimuth;
 
-
                     // Changes the reference frame to be with respect to the reference azimuth
                     if (SurfAzimuth >= 0)
                     {
@@ -315,10 +317,45 @@ namespace CASSYS
 
                     break;
 
-                case TrackMode.NOAT:
-
+                // Fixed Tilt with Seasonal Adjustment
+                // determining if the current timestamp is in the summer or winter season and setting SurfSlope accordingly
+                case TrackMode.FTSA:
+                    // SummerDate and WinterDate must be recalculated if year changes due to possible leap year
+                    if (previousYear != Year)
+                    {
+                        SummerDate = new DateTime(Year, itsSummerMonth, itsSummerDay);
+                        WinterDate = new DateTime(Year, itsWinterMonth, itsWinterDay);
+                    }
+                    previousYear = Year;
+                    
+                    // Winter date is before summer date in calender year
+                    if (SummerDate.DayOfYear - WinterDate.DayOfYear > 0)
+                    {
+                        if (DayOfYear >= WinterDate.DayOfYear && DayOfYear < SummerDate.DayOfYear)
+                        {
+                            SurfSlope = itsPlaneTiltWinter;
+                        }
+                        else
+                        {
+                            SurfSlope = itsPlaneTiltSummer;
+                        }
+                    }
+                    // Summer date is before winter date in calender year
+                    else
+                    {
+                        if (DayOfYear >= SummerDate.DayOfYear && DayOfYear < WinterDate.DayOfYear)
+                        {
+                            SurfSlope = itsPlaneTiltSummer;
+                        }
+                        else
+                        {
+                            SurfSlope = itsPlaneTiltWinter;
+                        }
+                    }
                     break;
 
+                case TrackMode.NOAT:
+                    break;
                 // Throw error to user if there is an issue with the tracker.
                 default:
                     ErrorLogger.Log("Tracking Parameters were incorrectly defined. Please check your input file.", ErrLevel.FATAL);
@@ -327,7 +364,6 @@ namespace CASSYS
 
             IncidenceAngle = Tilt.GetIncidenceAngle(SunZenith, SunAzimuth, SurfSlope, SurfAzimuth);
         }
-
         // Gathering the tracker mode, and relevant operational limits, and tracking axis characteristics.
         public void Config()
         {
@@ -346,6 +382,21 @@ namespace CASSYS
                         SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
                     }
                     break;
+                case "Fixed Tilted Plane Seasonal Adjustment":
+                    itsTrackMode = TrackMode.FTSA;
+                    SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthSeasonal", ErrLevel.FATAL));
+                    itsSummerMonth = DateTime.ParseExact(ReadFarmSettings.GetInnerText("O&S", "SummerMonth", _Error: ErrLevel.FATAL), "MMM", CultureInfo.CurrentCulture).Month;
+                    itsWinterMonth = DateTime.ParseExact(ReadFarmSettings.GetInnerText("O&S", "WinterMonth", _Error: ErrLevel.FATAL), "MMM", CultureInfo.CurrentCulture).Month;
+                    itsSummerDay = int.Parse(ReadFarmSettings.GetInnerText("O&S", "SummerDay", _Error: ErrLevel.FATAL));
+                    itsWinterDay = int.Parse(ReadFarmSettings.GetInnerText("O&S", "WinterDay", _Error: ErrLevel.FATAL));
+                    itsPlaneTiltSummer = Util.DTOR * double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltSummer", _Error: ErrLevel.FATAL));
+                    itsPlaneTiltWinter = Util.DTOR* double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltWinter", _Error: ErrLevel.FATAL));
+
+                    // Assume the simualtion will begin when the array is in the summer tilt
+                    SurfSlope = itsPlaneTiltSummer;
+
+                    break;
+
                 case "Unlimited Rows":
                     itsTrackMode = TrackMode.NOAT;
                     // Defining all the parameters for the shading of a unlimited row array configuration
@@ -429,7 +480,6 @@ namespace CASSYS
                 default:
                     ErrorLogger.Log("No orientation and shading was specified by the user.", ErrLevel.FATAL);
                     break;
-
             }
 
         }

@@ -26,11 +26,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
-using System.Xml;
-using System.Xml.Linq;
 
 namespace CASSYS
 {
@@ -48,22 +43,17 @@ namespace CASSYS
         public int outputPhases;                            // The number of phases at the inverter output [#]
 
         // Efficiency curves related variables
-        bool threeCurves;                                   // True if Inverter has three efficiency curves, false if Inverter has one efficiency curve
+        bool threeCurves;                            // True if Inverter has three efficiency curves, false if Inverter has one efficiency curve
         double itsLowVoltage;                               // The voltage threshold for low voltage efficiency curve [V]
         double itsMedVoltage;                               // The voltage threshold for medium voltage efficiency curve [V]
         double itsHighVoltage;                              // The voltage threshold for high voltage efficiency curve [V]
         double[][] itsPresentEfficiencies = new double[2][];// Current Efficiency curve chosen calculated for different voltage values [%]
         public double[][] itsLowEff = new double[2][];      // Low voltage efficiency curve values [P DC in, %]
-        double[][] itsMedEff = new double[2][];             // Medium voltage efficiency curve values [P DC in, %]
+        double[][] itsMedEff = new double[2][];      // Medium voltage efficiency curve values [P DC in, %]
         double[][] itsHighEff = new double[2][];            // High voltage efficiency curve values [P DC in, %]
         public double[][] itsOnlyEff = new double[2][];     // Its only efficiency curve [P DC in, %]
         bool effIn;
         bool effFrac;
-        
-
-        // Inverter wiring losses related variable
-        double itsACWiringLossPC;                           // The AC wiring loss specified as a percentage [%]
-        double itsACWiringRes;                              // The AC wiring loss translated from a percentage to a Resistance [ohms]
 
         // Inverter control variables (Used to determine the ClipDCPwrIng & ON status)
         public double itsNomOutputPwr;                      // Nominal output power [W AC]          
@@ -79,10 +69,11 @@ namespace CASSYS
         public double Efficiency;                           // Actual Efficiency of the inverter [%]
         public double VInDC;                                // Voltage, DC side of the Inverter
         public double IOut;                                 // Current Output of the Inverter [A, AC Single Phase]
-        public double ACWiringLoss;                         // AC Wiring Loss incurred [W]
         public double itsPNomArrayAC;                       // Nominal AC Production of the Array [W]
         public double LossPMinThreshold;                    // Loss when the power of the array is not sufficient for starting the inverter. 
         public double LossClipping;                         // Produced power before reduction by Inverter (clipping) [W]
+        public double itsMaxSubArrayACEff;                     // Initializing the value of the maximum AC power produced by this Sub-Array
+
 
         // Inverter constructor
         public Inverter
@@ -139,9 +130,6 @@ namespace CASSYS
 
             // Calculating the current to determine the wiring losses that follow (three phase output assumed)
             IOut = ACPwrOut / itsOutputVoltage / Math.Sqrt(outputPhases);
-
-            // AC wiring losses using the current caculated (three phase output assumed)
-            ACWiringLoss = Math.Sqrt(outputPhases) * Math.Pow(IOut, 2) * itsACWiringRes;
         }
 
         // Check if the PV Array voltage is within the MPPT Window of the Inverter
@@ -201,11 +189,9 @@ namespace CASSYS
             itsMinVoltage = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Min.V", _ArrayNum: ArrayNum));
             itsMaxVoltage = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Max.V", _ArrayNum: ArrayNum, _default: itsMppWindowMax.ToString()));
             itsNumInverters = int.Parse(ReadFarmSettings.GetInnerText("Inverter", "NumInverters", _ArrayNum: ArrayNum));
-            itsACWiringLossPC = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "LossFraction", _ArrayNum: ArrayNum));
             itsOutputVoltage = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Output", _ArrayNum: ArrayNum));
             itsPNomArrayAC = itsNomOutputPwr * itsNumInverters;
             itsThresholdPwr = double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Threshold", _ArrayNum: ArrayNum));
-            
 
             // Assigning the number of output phases;
             if (ReadFarmSettings.GetInnerText("Inverter", "Type", _ArrayNum: ArrayNum) == "Tri")
@@ -256,8 +242,6 @@ namespace CASSYS
             threeCurves = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Inverter", "MultiCurve", _ArrayNum: ArrayNum));
 
             // Initialization of efficiency curve arrays
-            //itsLowEff[0] = new double[8];
-            //itsLowEff[1] = new double[8];
             itsMedEff[0] = new double[8];
             itsMedEff[1] = new double[8];
             itsHighEff[0] = new double[8];
@@ -269,6 +253,19 @@ namespace CASSYS
 
             // Configuration of the Efficiency Curves for the Inverter
             ConfigEffCurves(ArrayNum, threeCurves);
+
+            if (string.Compare(ReadFarmSettings.CASSYSCSYXVersion, "1.2.0") >= 0 && Convert.ToBoolean(ReadFarmSettings.GetInnerText("System", "ACWiringLossAtSTC", _Error: ErrLevel.FATAL)))
+            {
+                itsMaxSubArrayACEff = 1;
+            }
+            else if (threeCurves)
+            {
+                itsMaxSubArrayACEff = itsMedEff[1][itsMedEff[1].Length - 1] / itsMedEff[0][itsMedEff[0].Length - 1];
+            }
+            else
+            {
+                itsMaxSubArrayACEff = itsOnlyEff[1][itsOnlyEff[1].Length - 1] / itsOnlyEff[0][itsOnlyEff[0].Length - 1];
+            }
         }
 
         // Obtaining and Setting efficiency curve values from .CSYX file
@@ -367,23 +364,6 @@ namespace CASSYS
                     itsOnlyEff[1][eff] = itsOnlyEff[0][eff]*double.Parse(ReadFarmSettings.GetInnerText("Inverter", "Efficiency/EffCurve/Effic." + (eff + 1).ToString(), _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 100;
                 }
             }
-        }
-
-        // Obtaining the AC wiring Resistance to calculate the AC Wiring Losses, this is dependent on the DC array it is connected to.
-        public void ConfigACWiring(double PNomArrayDC)
-        {
-            double itsMaxSubArrayAC;            // Initializing the value of the maximum AC power produced by this Sub-Array
-
-            if (threeCurves)
-            {
-                itsMaxSubArrayAC = PNomArrayDC * itsMedEff[1][itsMedEff[1].Length - 1]/itsMedEff[0][itsMedEff[0].Length - 1];
-            }
-            else
-            {
-                itsMaxSubArrayAC = PNomArrayDC * itsOnlyEff[1][itsOnlyEff[1].Length - 1] / itsOnlyEff[0][itsOnlyEff[0].Length - 1];
-            }
-
-            itsACWiringRes = itsACWiringLossPC * itsOutputVoltage / (itsMaxSubArrayAC / (itsOutputVoltage * Math.Sqrt(outputPhases)));
         }
     }
 }

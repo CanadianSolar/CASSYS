@@ -27,11 +27,6 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Xml;
-using System.Text;
-using CASSYS;
 
 namespace CASSYS
 {
@@ -254,6 +249,9 @@ namespace CASSYS
                 case "Fixed Tilted Plane":
                     itsShadModel = ShadModel.FT;
                     break;
+                case "Fixed Tilted Plane Seasonal Adjustment":
+                    itsShadModel = ShadModel.FT;
+                    break;
 
                 case "Single Axis Elevation Tracking (E-W)":
                     itsShadModel = ShadModel.TE;
@@ -281,11 +279,6 @@ namespace CASSYS
                     
                     itsRowsBlock = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RowsBlock", ErrLevel.FATAL));
                     itsRowBlockFactor = (itsRowsBlock - 1) / itsRowsBlock;
-
-                    //// Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant throughout the simulation
-                    //GetShadingLimitAngle();
-                    //GetDiffuseShadingFraction();
-                    //GetGroundReflectedShadingFraction();
 
                     // Collecting definitions for cell based shading models or preparing for its absence
                     useCellBasedShading = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S","UseCellVal", ErrLevel.WARNING, _default: "false"));
@@ -386,7 +379,6 @@ namespace CASSYS
                     // Defining the parameters for the shading for a fixed tilt configuration 
                     itsShadingLimitAngle = 0;
                     
-
                     // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant and 1.
                     DiffuseSF = 1;
                     ReflectedSF = 1;

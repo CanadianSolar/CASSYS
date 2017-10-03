@@ -33,11 +33,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Xml;
-using System.Text;
-using System.IO;
-using CASSYS;
 
 namespace CASSYS
 {
@@ -133,11 +128,10 @@ namespace CASSYS
         // Calculates the PV Array performance based on MPP or fixed voltage operation
         public void Calculate
             (
-               bool isMPPT                          // Determines the operating mode of the PV Array as Fixed Voltage or MPP 
-            , double InvVoltage                     // Voltage set by inverter [V], only used if MPPT status is false                                      
+               bool isMPPT                      // Determines the operating mode of the PV Array as Fixed Voltage or MPP 
+            , double InvVoltage                 // Voltage set by inverter [V], only used if MPPT status is false                                      
             )
         {
-
             if (isMPPT)
             {
                 // If the Inverter is MPPT tracking allow PV array to produce MPP

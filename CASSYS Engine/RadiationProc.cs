@@ -162,7 +162,7 @@ namespace CASSYS
             SimSun.Calculate(SimMet.DayOfYear, HourOfDay);
 
             // Calculating the Surface Slope and Azimuth based on the Tracker Chosen
-            SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth);
+            SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth, SimMet.Year, SimMet.DayOfYear);
             SimTilter.itsSurfaceSlope = SimTracker.SurfSlope;
             SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
 
@@ -192,7 +192,7 @@ namespace CASSYS
             double HGloHi = SimSun.NExtra;
 
             // Calculating the Surface Slope and Azimuth based on the Tracker Chosen
-            SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth);
+            SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth, SimMet.Year, SimMet.DayOfYear);
             SimTilter.itsSurfaceSlope = SimTracker.SurfSlope;
             SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
             SimTilter.IncidenceAngle = SimTracker.IncidenceAngle;
@@ -216,7 +216,6 @@ namespace CASSYS
                 SimSplitter.NDir = 0;
                 SimSplitter.HDir = 0;
 
-                //SimSplitter.Calculate(SimSun.Zenith, HGlo, NExtra: SimSun.NExtra);
                 SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
             }
             // Otherwise, bisection loop
@@ -253,7 +252,7 @@ namespace CASSYS
         {
             if (pyranoTilter.NoPyranoAnglesDefined)
             {
-                SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth);
+                SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth, SimMet.Year, SimMet.DayOfYear);
                 pyranoTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
                 pyranoTilter.itsSurfaceSlope = SimTracker.SurfSlope;
                 pyranoTilter.IncidenceAngle = SimTracker.IncidenceAngle;
@@ -350,17 +349,14 @@ namespace CASSYS
             // The sun class requires the configuration of the surface slope to calculate the apparent sunset and sunrise hours.
             SimTracker.Config();
             SimHorizonShading.Config(SimTracker.SurfSlope, SimTracker.SurfAzimuth, SimTracker.itsTrackMode);
-            SimSun.itsSurfaceSlope = SimTracker.SurfSlope;
             SimSun.Config();
-            SimTilter.Config();
 
-            // Configure a pyranometer tilter, only if the input file has tilted irradiance as an input.
             if (ReadFarmSettings.UsePOA)
             {
                 pyranoTilter.ConfigPyranometer();
             }
 
-            
+            SimTilter.Config();
         }
     }
 }

@@ -29,13 +29,14 @@ using System.Linq;
 using System.Xml;
 using System.Text;
 using System.Threading;
+using System.Data;
 
 namespace CASSYS
 {
-    static class ReadFarmSettings
+    public class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String[] SupportedVersion = { "0.9", "0.9.1", "0.9.2", "0.9.3", "1.0.0", "1.0.1", "1.1.0" };  // The supported versions of CASSYS CSYX Files.
+        public static String EngineVersion = "1.2.0";  // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -45,6 +46,8 @@ namespace CASSYS
         public static bool UseWindSpeed;                            // Boolean indicating if the program has the Wind Speed available to use
         public static bool tempAmbDefined;                          // Boolean indicating if the program has Temp Ambient available to use
         public static bool batchMode = false;                       // Determines if the program is being run in batch mode (CMD prompt arguments for IO files) or not
+        public static string outputMode = "csv";                    // Determines if output should be a comma seperated string (str), a csv file (csv), or a csv file with multiple runs with varying parameter (var)
+        public static string currentYear = DateTime.Now.Year.ToString();   // Gets the current year that the program is run for copywrite message
 
         // Gathering Input and Output Configurations for the ReadFarmSettings Class
         public static String SimInputFile;                          // Input file path
@@ -52,15 +55,18 @@ namespace CASSYS
         public static int SubArrayCount;                            // Number of system sub-arrays, default: 1
         public static int ClimateFileRowsToSkip;                    // Number of rows to skip
         public static int TMYType;                                  // If a TMY file is loaded, it specifies either 2 or 3 for .tm2 or .tm3 format
-        public static string delim;                                 // The character used in the input file between adjacent values
+        public static string Delim;                                 // The character used in the input file between adjacent values
         public static int[] ClimateRefPos;                          // The positions of input data from the user input file
-        //public static bool NoSystemDefined = false;                 // Checks if no system was defined and allow user to simulate irradiance values only
-        public static string SystemMode = "GridConnected";         //The system type will determine which calculations are required
+        //public static bool NoSystemDefined = false;               // Checks if no system was defined and allow user to simulate irradiance values only
+        public static string SystemMode = "GridConnected";          // The system type will determine which calculations are required
+        public static int IncClimateRowsAllowed;                    // Number of incorrectly formatted climate file rows CASSYS can skip over until simulation stops
 
         // Output configuration for the Program
         public static Dictionary<String, dynamic> Outputlist;       // Creating a dictionary to hold all output values;
         public static List<String> OutputScheme;                    // String Array that holds values based on user request
         public static String OutputHeader = null;                   // The header of the output file, Always begins with TimeStamp.
+        public static DataTable outputTable;                        // For variable parameter mode the output data held in a datatable
+        public static int runNumber;                                // Current simulation being ran for variable parameter mode
 
         // Finding and assigning the Simulation Input and Output file name 
         public static void AssignIOFileNames()
@@ -113,11 +119,12 @@ namespace CASSYS
             try
             {
                 // Collecting file specific information.
-                delim = GetInnerText("InputFile", "Delimeter", _Error: ErrLevel.FATAL);
+                Delim = GetInnerText("InputFile", "Delimeter", _Error: ErrLevel.FATAL);
                 Util.AveragedAt = GetInnerText("InputFile", "AveragedAt", _Error: ErrLevel.FATAL);
                 Util.timeFormat = GetInnerText("InputFile", "TimeFormat", _Error: ErrLevel.FATAL);
                 Util.timeStep = double.Parse(GetInnerText("InputFile", "Interval", _Error: ErrLevel.FATAL));
                 ClimateFileRowsToSkip = int.Parse(GetInnerText("InputFile", "RowsToSkip", _Error: ErrLevel.WARNING, _default: "0"));
+                IncClimateRowsAllowed = int.Parse(GetInnerText("InputFile", "IncorrectClimateRowsAllowed", _Error: ErrLevel.INTERNAL, _default: "0"));
                 TMYType = int.Parse(GetInnerText("InputFile", "TMYType", _default: "-1"));
 
                 // Initializing the array to use as a holder for column numbers.
@@ -187,11 +194,15 @@ namespace CASSYS
             {
                 if (Convert.ToBoolean(outNode.InnerText))
                 {
-                    // Gathering Relevant nodes
-                    Outputlist.Add(outNode.Name, null);
+                    // In variable parameter mode, the timestamps are only written for the first simulation
+                    if (!((outNode.Name == "Input_Timestamp" || outNode.Name == "Timestamp_Used_for_Simulation") && ReadFarmSettings.outputMode == "var" && ReadFarmSettings.runNumber != 1))
+                    {
+                        // Gathering Relevant nodes
+                        Outputlist.Add(outNode.Name, null);
 
-                    // Creating a list of all items
-                    OutputScheme.Add(outNode.Name);
+                        // Creating a list of all items
+                        OutputScheme.Add(outNode.Name);
+                    }
 
                     // Creating the output header, using the display name attribute of each output, or if individual sub-array performance is requested
                     // providing the header for each PV-side or Inv-side of Sub-Array for Current, Power, and Voltage
@@ -262,7 +273,8 @@ namespace CASSYS
 
                         OutputHeader += SubArrayTitle;
                     }
-                    else
+                    // In variable parameter mode, the timestamps are only written for the first simulation
+                    else if (!((outNode.Name == "Input_Timestamp" || outNode.Name == "Timestamp_Used_for_Simulation") && ReadFarmSettings.outputMode == "var" && ReadFarmSettings.runNumber != 1))
                     {
                         OutputHeader += outNode.Attributes["DisplayName"].Value + " (" + outNode.Attributes["Units"].Value + ")" + ",";
                     }
@@ -275,7 +287,7 @@ namespace CASSYS
         {
             try
             {
-                if (SupportedVersion.Contains(_VersionNum))
+                if (String.Compare(EngineVersion, _VersionNum)>=0)
                 {
                     // Determine the Path of the .CSYX requested
                     switch (Path)
@@ -319,6 +331,9 @@ namespace CASSYS
                         case "OutputFile":
                             Path = "/Site/OutputFileStyle/" + NodeName;
                             break;
+                        case "Iterations":
+                            Path = "/Site/Iterations/" + NodeName;
+                            break;
                     }
                     // Check if the .CSYX Blank, if it is, return the default value
                     if (doc.SelectSingleNode(Path).InnerText == "")
@@ -328,9 +343,13 @@ namespace CASSYS
                             ErrorLogger.Log(NodeName + " is not defined. CASSYS requires this value to run.", ErrLevel.FATAL);
                             return "N/A";
                         }
-                        else
+                        else if(_Error == ErrLevel.WARNING)
                         {
                             ErrorLogger.Log("Warning: " + NodeName + " is not defined for this file. CASSYS assigned " + _default + " for this value.", ErrLevel.WARNING);
+                            return _default;
+                        }
+                        else
+                        {
                             return _default;
                         }
                     }
@@ -347,7 +366,7 @@ namespace CASSYS
             }
             catch (NullReferenceException)
             {
-                if (_Error == ErrLevel.WARNING)
+                if (_Error == ErrLevel.WARNING || _Error == ErrLevel.INTERNAL)
                 {
                     return _default;
                 }
@@ -364,7 +383,7 @@ namespace CASSYS
         {
             try
             {
-                if (SupportedVersion.Contains(_VersionNum))
+                if (String.Compare(EngineVersion, _VersionNum) >= 0)
                 {
                     switch (Path)
                     {
@@ -394,6 +413,9 @@ namespace CASSYS
                             break;
                         case "OutputFile":
                             Path = "/Site/OutputFileStyle" + _Adder;
+                            break;
+                        case "Iteration1":
+                            Path = "/Site/Iterations/Iteration1" + _Adder;
                             break;
                     }
 
@@ -425,7 +447,7 @@ namespace CASSYS
         {
             CASSYSCSYXVersion = doc.SelectSingleNode("/Site/Version").InnerXml;
 
-            // Check if version number if specified.
+            // Check if version number is specified.
             if (CASSYSCSYXVersion == "")
             {
                 ErrorLogger.Log("The file does not have a valid version number. Please check the site file.", ErrLevel.FATAL);
@@ -433,7 +455,7 @@ namespace CASSYS
 
 
             // CASSYS Version check, if the version does not match, the program should warn the user.
-            if (!SupportedVersion.Contains(CASSYSCSYXVersion))
+            if (String.Compare(EngineVersion, CASSYSCSYXVersion)<0)
             {
                 ErrorLogger.Log("You are using an older version of the CASSYS Engine. Please update to the latest version available at https://github.com/CanadianSolar/CASSYS", ErrLevel.FATAL);
             }
@@ -451,8 +473,8 @@ namespace CASSYS
             // Show the following messages to the user
             Console.WriteLine("-------------------------------------------------------------------------------");
             Console.WriteLine("CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems");
-            Console.WriteLine("Copyright 2015 CanadianSolar, All rights reserved.");
-            Console.WriteLine("CASSYS Engine Version: 1.1.0");
+            Console.WriteLine("Copyright 2015 - " + currentYear + " CanadianSolar, All rights reserved.");
+            Console.WriteLine("CASSYS Engine Version: " + EngineVersion);
             Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE");
             Console.WriteLine("-------------------------------------------------------------------------------");
         }

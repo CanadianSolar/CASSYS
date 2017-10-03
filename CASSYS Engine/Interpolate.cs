@@ -121,7 +121,7 @@ namespace CASSYS
             if (pos == -1)
             {
                 //can not extrapolate
-                // ErrorLogger.Log("The Bezier Interpolation cannot algorithm tried to perform an extrapolation. CASSYS has ended.");
+                ErrorLogger.Log("The Bezier Interpolation cannot algorithm tried to perform an extrapolation. CASSYS has ended.", ErrLevel.WARNING);
             }
 
             //evaluate on the given interval 

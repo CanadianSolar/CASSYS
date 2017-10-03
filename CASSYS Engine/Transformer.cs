@@ -28,7 +28,7 @@ using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-
+using CASSYS;
 
 namespace CASSYS
 {
@@ -122,12 +122,25 @@ namespace CASSYS
         //Config will determine and assign values for the losses at the transformer using an .CSYX file
         public void Config()
         {
+            //call variables from ReadFarmSettings to determine version of CASSYS
+            new ReadFarmSettings();
+            string version = ReadFarmSettings.doc.SelectSingleNode("/Site/Version").InnerXml;
+
             // Config will find the Iron Losses, and Global losses from the file. The resistive loss, etc are calculated by the program from these two values.
-            itsPIronLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PIronLoss", ErrLevel.WARNING)) * 1000;
-            itsPGlobLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PGlobLossTrf", ErrLevel.WARNING)) * 1000;
+            itsPIronLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PIronLossTrf", ErrLevel.WARNING)) * 1000;
+
             itsPNom = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PNomTrf", ErrLevel.WARNING)) * 1000;
             itsPResLss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PResLssTrf", ErrLevel.WARNING)) * 1000;
-            
+
+            if (string.CompareOrdinal("1.2.0", version) > 0)
+            {
+                itsPGlobLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PGlobLossTrf", ErrLevel.WARNING)) * 1000;
+            }
+            else
+            {
+                itsPGlobLoss = Convert.ToDouble(ReadFarmSettings.GetInnerText("Transformer", "PFullLoadLss", ErrLevel.WARNING)) * 1000;
+            }
+
             // Parameters that determine if the transformer remains ON at night, and initializing the disconnection of the transformer. 
             isNightlyDisconnected = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Transformer", "NightlyDisconnect", ErrLevel.WARNING, _default: "False"));
             

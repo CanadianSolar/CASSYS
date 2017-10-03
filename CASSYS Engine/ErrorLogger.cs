@@ -103,7 +103,7 @@ namespace CASSYS
     }
 
     // Error Logging function
-    public enum ErrLevel {WARNING, FATAL};                    // Error Logging Level used to determine if the program should exit or not
+    public enum ErrLevel {INTERNAL, WARNING, FATAL};                    // Error Logging Level used to determine if the program should exit or not
 
     // Error Logging Method
     public static class ErrorLogger
@@ -116,6 +116,9 @@ namespace CASSYS
         // Write to Error Log and output message to user (Type 1: Uses exceptions.)
         public static void Log(Exception err, ErrLevel Level)
         {
+            if (Level == ErrLevel.INTERNAL)
+                return;
+
             try
             {
                 // Append to the file
@@ -151,6 +154,9 @@ namespace CASSYS
         // Write to Error Log and output message to user (Type 2: Does not use exceptions.)
         public static void Log(String Message, ErrLevel Level)
         {
+            if (Level == ErrLevel.INTERNAL)
+                return;
+
             // Append to the file
             StreamWriter OutputStream = new StreamWriter(Application.StartupPath + "/ErrorLog.txt", true);
 

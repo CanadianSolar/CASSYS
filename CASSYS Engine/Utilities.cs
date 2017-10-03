@@ -18,12 +18,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.IO;
-using System.Collections.Generic;
-using System.Linq;
-using System.Xml;
-using System.Text;
-
 
 namespace CASSYS
 {
@@ -68,7 +62,7 @@ namespace CASSYS
         static public DateTime cachedTimeStamp;
 
         // Gets the day of the year based on a given date
-        public static void TSBreak(String TimeStamp, out int dayOfYear, out double hour, out int month, out double nextTimeStampHour, out double baseTimeStampHour)
+        public static void TSBreak(String TimeStamp, out int dayOfYear, out double hour, out int year, out int month, out double nextTimeStampHour, out double baseTimeStampHour, SimMeteo simMeteoParser)
         {
             try
             {
@@ -82,7 +76,8 @@ namespace CASSYS
                         // Check if the time stamps are going back in time
                         if (DateTime.Compare(CurrentTimeStamp, cachedTimeStamp) < 0)
                         {
-                            ErrorLogger.Log("Time stamps in the Input File go backwards in time. Please check your input file. CASSYS has terminated.", ErrLevel.FATAL);
+                            ErrorLogger.Log("Time stamps in the Input File go backwards in time. Please check your input file. CASSYS has ended.", ErrLevel.FATAL);
+
                         }
                     }
                 }
@@ -129,7 +124,9 @@ namespace CASSYS
                     }
                 }
                 hour = CurrentTimeStamp.Hour + CurrentTimeStamp.Minute / 60D + CurrentTimeStamp.Second / 3600D;
+                year = CurrentTimeStamp.Year;
                 month = CurrentTimeStamp.Month;
+
                 baseTimeStampHour = baseTimeStamp.Hour + baseTimeStamp.Minute / 60D + baseTimeStamp.Second / 3600D;
                 nextTimeStampHour = nextTimeStamp.Hour + nextTimeStamp.Minute / 60D + nextTimeStamp.Second / 3600D;
             }
@@ -137,10 +134,12 @@ namespace CASSYS
             {
                 dayOfYear = 0;
                 hour = 0;
+                year = 0;
                 month = 0;
                 baseTimeStampHour = 0;
                 nextTimeStampHour = 0;
-                ErrorLogger.Log(TimeStamp + " was not recognized a valid DateTime. The date-time was expected in " + Util.timeFormat + " format. Please check Site definition file.", ErrLevel.FATAL);
+                ErrorLogger.Log(TimeStamp + " was not recognized a valid DateTime. The date-time was expected in " + Util.timeFormat + " format. Please check Site definition file. Row was skipped", ErrLevel.WARNING);
+                simMeteoParser.inputRead = false;
             }
         }
         

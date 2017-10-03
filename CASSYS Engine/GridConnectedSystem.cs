@@ -27,6 +27,7 @@ namespace CASSYS
         // Creating Array of PV Array and Inverter Objects
         PVArray[] SimPVA;                                       // Array of Photovoltaic Arrays within farm
         Inverter[] SimInv;                                      // Array of Inverters within farm
+        ACWiring[] SimACWiring;                                 // Array of Wires used in calculating AC wiring loss
         Transformer SimTransformer = new Transformer();         // Transformer instance used in calculations
 
         // Shading Related variables
@@ -127,8 +128,10 @@ namespace CASSYS
                         SimPVA[j].ModuleQualityLoss = 0;
                         SimPVA[j].SoilingLoss = 0;
                         SimInv[j].IOut = 0;
-                        SimInv[j].ACWiringLoss = 0;
                     }
+
+                    //performing AC wiring calculations
+                    SimACWiring[j].Calculate(SimInv[j]);
 
                     // Assigning the outputs to the dictionary
                     ReadFarmSettings.Outputlist["SubArray_Current" + (j + 1).ToString()] = SimPVA[j].IOut;
@@ -145,7 +148,7 @@ namespace CASSYS
                 for (int i = 0; i < SimInv.Length; i++)
                 {
                     farmACOutput += SimInv[i].ACPwrOut;
-                    farmACOhmicLoss += SimInv[i].ACWiringLoss;
+                    farmACOhmicLoss += SimACWiring[i].ACWiringLoss;
                 }
 
                 SimTransformer.Calculate(farmACOutput - farmACOhmicLoss);
@@ -411,6 +414,7 @@ namespace CASSYS
             // Array of PVArray, Inverter and Wiring objects based on the number of Sub-Arrays 
             SimPVA = new PVArray[ReadFarmSettings.SubArrayCount];
             SimInv = new Inverter[ReadFarmSettings.SubArrayCount];
+            SimACWiring = new ACWiring[ReadFarmSettings.SubArrayCount];
 
             // Initialize and Configure PVArray and Inverter Objects through their .CSYX file
             for (int SubArrayCount = 0; SubArrayCount < ReadFarmSettings.SubArrayCount; SubArrayCount++)
@@ -419,7 +423,17 @@ namespace CASSYS
                 SimInv[SubArrayCount].Config(SubArrayCount + 1);
                 SimPVA[SubArrayCount] = new PVArray();
                 SimPVA[SubArrayCount].Config(SubArrayCount + 1);
-                SimInv[SubArrayCount].ConfigACWiring(SimPVA[SubArrayCount].itsPNomDCArray);
+                SimACWiring[SubArrayCount] = new ACWiring();
+
+                //If 'at Pnom' specified for AC Loss Fraction in version 1.2.0
+                if (string.Compare(ReadFarmSettings.CASSYSCSYXVersion, "1.2.0") >= 0 && ReadFarmSettings.GetInnerText("System", "ACWiringLossAtSTC", _Error: ErrLevel.WARNING) == "False")
+                {                 
+                    SimACWiring[SubArrayCount].Config(SubArrayCount + 1, SimInv[SubArrayCount].itsOutputVoltage, SimInv[SubArrayCount].outputPhases, SimInv[SubArrayCount].itsNomOutputPwr);
+                }
+                else
+                {
+                    SimACWiring[SubArrayCount].Config(SubArrayCount + 1, SimInv[SubArrayCount].itsOutputVoltage, SimInv[SubArrayCount].outputPhases, SimInv[SubArrayCount].itsMaxSubArrayACEff * SimPVA[SubArrayCount].itsPNomDCArray);
+                }
                 farmArea += SimPVA[SubArrayCount].itsRoughArea;
             }
         }

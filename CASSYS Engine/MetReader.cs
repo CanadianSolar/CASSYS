@@ -20,17 +20,14 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.IO;
-using System.Text;
 using Microsoft.VisualBasic.FileIO;
 
 
 namespace CASSYS
 {
     // Class that collects all the Meteorological Data
-    class SimMeteo
+    public class SimMeteo
     {
         // Initializing output variables
         public double HGlo = double.NaN;                            // Horiztal Global Irradiance [W/m^2]
@@ -41,13 +38,15 @@ namespace CASSYS
         public double TModMeasured = double.NaN;                    // Measured module temperature [C]
         public String TimeStamp = null;                             // Timestamp initialized to null
         public int lastDOY = 0;                                     // Holds the day of year that was simulated in the last interval.
+        public int Year;                                            // Holds current year
         public int DayOfYear;                                       // Holds current day of year
         public double HourOfDay;                                    // Holds current hour of day
         public int MonthOfYear;                                     // Holds current month of year
         public double TimeStepEnd;                                  // Time at which timestamp begins
         public double TimeStepBeg;                                  // Time at which timestamp ends
         public TextFieldParser InputFileReader;                     // Used to read climate values from input file
-        
+        public bool inputRead;                                      // Used to skip calculations and output file for a timestamp if unable to read meteological data
+        int numOfSkippedInput = 0;                                      // Number of input lines CASSYS was unable to read
 
         // Blank Constructor for SimMeteo
         public SimMeteo()
@@ -57,6 +56,7 @@ namespace CASSYS
         // Reads the input file and assigns the available outputs and time stamp
         public void Calculate()
         {
+            inputRead = true;
             // Keeping a track of how many times this method was accessed, and printing progress on console window.
             if (ErrorLogger.iterationCount % 1000 == 0)
             {
@@ -79,7 +79,21 @@ namespace CASSYS
             }
 
             // Determining DayOfYear, HOD, MOY, TimeStamp end and beginning and assigning these to the SimMeteoClass
-            Utilities.TSBreak(TimeStamp, out DayOfYear, out HourOfDay, out MonthOfYear, out TimeStepEnd, out TimeStepBeg);
+            Utilities.TSBreak(TimeStamp, out DayOfYear, out HourOfDay, out Year, out MonthOfYear, out TimeStepEnd, out TimeStepBeg, this);
+
+            // Do not assign outputs if unable to read line of input file
+            if (!inputRead)
+            {
+                if (numOfSkippedInput > ReadFarmSettings.IncClimateRowsAllowed)
+                {
+                    ErrorLogger.Log("CASSYS was unable to read a total of " + ReadFarmSettings.IncClimateRowsAllowed + " climate file lines. Please correct climate file format. CASSYS has exited.", ErrLevel.FATAL);
+                }
+                else
+                {
+                    numOfSkippedInput++;
+                }
+                return;
+            }
 
             // Assigning outputs for this interval.
             AssignOutputs();
@@ -204,15 +218,13 @@ namespace CASSYS
             }
             catch (IndexOutOfRangeException)
             {
-                ErrorLogger.Log("One of the Input columns was not defined correctly. Please check your Input file definition. Simulation has ended.", ErrLevel.FATAL);
+                ErrorLogger.Log("Incorrect number of fields in the above line. Row was skipped.", ErrLevel.WARNING);
+                inputRead = false;
             }
             catch (FormatException)
             {
-                ErrorLogger.Log("Incorrect format for values in the Input String. Please check your Input file at the Input line specified above. Simulation has ended.", ErrLevel.FATAL);
-            }
-            catch (CASSYSException ex)
-            {
-                ErrorLogger.Log(ex, ErrLevel.WARNING);
+                ErrorLogger.Log("Incorrect format for values in the Input String. Please check your Input file at the Input line specified above. Row was skipped.", ErrLevel.WARNING);
+                inputRead = false;
             }
         }
 
@@ -228,8 +240,6 @@ namespace CASSYS
             {
                 // Get the Inputs from the Input file as assigned by the .CSYX file
                 // The Input order is set up in weatherRefPos and then the input line is broken into its constituents based on the user assignment
-
-
                 simDateTime = DateTime.Parse(inputLineDelimited[0]).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
                 simDateTime = new DateTime(1990, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
 
@@ -257,11 +267,13 @@ namespace CASSYS
             }
             catch (IndexOutOfRangeException)
             {
-                ErrorLogger.Log("One of the Input columns was not defined correctly. Please check your Input file definition. Simulation has ended.", ErrLevel.FATAL);
+                ErrorLogger.Log("One of the Input columns was not defined correctly. Please check your Input file definition. Row was skipped.", ErrLevel.WARNING);
+                inputRead = false;
             }
             catch (FormatException)
             {
-                ErrorLogger.Log("Incorrect format for values in the Input String. Please check your Input file at the Input line specified above. Simulation has ended.", ErrLevel.FATAL);
+                ErrorLogger.Log("Incorrect format for values in the Input String. Please check your Input file at the Input line specified above. Row was skipped.", ErrLevel.WARNING);
+                inputRead = false;
             }
             catch (CASSYSException ex)
             {
@@ -284,7 +296,7 @@ namespace CASSYS
                 }
 
                 // Configuring the delimiter for the file.
-                InputFileReader.SetDelimiters(ReadFarmSettings.delim);
+                InputFileReader.SetDelimiters(ReadFarmSettings.Delim);
 
                 if (ReadFarmSettings.TMYType == 2)
                 {
