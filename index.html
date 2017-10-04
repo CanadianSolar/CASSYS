@@ -31,11 +31,13 @@
 <p><i>Current Version: 1.2.0</i></p>
 <p><i>New in this version:</i></p>  
 <ol>
-<li>ASTM E2848 Mode: ASTM E2848 mode is now available as a simulation mode. Users can now simulate system performance using coefficients determined as defined by the ASTM E2848 standard. The reference guide has been updated to document and explain the calculation of system power.</li>
-<li>Radiation Mode: CASSYS can be used to calculate plane-of-array irradiance given horizontal irradiance, for a variety of fixed and tracking surfaces, even if the rest of the system is not defined.</li>
-<li>Horizon shading. The program now includes a complete horizon shading model, which reduces beam, diffuse and reflected radiation according to a user-defined horizon profile.</li>
-<li>New transformer model. The program moves away from the PVsyst transformer model, based on a hypothetical STC rating, to a physical model based on actual no-load and full-load losses.</li>
-<li>Bug fixes. Both the interface and the engine have been enhanced to improve stability and correctness.</li>
+<li>AC wiring loss calculations are now completed in their own class as opposed to being carried out in the Inverter class.</li>
+<li>AC wiring loss can now be modelled at either Standard Test Conditions or at nominal inverter power rating. This may be specified by the user in the system sheet. Previously, simulations were completed assuming STC.</li>
+<li>Orientations and shading sheet now has an additional user selection option: Fixed Tilt with Seasonal Adjustment. This allows the user to specify panel tilt angles for summer and winter seasons. Summer and winter start dates are indicated by user input. The CASSYS engine will adjust calculations and resulting outputs accordingly.</li>
+<li>Climate file: When running simulation the engine will be able to detect and skip over a user specified number of unusable rows. The user can specify the desired number of unreadable rows within the selected climate file, in the climate file sheet. If there is more than the specified number of unusable rows, the program will stop running.</li>
+<li>Transformer sheet now allows for user input of either CASSYS values or PVsyst equivalent values.</li>
+<li>Implemented capability to run simulations iteratively, but is not active as of this release.</li>
+<li>It is now possible to import .PAN and .OND files from all versions of PVsyst.</li>
 </ol>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
