@@ -46,7 +46,7 @@ namespace CASSYS
         public double TimeStepBeg;                                  // Time at which timestamp ends
         public TextFieldParser InputFileReader;                     // Used to read climate values from input file
         public bool inputRead;                                      // Used to skip calculations and output file for a timestamp if unable to read meteological data
-        int numOfSkippedInput = 0;                                      // Number of input lines CASSYS was unable to read
+        int numOfSkippedInput = 0;                                  // Number of input lines CASSYS was unable to read
 
         // Blank Constructor for SimMeteo
         public SimMeteo()

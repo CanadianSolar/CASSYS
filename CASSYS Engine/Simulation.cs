@@ -29,6 +29,7 @@ using System.Xml;
 using System.IO;
 using System.Diagnostics;
 using System.Data;
+using System.Windows.Forms;
 
 namespace CASSYS
 {
@@ -55,7 +56,14 @@ namespace CASSYS
             Stopwatch timeTaken = new Stopwatch();
             timeTaken.Start();
 
-            // ReadFarmSettings reads the overall configuration of the farm
+            // Clear error log just before simulation
+            //File.WriteAllText(Application.StartupPath + "/ErrorLog.txt", string.Empty);
+            if(File.Exists(Application.StartupPath + "/ErrorLog.txt"))
+            {
+                File.Delete(Application.StartupPath + "/ErrorLog.txt");
+            }
+
+           // ReadFarmSettings reads the overall configuration of the farm
             ReadFarmSettings.doc = SiteSettings;
 
             // Obtain IO File names, either from the command prompt, or from .CSYX
