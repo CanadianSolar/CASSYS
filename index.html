@@ -21,14 +21,15 @@
  <h2 class="project-tagline">Canadian Solar Simulation Program for Grid-Connected PV Systems</h2>
 	
 <a href="https://github.com/CanadianSolar/CASSYS" class="btn">View on GitHub</a>
-      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.2.0</a>	
+      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.2.1</a>	
 <h3>
 <a id="program-goals-and-description" class="anchor" href="#program-goals-and-description" aria-hidden="true"><span class="octicon octicon-link"></span></a>Program goals and description</h3>
 
 <hr>
 
 <p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
-<p><i>Current Version: 1.2.0</i></p>
+<p><i>Current Version: 1.2.1</i></p>
+
 <p><i>New in this version:</i></p>  
 <ol>
 <li>AC wiring loss calculations are now completed in their own class as opposed to being carried out in the Inverter class.</li>
@@ -39,6 +40,9 @@
 <li>Implemented capability to run simulations iteratively, but is not active as of this release.</li>
 <li>It is now possible to import .PAN and .OND files from all versions of PVsyst.</li>
 </ol>
+<p><i>Bug Fixes:</i></p>
+<li>Error Log: Now refreshes before each simulation</li>
+<li>Inverter Database: New user added .ond files visible</li>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
 
