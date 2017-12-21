@@ -33,8 +33,8 @@ namespace CASSYS
     {
         // Inverter definition variables
         bool itsMPPTracking;                                // MppTracking flag [TRUE, FALSE]
-        double itsMppWindowMin;                             // Minimum value for Mppt window [V]
-        double itsMppWindowMax;                             // Maximum value for Mppt window [V]
+        public double itsMppWindowMin;                      // Minimum value for Mppt window [V]
+        public double itsMppWindowMax;                      // Maximum value for Mppt window [V]
         public int itsNumInverters;                         // Number of same inverters supporting array [#]
         public double itsThresholdPwr;                      // Power below which inverter cuts off [W]     
         public double itsMinVoltage;                        // Minimum voltage required for the Inverter to turn ON [V]
@@ -43,13 +43,13 @@ namespace CASSYS
         public int outputPhases;                            // The number of phases at the inverter output [#]
 
         // Efficiency curves related variables
-        bool threeCurves;                            // True if Inverter has three efficiency curves, false if Inverter has one efficiency curve
+        bool threeCurves;                                   // True if Inverter has three efficiency curves, false if Inverter has one efficiency curve
         double itsLowVoltage;                               // The voltage threshold for low voltage efficiency curve [V]
         double itsMedVoltage;                               // The voltage threshold for medium voltage efficiency curve [V]
         double itsHighVoltage;                              // The voltage threshold for high voltage efficiency curve [V]
         double[][] itsPresentEfficiencies = new double[2][];// Current Efficiency curve chosen calculated for different voltage values [%]
         public double[][] itsLowEff = new double[2][];      // Low voltage efficiency curve values [P DC in, %]
-        double[][] itsMedEff = new double[2][];      // Medium voltage efficiency curve values [P DC in, %]
+        double[][] itsMedEff = new double[2][];             // Medium voltage efficiency curve values [P DC in, %]
         double[][] itsHighEff = new double[2][];            // High voltage efficiency curve values [P DC in, %]
         public double[][] itsOnlyEff = new double[2][];     // Its only efficiency curve [P DC in, %]
         bool effIn;
@@ -72,9 +72,10 @@ namespace CASSYS
         public double itsPNomArrayAC;                       // Nominal AC Production of the Array [W]
         public double LossPMinThreshold;                    // Loss when the power of the array is not sufficient for starting the inverter. 
         public double LossClipping;                         // Produced power before reduction by Inverter (clipping) [W]
-        public double itsMaxSubArrayACEff;                     // Initializing the value of the maximum AC power produced by this Sub-Array
-
-
+        public double LossLowVoltage;                       // Loss due to voltage too low [W]
+        public double LossHighVoltage;                      // Loss due to voltage too high [W]
+        public double itsMaxSubArrayACEff;                  // Initializing the value of the maximum AC power produced by this Sub-Array
+        
         // Inverter constructor
         public Inverter
         (
@@ -133,11 +134,12 @@ namespace CASSYS
         }
 
         // Check if the PV Array voltage is within the MPPT Window of the Inverter
-        public void GetMPPTStatus(double arrayV, out bool MPPTStatus)
+        // public void GetMPPTStatus(double arrayV, out bool MPPTStatus)
+        public void GetMPPTStatus(double arrayV)
         {
             // Default value for if the Inverter is in the MPPT Window
-            MPPTStatus = false;
-
+            inMPPTWindow = false;
+            
             if (itsMPPTracking)
             {
                 if (arrayV < itsMppWindowMin)
@@ -151,7 +153,7 @@ namespace CASSYS
                         VInDC = itsMppWindowMin;        // Less than or equal to voltage window minimum, fix to voltage minimum
                     }
 
-                    MPPTStatus = false;
+                    inMPPTWindow = false;
                 }
                 else if (arrayV > itsMppWindowMax)
                 {
@@ -164,7 +166,7 @@ namespace CASSYS
                         VInDC = itsMppWindowMax;        // Less than or equal to voltage window minimum, fix to voltage minimum
                     }
 
-                    MPPTStatus = false;
+                    inMPPTWindow = false;
                 }
                 // If in between the voltage window, the voltage stays as received
                 else
@@ -177,7 +179,7 @@ namespace CASSYS
                     {
                         VInDC = arrayV;
                     }
-                    MPPTStatus = true;
+                    inMPPTWindow = true;
                 }
             }
         }

@@ -40,7 +40,9 @@ namespace CASSYS
         public int lastDOY = 0;                                     // Holds the day of year that was simulated in the last interval.
         public int Year;                                            // Holds current year
         public int DayOfYear;                                       // Holds current day of year
+        public int DayOfMonth;                                      // // Holds current day of month
         public double HourOfDay;                                    // Holds current hour of day
+        public double minuteInterval;                               // Hold the interval at which the weather was collected
         public int MonthOfYear;                                     // Holds current month of year
         public double TimeStepEnd;                                  // Time at which timestamp begins
         public double TimeStepBeg;                                  // Time at which timestamp ends
@@ -52,7 +54,7 @@ namespace CASSYS
         public SimMeteo()
         {
         }
-        
+
         // Reads the input file and assigns the available outputs and time stamp
         public void Calculate()
         {
@@ -65,7 +67,11 @@ namespace CASSYS
             ErrorLogger.iterationCount++;
 
             // Assigning outputs of the SimMeteo class based on file type.
-            if (ReadFarmSettings.TMYType == 2)
+            if(ReadFarmSettings.TMYType == 1)
+            {
+                ParseEPWLine();
+            }
+            else if (ReadFarmSettings.TMYType == 2)
             {
                 ParseTM2Line();
             }
@@ -73,6 +79,7 @@ namespace CASSYS
             {
                 ParseTM3Line();
             }
+
             else
             {
                 ParseCSVLine();
@@ -97,7 +104,6 @@ namespace CASSYS
 
             // Assigning outputs for this interval.
             AssignOutputs();
-
         }
 
         // These outputs will be written to the file from this class.
@@ -111,6 +117,48 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Wind_Velocity"] = WindSpeed;
             ReadFarmSettings.Outputlist["Measured_Module_Temperature__deg_C_"] = TModMeasured;
             ReadFarmSettings.Outputlist["Average_Ambient_Temperature_deg_C_"] = TAmbient;
+        }
+
+        // Reads EPW Files and provides the values to simulation object
+        public void ParseEPWLine()
+         {
+            // Read Input file line and split line based on the delimiter, and assign variables as defined above
+            string[] inputLineDelimited = InputFileReader.ReadFields();
+            DateTime dateAndTime;
+            try
+            {
+                Year = int.Parse(inputLineDelimited[0]); // not used
+                MonthOfYear = int.Parse(inputLineDelimited[1]);
+                DayOfMonth = int.Parse(inputLineDelimited[2]);
+                HourOfDay = double.Parse(inputLineDelimited[3]);
+                minuteInterval = double.Parse(inputLineDelimited[4]);
+
+                // EPW files are assumed to be in hourly intervals, so this is a check to ensure the assumption is true
+                if(minuteInterval != 60 & minuteInterval != 0)
+                {
+                    ErrorLogger.Log("EPW file is not in 60 minute intervals", ErrLevel.FATAL);
+                }
+
+                // Year is permanantly set to 2017 to prevent chronological error 
+                dateAndTime = new DateTime(2017, MonthOfYear, DayOfMonth).AddHours(HourOfDay);
+
+                TAmbient = double.Parse(inputLineDelimited[6]);
+                HGlo = double.Parse(inputLineDelimited[13]);
+                HDiff = double.Parse(inputLineDelimited[15]);
+                WindSpeed = double.Parse(inputLineDelimited[20]);
+                
+                TimeStamp = dateAndTime.ToString("yyyy-MM-dd HH:mm:ss");
+                Util.timeFormat = "yyyy-MM-dd HH:mm:ss";
+                ReadFarmSettings.UsePOA = false;
+                ReadFarmSettings.UseDiffMeasured = true;
+                ReadFarmSettings.UseWindSpeed = true;
+                ReadFarmSettings.UseMeasuredTemp = false;
+            }
+            catch
+            {
+                ErrorLogger.Log("Error produced in loading EPW", ErrLevel.FATAL);
+                inputRead = false;
+            }
         }
 
         // Reads .TM2 files and provides the values to Simulation Object
@@ -164,6 +212,59 @@ namespace CASSYS
             ReadFarmSettings.UseWindSpeed = true;
             ReadFarmSettings.UseMeasuredTemp = false;
 
+        }
+
+        // Reads .TM3 Files and provides the value to Simulation Object
+        public void ParseTM3Line()
+        {
+
+            // Read Input file line and split line based on the delimiter, and assign variables as defined above
+            string[] inputLineDelimited = InputFileReader.ReadFields();
+            DateTime simDateTime = new DateTime();
+
+            try
+            {
+                // Get the Inputs from the Input file as assigned by the .CSYX file
+                // The Input order is set up in weatherRefPos and then the input line is broken into its constituents based on the user assignment
+                simDateTime = DateTime.Parse(inputLineDelimited[0]).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
+                simDateTime = new DateTime(1990, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
+
+                if (simDateTime.DayOfYear >= lastDOY)
+                {
+                    lastDOY = simDateTime.DayOfYear;
+                }
+                else
+                {
+                    simDateTime = new DateTime(simDateTime.Year + 1, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
+                    lastDOY = simDateTime.DayOfYear;
+                }
+                
+                TimeStamp = simDateTime.ToString("yyyy-MM-dd HH:mm:ss");
+
+                Util.timeFormat = "yyyy-MM-dd HH:mm:ss";
+                TAmbient = double.Parse(inputLineDelimited[31]);
+                HDiff = double.Parse(inputLineDelimited[10]);
+                HGlo = double.Parse(inputLineDelimited[4]);
+                WindSpeed = double.Parse(inputLineDelimited[46]);
+                ReadFarmSettings.UsePOA = false;
+                ReadFarmSettings.UseDiffMeasured = true;
+                ReadFarmSettings.UseWindSpeed = true;
+                ReadFarmSettings.UseMeasuredTemp = false;
+            }
+            catch (IndexOutOfRangeException)
+            {
+                ErrorLogger.Log("One of the Input columns was not defined correctly. Please check your Input file definition. Row was skipped.", ErrLevel.WARNING);
+                inputRead = false;
+            }
+            catch (FormatException)
+            {
+                ErrorLogger.Log("Incorrect format for values in the Input String. Please check your Input file at the Input line specified above. Row was skipped.", ErrLevel.WARNING);
+                inputRead = false;
+            }
+            catch (CASSYSException ex)
+            {
+                ErrorLogger.Log(ex, ErrLevel.WARNING);
+            }
         }
 
         // Reads CSV Files and provides the values to Simulation Object
@@ -228,58 +329,6 @@ namespace CASSYS
             }
         }
 
-        // Reads .TM3 Files and provides the value to Simulation Object
-        public void ParseTM3Line()
-        {
-
-            // Read Input file line and split line based on the delimiter, and assign variables as defined above
-            string[] inputLineDelimited = InputFileReader.ReadFields();
-            DateTime simDateTime = new DateTime();
-
-            try
-            {
-                // Get the Inputs from the Input file as assigned by the .CSYX file
-                // The Input order is set up in weatherRefPos and then the input line is broken into its constituents based on the user assignment
-                simDateTime = DateTime.Parse(inputLineDelimited[0]).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
-                simDateTime = new DateTime(1990, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
-
-                if (simDateTime.DayOfYear >= lastDOY)
-                {
-                    lastDOY = simDateTime.DayOfYear;
-                }
-                else
-                {
-                    simDateTime = new DateTime(simDateTime.Year + 1, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
-                    lastDOY = simDateTime.DayOfYear;
-                }
-                
-                TimeStamp = simDateTime.ToString("yyyy-MM-dd HH:mm:ss");
-
-                Util.timeFormat = "yyyy-MM-dd HH:mm:ss";
-                TAmbient = double.Parse(inputLineDelimited[31]);
-                HDiff = double.Parse(inputLineDelimited[10]);
-                HGlo = double.Parse(inputLineDelimited[4]);
-                WindSpeed = double.Parse(inputLineDelimited[46]);
-                ReadFarmSettings.UsePOA = false;
-                ReadFarmSettings.UseDiffMeasured = true;
-                ReadFarmSettings.UseWindSpeed = true;
-                ReadFarmSettings.UseMeasuredTemp = false;
-            }
-            catch (IndexOutOfRangeException)
-            {
-                ErrorLogger.Log("One of the Input columns was not defined correctly. Please check your Input file definition. Row was skipped.", ErrLevel.WARNING);
-                inputRead = false;
-            }
-            catch (FormatException)
-            {
-                ErrorLogger.Log("Incorrect format for values in the Input String. Please check your Input file at the Input line specified above. Row was skipped.", ErrLevel.WARNING);
-                inputRead = false;
-            }
-            catch (CASSYSException ex)
-            {
-                ErrorLogger.Log(ex, ErrLevel.WARNING);
-            }
-        }
 
         // Configuration method for the SimMeteo Class.
         public void Config()

@@ -53,6 +53,12 @@ namespace CASSYS
         public double TDif;                                      // Diffuse irradiance allowing for horizon effects [W/m^2]
         public double TRef;                                      // Ground reflected irradiance allowing for horizon effects [W/m^2]
         public double TGlo;                                      // Total irradiance allowing for horizon effects [W/m^2]
+        public double GloRad;                                    // Total irradiance with no horizon shadin effects [W/m^2]
+
+        public double LossDir;                                   // Beam losses due to horizon effects [W/m^2]
+        public double LossDif;                                   // Diffuse losses due to horizon effects [W/m^2]
+        public double LossRef;                                   // Ground reflected losses due to horizon effects [W/m^2]
+        public double LossGlo;                                   // Total losses due to horizon effects [W/m^2]
 
         // Horizon shading constructor
         public HorizonShading()
@@ -169,6 +175,13 @@ namespace CASSYS
                 TRef = GRefFactor * POAGRef;
                 TGlo = TDir + TDif + TRef;
             }
+
+            // Calculate horizon shading losses
+            LossDir = POABeam - TDir;
+            LossDif = POADiff - TDif;
+            LossRef = POAGRef - TRef;
+            LossGlo = LossDir + LossDif + LossRef;
+
         }
 
         // This function creates a 361-element length array that extends 180 degrees above and below the Panel Azimuth value

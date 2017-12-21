@@ -31,7 +31,8 @@ namespace CASSYS
         Transformer SimTransformer = new Transformer();         // Transformer instance used in calculations
 
         // Shading Related variables
-        Shading SimShading = new Shading();                     // used to calculate solar panel shading
+        HorizonShading SimHorizon = new HorizonShading();       // used to calculate solar panel shading relative to a given horizon
+        Shading SimShading = new Shading();                     // used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
         double ShadGloFactor;                                   // Shading factor on the POA Global
         double ShadBeamLoss;                                    // Shading Losses to Beam
@@ -56,12 +57,17 @@ namespace CASSYS
         double farmOverAllEff = 0;                              // Overall efficiency of farm
         double farmPR = 0;                                      // Farm Performance Ratio
         double farmSysIER = 0;
+        double farmPnom;                                        // Nominal Power of farm [W]
+        double farmTempLoss;                                    // Farm/PVArray Loss due to temperature [W]
+        double farmRadLoss;                                     // Farm/PVArray Loss due to irradiance level [W]
 
         // Inverter related calculation variables:
-        double farmACOutput = 0;                                // Farm output [W AC]
+        double farmACOutput = 0;                                // Farm inverter output [W AC]
         double farmACOhmicLoss = 0;                             // Farm/Inverter to Transformer AC Ohmic Loss (Sum for all sub-arrays) [W]
         double farmACPMinThreshLoss = 0;                        // Loss when the power of the array is not sufficient for starting the inverter. [W]
         double farmACClippingPower = 0;                         // Produced power before reduction by Inverter (clipping) [W]
+        double farmACMaxVoltageLoss = 0;                        // Loss of power when voltage of the array is too large and forces the inverters to 'shut off' and when inverter is not operating at MPP [W]
+        double farmACMinVoltageLoss = 0;                        // Loss of power when voltage of the array is too small and forces the inverters to 'shut off' and when inverter is not operating at MPP [W]
 
         // Calculate method
         public void Calculate(
@@ -69,9 +75,18 @@ namespace CASSYS
                 SimMeteo SimMet                                 // Meteological data from inputfile
             )
         {
+            // Reset Losses
+            for (int i = 0; i < SimPVA.Length; i++)
+            {
+                SimInv[i].LossPMinThreshold = 0;
+                SimInv[i].LossClipping = 0;
+                SimInv[i].LossLowVoltage = 0;
+                SimInv[i].LossHighVoltage = 0;
+            }
+
             // Calculating solar panel shading
             SimShading.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimHorizonShading.TDir, RadProc.SimHorizonShading.TDif, RadProc.SimHorizonShading.TRef, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
-
+            
             try
             {
                 // Calculate PV Array Output for inputs read in this loop
@@ -79,55 +94,17 @@ namespace CASSYS
                 {
                     // Adjust the IV Curve based on based on Temperature and Irradiance
                     SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear);
-
+                    
                     // Check Inverter status to determine if the Inverter is ON or OFF
                     GetInverterStatus(j);
 
-                    if (SimInv[j].isON)
+                    // If inverter is off set appropriate variables to 0 and recalculate array in open circuit voltage
+                    if (!SimInv[j].isON)
                     {
-                        // If ON and If the PVArray Voltage in the MPPT Window, calculate the Inverter Output
-                        if (SimInv[j].inMPPTWindow)
-                        {
-                            SimPVA[j].Calculate(true, 0);
-                            SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
-                            // If the Inverter is Clipping, the voltage is increased till the Inverter will not Clip anymore. 
-                            if (SimInv[j].isClipping)
-                            {
-                                GetClippingVoltage(j);
-                                SimPVA[j].Calculate(false, SimInv[j].VInDC);
-                                SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
-                            }
-                        }
-                        else
-                        {
-                            // If ON and if the PV Array Voltage is NOT in the MPPT Window, re-calculate with the PV Array at Fixed Voltage Mode
-                            SimPVA[j].Calculate(false, SimInv[j].VInDC);
-                            GetInverterStatus(j);
-
-                            if ((SimInv[j].isON == true) && (SimInv[j].inMPPTWindow == false))
-                            {
-                                SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
-
-                                if (SimInv[j].isClipping)
-                                {
-                                    GetClippingVoltage(j);
-                                    SimPVA[j].Calculate(false, SimInv[j].VInDC);
-                                    SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // If the Inverter is OFF, everything should be 0.
-                        SimPVA[j].VOut = SimInv[j].VInDC;
-                        SimPVA[j].IOut = 0;
-                        SimPVA[j].POut = 0;
-                        SimPVA[j].OhmicLosses = 0;
-                        SimPVA[j].MismatchLoss = 0;
-                        SimPVA[j].ModuleQualityLoss = 0;
-                        SimPVA[j].SoilingLoss = 0;
+                        SimInv[j].ACPwrOut = 0;
                         SimInv[j].IOut = 0;
+                        SimPVA[j].CalcAtOpenCircuit();
+                        SimPVA[j].Calculate(false, SimPVA[j].Voc);
                     }
 
                     //performing AC wiring calculations
@@ -156,7 +133,7 @@ namespace CASSYS
                 // Calculating outputs that will be assigned for this interval
                 // Shading each component of the Tilted radiaton
                 // Using horizon affected tilted radiation
-                ShadGloLoss = RadProc.SimTilter.TGlo - SimShading.ShadTGlo;
+                ShadGloLoss = (RadProc.SimTilter.TGlo - SimShading.ShadTGlo) - RadProc.SimHorizonShading.LossGlo;
                 ShadGloFactor = (RadProc.SimTilter.TGlo > 0 ? SimShading.ShadTGlo / RadProc.SimTilter.TGlo : 1);
                 ShadBeamLoss = RadProc.SimHorizonShading.TDir - SimShading.ShadTDir;
                 ShadDiffLoss = RadProc.SimTilter.TDif > 0 ? RadProc.SimHorizonShading.TDif - SimShading.ShadTDif : 0;
@@ -175,12 +152,17 @@ namespace CASSYS
                 farmPNomAC = 0;
                 farmACPMinThreshLoss = 0;
                 farmACClippingPower = 0;
+                farmACMaxVoltageLoss = 0;
+                farmACMinVoltageLoss = 0;
+                farmPnom = 0;
+                farmTempLoss = 0;
+                farmRadLoss = 0;
 
                 for (int i = 0; i < SimPVA.Length; i++)
                 {
                     farmDC += SimPVA[i].POut;
                     farmDCCurrent += SimPVA[i].IOut;
-                    farmDCMismatchLoss += SimPVA[i].MismatchLoss;
+                    farmDCMismatchLoss += Math.Max(0, SimPVA[i].MismatchLoss);
                     farmDCModuleQualityLoss += SimPVA[i].ModuleQualityLoss;
                     farmDCOhmicLoss += SimPVA[i].OhmicLosses;
                     farmDCSoilingLoss += SimPVA[i].SoilingLoss;
@@ -190,10 +172,13 @@ namespace CASSYS
                     farmPNomAC += SimInv[i].itsPNomArrayAC;
                     farmACPMinThreshLoss += SimInv[i].LossPMinThreshold;
                     farmACClippingPower += SimInv[i].LossClipping;
-                    SimInv[i].LossPMinThreshold = 0;
-                    SimInv[i].LossClipping = 0;
+                    farmACMaxVoltageLoss += SimInv[i].LossHighVoltage;
+                    farmACMinVoltageLoss += SimInv[i].LossLowVoltage;
+                    farmPnom += (SimPVA[i].itsPNom * SimPVA[i].itsNumModules) * SimPVA[i].TGloEff / 1000;
+                    farmTempLoss += SimPVA[i].tempLoss;
+                    farmRadLoss += SimPVA[i].radLoss;
                 }
-                
+
                 // Averages all PV Array temperature values
                 farmDCTemp /= farmTotalModules;
                 farmModuleTempAndAmbientTempDiff = farmDCTemp - SimMet.TAmbient;
@@ -212,10 +197,8 @@ namespace CASSYS
 
             // Assigning Outputs for this class.
             AssignOutputs();
-
         }
-
-
+        
         public void AssignOutputs()
         {
             ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Shading"] = SimShading.ShadTGlo;
@@ -224,6 +207,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Diffuse"] = ShadDiffLoss;
             ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Ground_Reflected"] = ShadRefLoss;
             ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Incidence"] = SimPVA[0].IAMTGlo;
+            ReadFarmSettings.Outputlist["Radiation_Soiling_Loss"] = SimPVA[0].RadSoilingLoss;
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"] = SimShading.ShadTGlo - SimPVA[0].IAMTGlo;
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);
@@ -237,6 +221,8 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["IAM_Factor_on_Beam"] = SimPVA[0].IAMDir;
             ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
+            ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"] = SimPVA[0].TGloEff;
+            ReadFarmSettings.Outputlist["Array_Nominal_Power"] = farmPnom / 1000;
             ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
             ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;
             ReadFarmSettings.Outputlist["Ohmic_Wiring_Loss"] = farmDCOhmicLoss / 1000;
@@ -248,12 +234,14 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["PV_Array_Voltage"] = (farmDCCurrent > 0 ? farmDC / farmDCCurrent : 0);
             ReadFarmSettings.Outputlist["Available_Energy_at_Inverter_Output"] = farmACOutput / 1000;
             ReadFarmSettings.Outputlist["AC_Ohmic_Loss"] = farmACOhmicLoss / 1000;
-            ReadFarmSettings.Outputlist["Inverter_Efficiency"] = (farmACOutput > 0 ? farmACOutput / farmDC : 0) * 100;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Power_Threshold"] = farmACPMinThreshLoss / 1000;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Voltage_Threshold"] = 0;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Nominal_Inv._Power"] = farmACClippingPower > 0 ? farmACClippingPower / 1000 : 0;
-            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Nominal_Inv._Voltage"] = 0;
-            ReadFarmSettings.Outputlist["External_transformer_loss"] = SimTransformer.Losses / 1000;
+            ReadFarmSettings.Outputlist["Inverter_Efficiency"] = (farmACOutput > 0 ? farmACOutput / farmDC : 0) * 100;      
+            ReadFarmSettings.Outputlist["DCAC_Conversion_Losses"] = (farmACOutput > 0 ? farmDC - farmACOutput:0)/1000;
+            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Low_Power_Threshold"] = farmACPMinThreshLoss / 1000;
+            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_Low_Voltage_Threshold"] = farmACMinVoltageLoss / 1000;
+            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_High_Power_Threshold"] = farmACClippingPower > 0 ? farmACClippingPower / 1000 : 0;
+            ReadFarmSettings.Outputlist["Inverter_Loss_Due_to_High_Voltage_Threshold"] = farmACMaxVoltageLoss / 1000;
+            ReadFarmSettings.Outputlist["Virtual_Inverter_Input_Energy"] = (farmDC + farmACPMinThreshLoss + farmACMinVoltageLoss + (farmACClippingPower > 0 ? farmACClippingPower : 0) + farmACMaxVoltageLoss) /1000;
+            ReadFarmSettings.Outputlist["External_transformer_loss"] = (SimTransformer.POut < 0) ? 0 : (SimTransformer.Losses / 1000);
             ReadFarmSettings.Outputlist["Power_Injected_into_Grid"] = SimTransformer.POut / 1000;
             ReadFarmSettings.Outputlist["Energy_Injected_into_Grid"] = SimTransformer.EnergyToGrid / 1000;
             ReadFarmSettings.Outputlist["PV_Array_Efficiency"] = farmDCEfficiency;
@@ -265,6 +253,9 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["AC_losses_ratio"] = SimTransformer.Losses / SimTransformer.POut < 0 ? 0 : SimTransformer.Losses / SimTransformer.POut;
             ReadFarmSettings.Outputlist["Performance_Ratio"] = farmPR;
             ReadFarmSettings.Outputlist["System_Loss_Incident_Energy_Ratio"] = farmSysIER;
+            ReadFarmSettings.Outputlist["Power_Loss_Due_to_Temperature"] = farmTempLoss / 1000;
+            ReadFarmSettings.Outputlist["Energy_Loss_Due_to_Irradiance"] = farmRadLoss / 1000;
+            ReadFarmSettings.Outputlist["NightTime_Energizing_Loss"] = (SimTransformer.POut < 0) ? SimTransformer.itsPIronLoss / 1000 : 0;
 
             // Get the power for individual Sub-Arrays
             ReadFarmSettings.Outputlist["Sub_Array_Performance"] = "";
@@ -284,8 +275,6 @@ namespace CASSYS
         // Calculates the Voltage at which the Inverter will produce Nom AC Power (when Clipping) using Bisection Method.
         void GetClippingVoltage(int j)
         {
-            SimInv[j].LossClipping = SimPVA[j].POut;                        // The input power that begins the clipping
-
             SimPVA[j].CalcAtOpenCircuit();                                  // Calculating Open Circuit characteristics to determine upper and lower bound of interpolation
 
             double InvVR = SimPVA[j].Voc;                                   // The higher bound of the Voltage Range [V]
@@ -311,8 +300,7 @@ namespace CASSYS
                 trialInvV = (InvVR + InvVL) / 2;                            // Calculate new search variable [V]
             }
             while (Math.Abs(InvVR - InvVL) > tolerance);
-
-            SimInv[j].LossClipping -= SimInv[j].ACPwrOut;
+            
             SimInv[j].VInDC = trialInvV;
         }
 
@@ -320,8 +308,13 @@ namespace CASSYS
         // Checks the status of the Inverter (ON, MPPT tracking, etc) and configures its operation based on the PV Array's characteristics. 
         void GetInverterStatus(int j)
         {
+           // Determine MPPT from the array
+            SimPVA[j].Calculate(true, 0);
+            double arrayVMPP = SimPVA[j].VOut;
+            double arrayPMPP = SimPVA[j].PMPP;
+            
             // If the Inverter is off, check if the Open Circuit Voltage of the Array is sufficient to turn the Inverter ON
-            if (SimInv[j].isON == false)
+            if (!SimInv[j].isON)
             {
                 // Determining Array Voltage 
                 SimPVA[j].CalcAtOpenCircuit();
@@ -337,71 +330,80 @@ namespace CASSYS
                 {
                     SimInv[j].hasMinVoltage = false;
                     SimInv[j].isON = false;
-                    SimInv[j].VInDC = 0;
                     SimInv[j].ACPwrOut = 0;
-                    SimInv[j].inMPPTWindow = false;
+                    SimInv[j].IOut = 0;
+                    // Calculate energy loss due to voltage too low
+                    SimInv[j].LossLowVoltage = arrayPMPP;
+                    // Inverter is off, nothing else to do
+                    return;
                 }
                 else
                 {
                     SimInv[j].hasMinVoltage = true;
                     SimInv[j].isON = true;
-                    SimInv[j].inMPPTWindow = false;
                 }
             }
-
-            // If the Inverter turns on because of sufficient voltage, or if the Inverter was already ON  
-            // Check if the Incoming Array Power with MPP Operation is sufficient to keep it ON
-            if (SimInv[j].isON)
+            
+            // If the Inverter turns on because of sufficient voltage, or if the Inverter was already ON
+            // MPPT check, if true then use voltage window to determine voltage out of Inverter and if it is in the MPPT Window
+            if (SimInv[j].isBipolar)
             {
-                SimPVA[j].Calculate(true, 0);
-                double arrayVMPP = SimPVA[j].VOut;
-                double arrayPMPP = SimPVA[j].POut;
+                arrayVMPP /= 2;
+            }
+            
+            // SimInv[j].GetMPPTStatus(arrayVMPP, out SimInv[j].inMPPTWindow);
+            SimInv[j].GetMPPTStatus(arrayVMPP);
 
-                // MPPT check, if true then use voltage window to determine voltage out of Inverter and if it is in the MPPT Window
-                if (SimInv[j].isBipolar)
-                {
-                    arrayVMPP /= 2;
-                }
+            // Recalculate array operating point now that the voltage has been determined
+            SimPVA[j].Calculate(false, SimInv[j].VInDC);
+            SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC); 
 
-                SimInv[j].GetMPPTStatus(arrayVMPP, out SimInv[j].inMPPTWindow);
+            if (SimInv[j].VInDC == SimInv[j].itsMppWindowMin)
+            {
+                // Calculate energy loss due to voltage too low
+                SimInv[j].LossLowVoltage = arrayPMPP;
+            }
 
-                if (SimInv[j].inMPPTWindow)
-                {
-                    // Check if the inverter has sufficient power to stay ON 
-                    if (arrayPMPP > (SimInv[j].itsThresholdPwr * SimInv[j].itsNumInverters))
-                    {
-                        SimInv[j].isON = true;
-                    }
-                    else
-                    {
-                        // Inverter must be turned off.
-                        SimInv[j].LossPMinThreshold = SimPVA[j].POut;
-                        SimInv[j].hasMinVoltage = false;
-                        SimInv[j].isON = false;
-                        SimInv[j].VInDC = SimPVA[j].VOut;
-                        SimInv[j].ACPwrOut = 0;
-                        SimInv[j].inMPPTWindow = false;
-                    }
-                }
-                else
-                {
-                    SimPVA[j].Calculate(false, SimInv[j].VInDC);
-                    // Check if the inverter has sufficient power to stay ON after the voltage has been pinned to the Min/Max PT Voltage level
-                    if (SimPVA[j].POut > (SimInv[j].itsThresholdPwr * SimInv[j].itsNumInverters))
-                    {
-                        SimInv[j].isON = true;
-                    }
-                    else
-                    {
-                        // Inverter must be turned off.
-                        SimInv[j].LossPMinThreshold = SimPVA[j].POut > 0 ? SimPVA[j].POut : 0;
-                        SimInv[j].hasMinVoltage = false;
-                        SimInv[j].isON = false;
-                        SimInv[j].ACPwrOut = 0;
-                        SimInv[j].inMPPTWindow = false;
-                    }
+            if (SimInv[j].VInDC == SimInv[j].itsMppWindowMax)
+            {
+                // Calculate energy loss due to voltage too high
+                SimInv[j].LossHighVoltage = arrayPMPP - SimPVA[j].POutNoLoss; 
+            }
 
-                }
+            // Check if the inverter has sufficient power to stay ON 
+            if (SimPVA[j].POut < (SimInv[j].itsThresholdPwr * SimInv[j].itsNumInverters) || SimInv[j].ACPwrOut < 0)
+            { 
+                // Inverter must be turned off.
+                SimInv[j].isON = false;
+                SimInv[j].ACPwrOut = 0;
+                SimInv[j].IOut = 0;
+                SimInv[j].LossLowVoltage = 0;
+                SimInv[j].LossHighVoltage = 0;
+                SimInv[j].LossPMinThreshold = SimPVA[j].PMPP;
+                return; 
+            }
+            
+            // If the Inverter is Clipping, the voltage is increased till the Inverter will not Clip anymore. 
+            if (SimInv[j].isClipping)
+            {
+                double NoClippingPwr = SimPVA[j].POutNoLoss;                      // Output power of the array
+                GetClippingVoltage(j);
+                
+                SimPVA[j].Calculate(false, SimInv[j].VInDC);
+                SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
+ 
+                SimInv[j].LossClipping = NoClippingPwr - SimPVA[j].POutNoLoss;
+            }
+            // Check that max voltage is not exceeded
+            if (SimInv[j].VInDC > SimInv[j].itsMaxVoltage) 
+            {
+                SimInv[j].isON = false;
+                SimInv[j].ACPwrOut = 0;
+                SimInv[j].IOut = 0;
+                SimInv[j].LossLowVoltage = 0;
+                SimInv[j].LossClipping = 0;
+                // Calculate energy lost
+                SimInv[j].LossHighVoltage = SimPVA[j].PMPP;
             }
         }
 
@@ -425,10 +427,10 @@ namespace CASSYS
                 SimPVA[SubArrayCount].Config(SubArrayCount + 1);
                 SimACWiring[SubArrayCount] = new ACWiring();
 
-                //If 'at Pnom' specified for AC Loss Fraction in version 1.2.0
+                // If 'at Pnom' specified for AC Loss Fraction in version 1.2.0
                 if (string.Compare(ReadFarmSettings.CASSYSCSYXVersion, "1.2.0") >= 0 && ReadFarmSettings.GetInnerText("System", "ACWiringLossAtSTC", _Error: ErrLevel.WARNING) == "False")
-                {                 
-                    SimACWiring[SubArrayCount].Config(SubArrayCount + 1, SimInv[SubArrayCount].itsOutputVoltage, SimInv[SubArrayCount].outputPhases, SimInv[SubArrayCount].itsNomOutputPwr);
+                {
+                    SimACWiring[SubArrayCount].Config(SubArrayCount + 1, SimInv[SubArrayCount].itsOutputVoltage, SimInv[SubArrayCount].outputPhases, SimInv[SubArrayCount].itsPNomArrayAC);
                 }
                 else
                 {

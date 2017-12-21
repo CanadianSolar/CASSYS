@@ -38,12 +38,13 @@ namespace CASSYS
         // List and definition of variables used in the program file
         // Instance of all one-time objects, i.e. weather and radiation related objects
         SimMeteo SimMet = new SimMeteo();
+        LossDiagram LossDiagram = new LossDiagram();            // initialize LossDiagram class only when needed
         RadiationProc SimRadProc;
-        GridConnectedSystem SimGridSys;
+        GridConnectedSystem SimGridSys;             
         ASTME2848 SimASTM;
         public String OutputString = "";
         StreamWriter OutputFileWriter;                          // stream writer used to write to output csv file
-
+                        
         // Blank constructor for the CASSYS Program
         public Simulation()
         {
@@ -56,8 +57,7 @@ namespace CASSYS
             Stopwatch timeTaken = new Stopwatch();
             timeTaken.Start();
 
-            // Clear error log just before simulation
-            //File.WriteAllText(Application.StartupPath + "/ErrorLog.txt", string.Empty);
+            // Delete error log just before simulation
             if(File.Exists(Application.StartupPath + "/ErrorLog.txt"))
             {
                 File.Delete(Application.StartupPath + "/ErrorLog.txt");
@@ -195,7 +195,9 @@ namespace CASSYS
                             case "GridConnected":
                                 SimRadProc.Calculate(SimMeteoParser);
                                 SimGridSys.Calculate(SimRadProc, SimMeteoParser);
+                                LossDiagram.Calculate();
                                 break;
+
                             case "Radiation":
                                 SimRadProc.Calculate(SimMeteoParser);
                                 break;
@@ -258,6 +260,12 @@ namespace CASSYS
                         }
                     }
 
+                    // If simulation done for Grid connected mode then write the calculated loss values to temp output file 
+                    if(ReadFarmSettings.SystemMode == "GridConnected")
+                    {
+                        LossDiagram.AssignLossOutputs();
+                    }
+
                     timeTaken.Stop();
 
                     Console.WriteLine("");
@@ -286,18 +294,14 @@ namespace CASSYS
                 if (ReadFarmSettings.Outputlist[required] != null)
                 {
                     // In variable parameter mode, the timestamps are only written for the first simulation
-                    //if (!((required == "Input_Timestamp" || required == "Timestamp_Used_for_Simulation") && ReadFarmSettings.outputMode == "var" && ReadFarmSettings.runNumber != 1))
-                    //{
-                        string temp = ReadFarmSettings.Outputlist[required].ToString() + ",";
-                        OutputLine += temp;
-                    //}
+                    string temp = ReadFarmSettings.Outputlist[required].ToString() + ",";
+                    OutputLine += temp;
                 }
                 else
                 {
                     OutputLine += "Not Available,";
                 }
             }
-
             return OutputLine.TrimEnd(',');
         }
     }

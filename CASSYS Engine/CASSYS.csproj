@@ -9,7 +9,7 @@
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CASSYS</RootNamespace>
-    <AssemblyName>CASSYS</AssemblyName>
+    <AssemblyName>CASSYS Engine</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -81,6 +81,7 @@
     <Compile Include="HorizonShading.cs" />
     <Compile Include="Interpolate.cs" />
     <Compile Include="Inverter.cs" />
+    <Compile Include="LossDiagram.cs" />
     <Compile Include="MetReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PVArray.cs" />

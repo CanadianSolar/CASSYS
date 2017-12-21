@@ -39,7 +39,7 @@ namespace CASSYS
     class PVArray
     {
         // Parameters of the PV Module
-        double itsPNom;                       // Nominal power of the module [W], typically at STC  
+        public double itsPNom;                // Nominal power of the module [W], typically at STC  
         double itsIscref;                     // Reference short circuit current [A]
         double itsVocref;                     // Reference open circuit voltage [V]
         double itsImppref;                    // Reference maximum power point current [A]
@@ -59,7 +59,7 @@ namespace CASSYS
         double itsRsh;                        // Unadjusted reference Rshunt [ohms]
         double itsRshZero;                    // Rshunt Parameter that follows the PVSyst Model
         double itsRpRef;                      // Shunt resistance [ohms];
-        double itsRw;                         // Global wiring loss as seen from Inverter for entire Sub-Array [ohms]
+        double itsRw;                         // Global wiring resistance as seen from Inverter for entire Sub-Array [ohms]
         double itsSubArrayNum;                // The sub-array number that the PVArray belongs to. [#]
         
 
@@ -85,15 +85,17 @@ namespace CASSYS
         double itsConstHTC;                   // Constant Heat Transfer Coefficient (CHTC)
         double itsConvHTC;                    // Convective Heat Transfer Coefficient (ConvHTC)
         double itsAdsorp = 0.9;               // Adsorption, default 0.9 for PVSyst
+       
 
         // PV Array local & intermediate calculation variables
         double lossLessTGlo;                  // Tilted Global Irradiance (used for efficiency calculations)
         double Irs;                           // Reverse saturation current [A]
         double mVoc;                          // Module open circuit voltage [V]
         double mIPhi;                         // Module short-circuit current [A]
-        double mVout;                         // Module voltage at max power point [V]
-        double mIout;                         // Module current at max power point [A]
-        double mPower;                        // Module Power produced [W]      
+        double mVout;                         // Module voltage [V]
+        double mIout;                         // Module current [A]
+        public double mPower;                 // Module Power produced [W]
+        public double mPMPP;                  // Module power at maximum power point [W]      
 
         // Array Related Variables
         public double itsNSeries;             // Number of modules in series [#]
@@ -108,9 +110,11 @@ namespace CASSYS
         public double VOut;                   // PV array voltage at maximum power [V] 
         public double IOut;                   // PV array current at maximum power [A] 
         public double POut;                   // PV array power produced [W]  
+        public double POutNoLoss;             // PV array power with no losses [W]
         public double Voc;                    // PV array Voc [V]
         public double TModule;                // Temperature of module [C]
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
+        public double RadSoilingLoss;         // Losses due to soiling of PV array [W/m^2]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
@@ -119,6 +123,9 @@ namespace CASSYS
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
         public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
+        public double tempLoss;               // Energy loss due to temperature [W]
+        public double radLoss;                // Energy loss due to irradiance level [W]
+        public double PMPP;                   // Power of the array at moximum power point [W]
 
         // PVArray Blank Constructor
         public PVArray()
@@ -132,12 +139,10 @@ namespace CASSYS
             , double InvVoltage                 // Voltage set by inverter [V], only used if MPPT status is false                                      
             )
         {
-            if (isMPPT)
-            {
-                // If the Inverter is MPPT tracking allow PV array to produce MPP
-                CalcAtMaximumPowerPoint();
-            }
-            else
+
+            CalcAtMaximumPowerPoint(); // Calculate max power
+            
+            if (!isMPPT)
             {
                 // If the Inverter is fixing/raising the Array to an MPPT Limit/Clipping Voltage, use the inverter voltage and calculate new power point 
                 mVout = InvVoltage / itsNSeries;
@@ -189,7 +194,6 @@ namespace CASSYS
             // Adjust Voc based on temperature (similar to current adjustment above)
             CalcAtOpenCircuit();
             mVoc = Voc / itsNSeries;
-
         }
 
         // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred
@@ -236,6 +240,12 @@ namespace CASSYS
 
             // Modified TGlo based on irradiance based on soiling and Incidence Angle modifier
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
+
+            // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
+            // and only for the first array
+
+            // Calculate soiling losses in irradiance
+            RadSoilingLoss = IAMTGlo * itsSoilingLossPC;
         }
 
         // Calculates the MPPT operating point of the module
@@ -283,34 +293,50 @@ namespace CASSYS
                 mVout = (xL + xH) / 2;                                         // Assigning output, Vmpp
                 CalcAtGivenVoltage(mVout, out mIout, out mPower);          // Assigning output, Pmpp and Impp calculated at module Vmpp
             }
+            mPMPP = mPower;
         }
 
         // Calculates Module to Array and applies losses at the Array Level, i.e. Multiplying the currents and voltages by Series and Parallel resp.
         void CalcModuleToArray(bool isMPPT)
         {
+            // Calculate power of array at maximum power point
+            PMPP = mPMPP * itsNumModules;
+
+            // Calculate Temperature Losses
+            tempLoss = -(itsTCoefP / 100) * (TModule - 25) * (itsPNomDCArray) * (TGloEff / 1000);
+
+            // Calculate Energy loss due to irradiance
+            radLoss = (itsPNomDCArray * TGloEff / 1000) - tempLoss - PMPP;
+            
             // Output variables are assigned their values, module voltages add in series, module currents add when parallel, powers add in both cases
             VOut = mVout * itsNSeries;
-            IOut = mIout * itsNParallel * (1 - itsModuleQualityLossPC);
+            IOut = mIout * itsNParallel;
+
+            // Calculate POut of the array before losses are applied
+            POutNoLoss = VOut * IOut;
 
             // Module Quality Losses, Soiling Loses, etc are first adjusted to their before loss value, then losses are calculated.
             ModuleQualityLoss = mIout * itsNParallel * itsModuleQualityLossPC * VOut;
+            IOut *= (1 - itsModuleQualityLossPC);  
             SoilingLoss = mIout * itsNParallel * itsSoilingLossPC * VOut / (1 - itsSoilingLossPC);
 
             // The loss percentage applied is different if the array is in MPP Mode or in Fixed Operation Mode
             if (isMPPT)
             {
-                MismatchLoss = IOut * itsMismatchLossSTCPC * VOut;
+                MismatchLoss = mIout * itsNParallel * itsMismatchLossSTCPC * VOut;
                 IOut *= (1 - itsMismatchLossSTCPC);
             }
             else
             {
-                MismatchLoss = IOut * itsMismatchFixedVLoss * VOut;
+                MismatchLoss = mIout * itsNParallel * itsMismatchFixedVLoss * VOut;
                 IOut *= (1 - itsMismatchFixedVLoss);
             }
 
             // Calculating Ohmic Loss and assigning power out and efficiency values
             OhmicLosses = Math.Pow(IOut, 2) * itsRw;
-            POut = VOut * IOut - OhmicLosses;
+
+            // Calculating PV array output power after losses
+            POut = POutNoLoss - (OhmicLosses + MismatchLoss + ModuleQualityLoss);
 
             // Calculating DC Efficiency
             Efficiency = lossLessTGlo > 0 ? mPower / lossLessTGlo / itsArea : 0;
@@ -398,7 +424,7 @@ namespace CASSYS
             }
 
             // Assigning Outputs to the variables
-            moduleI = iNew;
+            moduleI = Math.Max(iNew,0);
             moduleP = (moduleI * v);
         }
 
@@ -411,7 +437,6 @@ namespace CASSYS
             , double TModMeasured                     // Measured temperature of the module [C]  
             )
         {
-
             // Beginning of Temperature calculation model (see Ref 4)
             // Enables user to choose the temperature model, or use measured values
             if (useMeasuredTemp)
@@ -429,8 +454,6 @@ namespace CASSYS
             }
             else
             {
-
-
                 // NB: throw an error so temp. model does not error
                 if (itsConstHTC <= 0)
                 {
@@ -565,7 +588,6 @@ namespace CASSYS
                     itsUserIAMProfile[0] = UserAOI.ToArray();
                     itsUserIAMProfile[1] = UserIAM.ToArray();
                 }
-
             }
 
             // If soiling losses are defined on a monthly basis, then populate an array with values for each month
@@ -712,7 +734,6 @@ namespace CASSYS
 
             // Calculate the Gamma Temperature Coefficient Parameter for the module
             CalcGammaCoeff();
-
         }
 
         // Calculate GammaCoefficient Parameters for the module using the Temperature Coefficient for Power provided in the database. 
@@ -740,7 +761,7 @@ namespace CASSYS
             itsRsh = itsRpRef;
 
             // Variables required to use the bisection method to match gamma to the target Pnom
-            double targetPNom = itsPNom * (1 + itsTCoefP/100 * (TrialTModule - itsTref));         // The target power is Pnom corrected to TrialTModule using uPMPP
+            double targetPNom = itsPNom * (1 + itsTCoefP/100 * (TrialTModule - itsTref));           // The target power is Pnom corrected to TrialTModule using uPMPP
             double gammaL = itsGammaRef - 0.5D;                                                     // Lower bound: The uGamma is a small adjustment for TModule, so Gamma should lie within +/- 0.5 of the refGamma    
             double gammaH = itsGammaRef + 0.5D;                                                     // Higher bound: The uGamma is a small adjustment for TModule, so Gamma should lie within +/- 0.5 of the refGamma
 

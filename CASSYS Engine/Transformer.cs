@@ -37,7 +37,7 @@ namespace CASSYS
         // Parameters of the transformer       
         public double itsPNom;                          // The nominal power of the transformer [W]
         double itsPGlobLoss;                            // The global loss of the transformer [W]
-        double itsPIronLoss;                            // The resultant iron loss of the transformer [W]
+        public double itsPIronLoss;                            // The resultant iron loss of the transformer [W]
         bool isNightlyDisconnected;                     // Determines if the transformer is disconnected at night [true for nightly disconnect, false otherwise]
 
         // Output variables
@@ -108,15 +108,16 @@ namespace CASSYS
             }
 
             // Calculating Energy to Grid.
-            if (POut > 0)
+            /*if (POut > 0)
             {
                 EnergyToGrid = POut * Util.timeStep / 60;
             }
             else
             {
-                EnergyToGrid = 0;
-            }
-            
+               // EnergyToGrid = 0;
+                EnergyToGrid = POut * Util.timeStep / 60;
+            }*/
+            EnergyToGrid = POut * Util.timeStep / 60;
         }
 
         //Config will determine and assign values for the losses at the transformer using an .CSYX file

@@ -326,21 +326,26 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Sun_Zenith_Angle"] = Util.RTOD * SimSun.Zenith;
             ReadFarmSettings.Outputlist["Sun_Azimuth_Angle"] = Util.RTOD * SimSun.Azimuth;
             ReadFarmSettings.Outputlist["ET_Irrad"] = SimSun.NExtra;
+            ReadFarmSettings.Outputlist["Air_Mass"] = SimSun.AirMass;
             ReadFarmSettings.Outputlist["Albedo"] = SimTilter.itsMonthlyAlbedo[Utilities.CurrentTimeStamp.Month];
             ReadFarmSettings.Outputlist["Normal_beam_irradiance"] = SimSplitter.NDir;
             ReadFarmSettings.Outputlist["Horizontal_Global_Irradiance"] = SimSplitter.HGlo;
             ReadFarmSettings.Outputlist["Horizontal_diffuse_irradiance"] = SimSplitter.HDif;
             ReadFarmSettings.Outputlist["Horizontal_beam_irradiance"] = SimSplitter.HDir;
-            ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Plane"] = SimHorizonShading.TGlo;
-            ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimHorizonShading.TDir;
-            ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimHorizonShading.TDif;
-            ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimHorizonShading.TRef;
+            ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Plane"] = SimTilter.TGlo;
+            ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimTilter.TDir;
+            ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimTilter.TDif;
+            ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimTilter.TRef;
             ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;
             ReadFarmSettings.Outputlist["Tracker_Azimuth"] = SimTracker.itsTrackerAzimuth * Util.RTOD;
             ReadFarmSettings.Outputlist["Tracker_Rotation_Angle"] = SimTracker.RotAngle * Util.RTOD;
             ReadFarmSettings.Outputlist["Collector_Surface_Slope"] = SimTilter.itsSurfaceSlope * Util.RTOD;
             ReadFarmSettings.Outputlist["Collector_Surface_Azimuth"] = SimTilter.itsSurfaceAzimuth * Util.RTOD;
             ReadFarmSettings.Outputlist["Incidence_Angle"] = Math.Min(Util.RTOD * SimTilter.IncidenceAngle, 90);
+            ReadFarmSettings.Outputlist["FarShading_Global_Loss"] = SimHorizonShading.LossGlo;
+            ReadFarmSettings.Outputlist["FarShading_Beam_Loss"] = SimHorizonShading.LossDir;
+            ReadFarmSettings.Outputlist["FarShading_Diffuse_Loss"] = SimHorizonShading.LossDif;
+            ReadFarmSettings.Outputlist["FarShading_Ground_Reflected_Loss"] = SimHorizonShading.LossRef;
         }
 
         public void Config()
