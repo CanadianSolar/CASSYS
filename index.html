@@ -21,29 +21,29 @@
  <h2 class="project-tagline">Canadian Solar Simulation Program for Grid-Connected PV Systems</h2>
 	
 <a href="https://github.com/CanadianSolar/CASSYS" class="btn">View on GitHub</a>
-      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.2.1</a>	
+      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.3.0</a>	
 <h3>
 <a id="program-goals-and-description" class="anchor" href="#program-goals-and-description" aria-hidden="true"><span class="octicon octicon-link"></span></a>Program goals and description</h3>
 
 <hr>
 
 <p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
-<p><i>Current Version: 1.2.1</i></p>
+<p><i>Current Version: 1.3.0</i></p>
 
 <p><i>New in this version:</i></p>  
 <ol>
-<li>AC wiring loss calculations are now completed in their own class as opposed to being carried out in the Inverter class.</li>
-<li>AC wiring loss can now be modelled at either Standard Test Conditions or at nominal inverter power rating. This may be specified by the user in the system sheet. Previously, simulations were completed assuming STC.</li>
-<li>Orientations and shading sheet now has an additional user selection option: Fixed Tilt with Seasonal Adjustment. This allows the user to specify panel tilt angles for summer and winter seasons. Summer and winter start dates are indicated by user input. The CASSYS engine will adjust calculations and resulting outputs accordingly.</li>
-<li>Climate file: When running simulation the engine will be able to detect and skip over a user specified number of unusable rows. The user can specify the desired number of unreadable rows within the selected climate file, in the climate file sheet. If there is more than the specified number of unusable rows, the program will stop running.</li>
-<li>Transformer sheet now allows for user input of either CASSYS values or PVsyst equivalent values.</li>
-<li>Implemented capability to run simulations iteratively, but is not active as of this release.</li>
-<li>It is now possible to import .PAN and .OND files from all versions of PVsyst.</li>
+<li>Loss diagram sheet added as a simulation output</li>
+<li>Loss diagram class added to carry out reading and outputting losses to the interface</li>
+<li>EPW weather files are not compatible with CASSYS and can be used for simulations</li>
+<li>MetReader now has the necessary capabilities to read from epw files</li>
+<li>GradConnectedSystems class has been slightly restructured in order to add and slightly modify some calculations</li>
+<li>PVArray now has addition calculations for previously uncalculated losses</li>
+<li>Exporting the CASSYS summary as a PDF is now an option using the Export as PDF button on the summary sheet</li>
+<li></li>
 </ol>
 <p><i>Bug Fixes:</i></p>
 <ol>
-<li>Error Log: Now refreshes before each simulation</li>
-<li>Inverter Database: Fixed issue with user added .OND files not being visible in the selector on the Systems Sheet</li>
+<li>Inverter Database: Fixed issue with OND files not uploading if missing non-pertinent information for calculations</li>
 </ol>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
