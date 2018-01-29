@@ -36,7 +36,7 @@ namespace CASSYS
     public class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String EngineVersion = "1.3.1";               // The supported versions of CASSYS CSYX Files.
+        public static String EngineVersion = "1.4.0";               // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -329,6 +329,9 @@ namespace CASSYS
                         case "Losses":
                             Path = "/Site/System/Losses/" + NodeName;
                             break;
+                        case "Spectral":
+                            Path = "/Site/Spectral/" + NodeName;
+                            break;
                         case "InputFile":
                             Path = "/Site/InputFileStyle/" + NodeName;
                             break;
@@ -411,6 +414,9 @@ namespace CASSYS
                             break;
                         case "Losses":
                             Path = "/Site/System/Losses" + _Adder;
+                            break;
+                        case "Spectral":
+                            Path = "/Site/Spectral" + _Adder;
                             break;
                         case "InputFile":
                             Path = "/Site/InputFileStyle" + _Adder;
