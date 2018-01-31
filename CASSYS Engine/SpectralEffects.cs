@@ -2,12 +2,14 @@
 // (c) Canadian Solar Solutions Inc.
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Title: HorizonShading.cs
+// Title: SpectralEffects.cs
 //
 // Revision History:
 //
 // Description:
-// This class is responsible for the simulation of spectral effects
+// This class is responsible for the simulation of 'spectral effects', albeit
+// with a relatively simple model. PV array production is adjusted based on a
+// clearness index curve given by the user.
 //
 ///////////////////////////////////////////////////////////////////////////////
 // References and Supporting Documentation or Links
@@ -27,11 +29,11 @@ namespace CASSYS
     class SpectralEffects
     {
         // Input variables
-        string SpectralClearnessIndexStr;                           // String containing the Clearness Index points from the .csyx file [#]
-        string SpectralClearnessCorrectionStr;                      // String containing the Clearness Correction points from the .csyz file [unitless]
+        string SpectralClearnessIndexStr;                           // String containing the Clearness Index points from the .csyx file [unitless]
+        string SpectralClearnessCorrectionStr;                      // String containing the Clearness Correction points from the .csyx file [unitless]
 
         // Spectral Effects local variables/arrays and intermediate calculation variables and arrays
-        double[] ClearnessIndexArr;                                 // Array containing the comma-separated index values from SpectralClearnessIndexStr [#]
+        double[] ClearnessIndexArr;                                 // Array containing the comma-separated index values from SpectralClearnessIndexStr [unitless]
         double[] ClearnessCorrectionArr;                            // Array containing the comma-separated correction values from SpectralClearnessCorrectionStr [unitless]
         double clearnessIndex;                                      // Clearness index
 
@@ -58,7 +60,7 @@ namespace CASSYS
                 // Getting the Spectral Model information from the .csyx file
                 SpectralClearnessIndexStr = ReadFarmSettings.GetInnerText("Spectral", "ClearnessIndex/kt", ErrLevel.WARNING, "0.9", _default: "1");
                 SpectralClearnessCorrectionStr = ReadFarmSettings.GetInnerText("Spectral", "ClearnessIndex/ktCorrection", ErrLevel.WARNING, "0.9", _default: "0");
-                
+
                 // Converts the Spectral Model imported from the .csyx file into an array of doubles
                 ClearnessIndexArr = SpectralCSVStringtoArray(SpectralClearnessIndexStr);
                 ClearnessCorrectionArr = SpectralCSVStringtoArray(SpectralClearnessCorrectionStr);
@@ -74,6 +76,19 @@ namespace CASSYS
                 ClearnessIndexArr = new double[] { 1 };
                 ClearnessCorrectionArr = new double[] { 0 };
             }
+            // TODO: remove later
+            for (int i = 0; i < ClearnessIndexArr.Length; i++)
+            {
+                Console.Write(ClearnessIndexArr[i]);
+                Console.Write(" ");
+            }
+            Console.WriteLine();
+            for (int i = 0; i < ClearnessCorrectionArr.Length; i++)
+            {
+                Console.Write(ClearnessCorrectionArr[i]);
+                Console.Write(" ");
+            }
+            Console.WriteLine();
         }
 
         // Calculate manages calculations that need to be run for each time step
@@ -85,9 +100,6 @@ namespace CASSYS
             )
         {
             clearnessIndex = Sun.GetClearnessIndex(HGlo, NExtra, SunZenith);
-            clearnessIndex = Math.Min(clearnessIndex, 1.0);
-            clearnessIndex = Math.Max(clearnessIndex, 0.0);
-
             clearnessCorrection = Interpolate.Linear(ClearnessIndexArr, ClearnessCorrectionArr, clearnessIndex);
         }
 

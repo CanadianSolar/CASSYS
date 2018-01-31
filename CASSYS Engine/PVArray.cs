@@ -113,6 +113,7 @@ namespace CASSYS
         public double TModule;                // Temperature of module [C]
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
         public double RadSoilingLoss;         // Losses due to soiling of PV array [W/m^2]
+        public double SpectralCorr;           // Corrections due to spectral effects [W/m^2]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
@@ -195,7 +196,7 @@ namespace CASSYS
             mVoc = Voc / itsNSeries;
         }
 
-        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred plus spectral model adjustments
+        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred plus spectral model corrections
         void CalcEffectiveIrradiance
             (
               double TDir                            // Tilted Beam Irradiance [W/m^2]
@@ -243,6 +244,9 @@ namespace CASSYS
 
             // Modified TGlo based on spectral effects model
             TGloEff = TGloEff * (1 + ClearCorr);
+
+            // Determining spectral effects correction based on clearness index
+            SpectralCorr = TGloEff * ClearCorr;
 
             // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
             // and only for the first array

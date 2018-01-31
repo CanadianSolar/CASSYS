@@ -164,23 +164,28 @@ namespace CASSYS
         }
 
         // Compute the clearness index. Duffie and Beckman (1991)
-        static public double GetClearnessIndex      // (o) clearness index [0-1]
+        public static double GetClearnessIndex      // (o) clearness index [0-1]
             (
               double HGlo                           // (i) global irradiance on horizontal [W/m2]
             , double NExtra                         // (i) normal extraterrestrial irradiance [W/m2]
             , double Zenith                         // (i) zenith angle of sun [radians]
             )
         {
-            if (Zenith > Math.PI / 2)
-                return 1.0;
+            double kt;                              // Clearness index defined locally to be returned later
+            if (Zenith >= Math.PI / 2)
+                kt = 1.0;
             else
-                return HGlo / (NExtra * Math.Cos(Zenith));
+                kt = HGlo / (NExtra * Math.Cos(Zenith));
+
+            kt = Math.Min(kt, 1.0);
+            kt = Math.Max(kt, 0.0);
+            return kt;
         }
 
         // Compute the diffuse fraction given the clearness index, using the Orgill and Hollands formula
         // Duffie, J.A., and Beckman, W.A., Solar Engineering of Thermal
         // Processes, 2nd edition, John Wiley & Sons (1991), p. 81
-        static public double GetDiffuseFraction     // (o) diffuse fraction (Orgill and Hollands formula) [0-1]
+        public static double GetDiffuseFraction     // (o) diffuse fraction (Orgill and Hollands formula) [0-1]
             (
                 double kt                           // (i) clearness index [0-1]
             )
