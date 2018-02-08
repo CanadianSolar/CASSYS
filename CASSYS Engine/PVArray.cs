@@ -242,11 +242,11 @@ namespace CASSYS
             // Modified TGlo based on irradiance based on soiling and Incidence Angle modifier
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
 
-            // Modified TGlo based on spectral effects model
-            TGloEff = TGloEff * (1 + ClearCorr);
-
             // Determining spectral effects correction based on clearness index
             SpectralCorr = TGloEff * ClearCorr;
+
+            // Modified TGlo based on spectral effects model
+            TGloEff = TGloEff * (1 + ClearCorr);
 
             // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
             // and only for the first array
