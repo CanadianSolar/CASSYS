@@ -78,6 +78,7 @@
     <Compile Include="CASSYSClass.cs" />
     <Compile Include="ErrorLogger.cs" />
     <Compile Include="GridConnectedSystem.cs" />
+    <Compile Include="GroundShading.cs" />
     <Compile Include="HorizonShading.cs" />
     <Compile Include="Interpolate.cs" />
     <Compile Include="Inverter.cs" />

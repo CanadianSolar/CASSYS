@@ -105,9 +105,8 @@ namespace CASSYS
             }
             if (SurfaceAzimuth < -Math.PI || SurfaceAzimuth > Math.PI)
             {
-                throw new CASSYSException("GetProfileAngle: Invalid surface Azimuth.");
+                throw new CASSYSException("GetProfileAngle: Invalid surface azimuth.");
             }
-
             // Calculations
             if (SunZenith == 0)
             {
