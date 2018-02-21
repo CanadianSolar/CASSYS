@@ -33,6 +33,7 @@ namespace CASSYS
         SpectralEffects SimSpectral = new SpectralEffects();    // Used to calculate spectral correction relative to a given model
 
         // Shading Related variables
+        GroundShading SimGround = new GroundShading();          // Used to calculate ground shading
         HorizonShading SimHorizon = new HorizonShading();       // Used to calculate solar panel shading relative to a given horizon
         Shading SimShading = new Shading();                     // Used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
@@ -91,6 +92,9 @@ namespace CASSYS
 
             // Calculating spectral model effects
             SimSpectral.Calculate(SimMet.HGlo, RadProc.SimSun.NExtra, RadProc.SimSun.Zenith);
+
+            // Calculating shading of ground beneath solar panels
+            SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimSplitter.HDif, RadProc.SimSplitter.HDir, SimShading, RadProc.TimeStampAnalyzed);
 
             try
             {
@@ -218,7 +222,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Ground_Reflected"] = SimShading.ShadTRef * (1 - SimPVA[0].IAMRef);
-            ReadFarmSettings.Outputlist["Profile_Angle"] = Util.RTOD * SimShading.ProfileAng;
+            ReadFarmSettings.Outputlist["Profile_Angle"] = Util.RTOD * SimShading.FrontProfileAng;
             ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Global"] = ShadGloFactor;
             ReadFarmSettings.Outputlist["Near_Shading_Factor_on_Beam"] = SimShading.BeamSF;
             ReadFarmSettings.Outputlist["Near_Shading_Factor_on__Diffuse"] = SimShading.DiffuseSF;
@@ -417,6 +421,7 @@ namespace CASSYS
         public void Config()
         {
             SimShading.Config();
+            SimGround.Config(100);
             SimTransformer.Config();
             SimSpectral.Config();
 

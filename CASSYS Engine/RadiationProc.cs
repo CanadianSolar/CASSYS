@@ -28,11 +28,12 @@ namespace CASSYS
         public Sun SimSun = new Sun();                                  // Instance used for Radiation calculations
         public Tracker SimTracker = new Tracker();                      // Instance used for use in systems with tracking
         public HorizonShading SimHorizonShading = new HorizonShading(); // Instance used for Horizon shading calculations
-        public Tilter SimTilter = new Tilter();                         // instance used for titler calculations
-        DateTime TimeStampAnalyzed;                                     // The time-stamp that used for Sun position calculations [yyyy-mm-dd hh:mm:ss]
+        public Tilter SimTilter = new Tilter();                         // Instance used for tilter calculations
+        public Splitter SimSplitter = new Splitter();                   // Instance used for splitter calculations
+        // EC: remove public from this later
+        public DateTime TimeStampAnalyzed;                                     // The time-stamp that used for Sun position calculations [yyyy-mm-dd hh:mm:ss]
         double HourOfDay;                                               // Hour of day specific to radiation calculations
 
-        Splitter SimSplitter = new Splitter();
         Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
         bool negativeIrradFlag = false;                                 // Negative Irradiance Warning Flag
 
