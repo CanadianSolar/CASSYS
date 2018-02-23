@@ -14,7 +14,7 @@
 // References and Supporting Documentation or Links
 ///////////////////////////////////////////////////////////////////////////////
 // Code adapted from https://github.com/NREL/bifacialvf which is based on
-// <paper>
+// https://www.nrel.gov/docs/fy17osti/67847.pdf
 ///////////////////////////////////////////////////////////////////////////////
 // Notes
 ///////////////////////////////////////////////////////////////////////////////
@@ -103,7 +103,7 @@ namespace CASSYS
             // Calculate sky configuration factors if not a tracking system; otherwise, will be done in Calculate()
             if (itsTrackMode == TrackMode.NOAT)
             {
-                double PanelTilt = double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                double PanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
                 CalcSkyConfigFactors(PanelTilt);
             }
         }
@@ -182,6 +182,8 @@ namespace CASSYS
             double x1 = Math.Cos(PanelTilt);                    // Horizontal distance from front of panel to rear of panel [panel slope lengths]
             double d = itsPitch - x1;                           // Horizontal distance from rear of one row to front of the next [panel slope lengths]
 
+            Console.WriteLine(PanelTilt * Util.RTOD);
+
             // Forced fix for case of itsClearance = 0
             if (itsClearance == 0.0)
             {
@@ -197,15 +199,12 @@ namespace CASSYS
             {
                 double angA = 0;
                 double angB = 0;
-                double beta1 = 0;
-                double beta2 = 0;
-                double beta3 = 0;
-                double beta4 = 0;
-                double beta5 = 0;
-                double beta6 = 0;
-                double sky1 = 0;            // Diffuse sky radiation from 'back' opening
-                double sky2 = 0;            // Diffuse sky radiation from 'overhead' opening
-                double sky3 = 0;            // Diffuse sky radiation from 'front' opening
+                double beta1 = 0;           // Angle that limits sky view from behind
+                double beta2 = 0;           // Angle from ground point to bottom of panel behind
+                //double beta3 = 0;           // Angle from ground point to top of panel behind
+                //double beta4 = 0;           // Angle from ground point to top of panel ahead
+                //double beta5 = 0;           // Angle from ground point to bottom of panel ahead
+                //double beta6 = 0;           // Angle that limits sky view from ahead
 
                 // Divide the row-to-row spacing into n intervals for calculating ground shade factors
                 double delta = itsPitch / n;
@@ -216,78 +215,123 @@ namespace CASSYS
                 for (int i = 0; i < n; i++)
                 {
                     x += delta;
-                    // Angle from ground point to top of panel two rows behind
-                    angA = Math.Atan((h + itsClearance) / (2.0 * itsPitch + x1 - x));
-                    if (angA < 0.0)
-                    {
-                        angA += Math.PI;
-                    }
-                    // Angle from ground point to bottom of panel two rows behind
-                    angB = Math.Atan(itsClearance / (2.0 * itsPitch - x));
-                    if (angB < 0.0)
-                    {
-                        angB += Math.PI;
-                    }
-                    beta1 = Math.Max(angA, angB);
+                    //// Angle from ground point to top of panel two rows behind
+                    //angA = Math.Atan((h + itsClearance) / (2.0 * itsPitch + x1 - x));
+                    //if (angA < 0.0)
+                    //{
+                    //    angA += Math.PI;
+                    //}
+                    //// Angle from ground point to bottom of panel two rows behind
+                    //angB = Math.Atan(itsClearance / (2.0 * itsPitch - x));
+                    //if (angB < 0.0)
+                    //{
+                    //    angB += Math.PI;
+                    //}
+                    //beta1 = Math.Max(angA, angB);
 
-                    // Angle from ground point to top of panel directly behind
-                    angA = Math.Atan((h + itsClearance) / (itsPitch + x1 - x));
-                    if (angA < 0.0)
-                    {
-                        angA += Math.PI;
-                    }
-                    // Angle from ground point to bottom of panel directly behind
-                    angB = Math.Atan(itsClearance / (itsPitch - x));
-                    if (angB < 0.0)
-                    {
-                        angB += Math.PI;
-                    }
-                    beta2 = Math.Min(angA, angB);
-                    beta3 = Math.Max(angA, angB);
+                    //// Angle from ground point to top of panel directly behind
+                    //angA = Math.Atan((h + itsClearance) / (itsPitch + x1 - x));
+                    //if (angA < 0.0)
+                    //{
+                    //    angA += Math.PI;
+                    //}
+                    //// Angle from ground point to bottom of panel directly behind
+                    //angB = Math.Atan(itsClearance / (itsPitch - x));
+                    //if (angB < 0.0)
+                    //{
+                    //    angB += Math.PI;
+                    //}
+                    //beta2 = Math.Min(angA, angB);
+                    //beta3 = Math.Max(angA, angB);
 
-                    // Angle from ground point to top of panel directly above/ahead (depending on ground position)
-                    beta4 = Math.Atan((h + itsClearance) / (x1 - x));
-                    if (beta4 < 0.0)
-                    {
-                        beta4 += Math.PI;
-                    }
-                    // Angle from ground point to bottom of panel directly above/ahead (depending on ground position)
-                    beta5 = Math.Atan(itsClearance / (-x));
-                    if (beta5 < 0.0)
-                    {
-                        beta5 += Math.PI;
-                    }
-                    // Angle from ground point to top of panel one row ahead
-                    beta6 = Math.Atan((h + itsClearance) / (-d - x));
-                    if (beta6 < 0.0)
-                    {
-                        beta6 += Math.PI;
-                    }
+                    //// Angle from ground point to top of panel directly above/ahead (depending on ground position)
+                    //beta4 = Math.Atan((h + itsClearance) / (x1 - x));
+                    //if (beta4 < 0.0)
+                    //{
+                    //    beta4 += Math.PI;
+                    //}
+                    //// Angle from ground point to bottom of panel directly above/ahead (depending on ground position)
+                    //beta5 = Math.Atan(itsClearance / (-x));
+                    //if (beta5 < 0.0)
+                    //{
+                    //    beta5 += Math.PI;
+                    //}
+                    //// Angle from ground point to top of panel one row ahead
+                    //beta6 = Math.Atan((h + itsClearance) / (-d - x));
+                    //if (beta6 < 0.0)
+                    //{
+                    //    beta6 += Math.PI;
+                    //}
 
-                    // If there is an opening toward the sky behind, calculate sky configuration value
-                    if (beta2 > beta1)
-                    {
-                        sky1 = 0.5 * (Math.Cos(beta1) - Math.Cos(beta2));
-                    }
-                    // If there is an opening toward the sky above, calculate sky configuration value
-                    if (beta4 > beta3)
-                    {
-                        sky2 = 0.5 * (Math.Cos(beta3) - Math.Cos(beta4));
-                    }
-                    // If there is an opening toward the sky ahead, calculate sky configuration value
-                    if (beta6 > beta5)
-                    {
-                        sky3 = 0.5 * (Math.Cos(beta5) - Math.Cos(beta6));
-                    }
+                    //double sky1 = 0;            // Diffuse sky radiation from 'back' opening
+                    //double sky2 = 0;            // Diffuse sky radiation from 'overhead' opening
+                    //double sky3 = 0;            // Diffuse sky radiation from 'front' opening
+                    //// If there is an opening toward the sky behind, calculate sky configuration value
+                    //if (beta2 > beta1)
+                    //{
+                    //    sky1 = 0.5 * (Math.Cos(beta1) - Math.Cos(beta2));
+                    //}
+                    //// If there is an opening toward the sky above, calculate sky configuration value
+                    //if (beta4 > beta3)
+                    //{
+                    //    sky2 = 0.5 * (Math.Cos(beta3) - Math.Cos(beta4));
+                    //}
+                    //// If there is an opening toward the sky ahead, calculate sky configuration value
+                    //if (beta6 > beta5)
+                    //{
+                    //    sky3 = 0.5 * (Math.Cos(beta5) - Math.Cos(beta6));
+                    //}
 
-                    // Save as arrays of values. Same for both to the rear and to the front, since we assume homogeneity
-                    rearSkyConfigFactors[i] = sky1 + sky2 + sky3;
-                    frontSkyConfigFactors[i] = sky1 + sky2 + sky3;
-                    skyConfig += i + "," + sky1 + "," + sky2 + "," + sky3 + Environment.NewLine;
+                    //// Save as arrays of values. Same for both to the rear and to the front, since we assume homogeneity
+                    //rearSkyConfigFactors[i] = sky1 + sky2 + sky3;
+                    //frontSkyConfigFactors[i] = sky1 + sky2 + sky3;
+                    //skyConfig += i + "," + sky1 + "," + sky2 + "," + sky3;
+
+                    int sky_views = 8;
+                    double dist = Math.Ceiling(sky_views / 2.0);
+                    for (int j = 0; j < sky_views; j++)
+                    {
+                        // Angle from ground point to top of panel P
+                        angA = Math.Atan((h + itsClearance) / (dist * itsPitch + x1 - x));
+                        if (angA < 0.0)
+                        {
+                            angA += Math.PI;
+                        }
+                        // Angle from ground point to bottom of panel P
+                        angB = Math.Atan(itsClearance / (dist * itsPitch - x));
+                        if (angB < 0.0)
+                        {
+                            angB += Math.PI;
+                        }
+                        beta1 = Math.Max(angA, angB);
+
+                        dist--;
+
+                        // Angle from ground point to top of panel Q
+                        angA = Math.Atan((h + itsClearance) / (dist * itsPitch + x1 - x));
+                        if (angA < 0.0)
+                        {
+                            angA += Math.PI;
+                        }
+                        // Angle from ground point to bottom of panel Q
+                        angB = Math.Atan(itsClearance / (dist * itsPitch - x));
+                        if (angB < 0.0)
+                        {
+                            angB += Math.PI;
+                        }
+                        beta2 = Math.Min(angA, angB);
+
+                        double sky = 0;
+                        if (beta2 > beta1)
+                        {
+                            sky= 0.5 * (Math.Cos(beta1) - Math.Cos(beta2));
+                        }
+                        skyConfig += "," + sky;
+                    }
+                    skyConfig += Environment.NewLine;
                 }
                 File.WriteAllText("skyConfig.csv", skyConfig);
             }
-            // TODO: add other row types
             else
             {
                 ErrorLogger.Log("Incorrect row type.", ErrLevel.FATAL);
@@ -446,7 +490,6 @@ namespace CASSYS
                     }
                 }
             }
-            // TODO: add other row types
             else
             {
                 ErrorLogger.Log("Incorrect row type.", ErrLevel.FATAL);
