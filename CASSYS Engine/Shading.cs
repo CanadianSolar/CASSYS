@@ -228,12 +228,11 @@ namespace CASSYS
                 {
                     // Computes the fraction of collectors arranged in rows that will be shaded on the front side at a particular sun position.
                     double AC = Math.Sin(CollectorTilt) * itsCollBW / Math.Sin(FrontSLA);
-                    double CAAp = Math.PI - FrontSLA - CollectorTilt;
+                    double CAAp = Math.PI - CollectorTilt - FrontSLA;
                     double CApA = Math.PI - CAAp - (FrontSLA - FrontProfileAng);
-                    double ACAp = Math.PI - CAAp - CApA;
 
                     // Length of shaded section
-                    double AAp = AC * Math.Sin(ACAp) / Math.Sin(CApA);
+                    double AAp = AC * Math.Sin(FrontSLA - FrontProfileAng) / Math.Sin(CApA);
 
                     // Using the Cell based shading model
                     if (useCellBasedShading)
@@ -293,12 +292,11 @@ namespace CASSYS
                 {
                     // Computes the fraction of collectors arranged in rows that will be shaded on the back side at a particular sun position.
                     double AC = Math.Sin(CollectorTilt) * itsCollBW / Math.Sin(BackSLA);
-                    double CAAp = Math.PI - BackSLA - CollectorTilt;
+                    double CAAp = Math.PI - CollectorTilt - BackSLA;
                     double CApA = Math.PI - CAAp - (BackSLA - BackProfileAng);
-                    double ACAp = Math.PI - CAAp - CApA;
 
                     // Length of shaded section
-                    double AAp = AC * Math.Sin(ACAp) / Math.Sin(CApA);
+                    double AAp = AC * Math.Sin(BackSLA - BackProfileAng) / Math.Sin(CApA);
 
                     // Using the Cell based shading model
                     if (useCellBasedShading)
