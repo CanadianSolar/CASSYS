@@ -144,24 +144,8 @@ namespace CASSYS
             }
             else
             {
-                double auxFront = Math.Sqrt(Math.Pow(itsPitch, 2.0) + Math.Pow(itsCollBW, 2.0) - 2.0 * (itsCollBW * itsPitch * Math.Cos(CollectorTilt)));
-                double origFrontSLA = Math.Acos((Math.Pow(itsPitch, 2.0) + Math.Pow(auxFront, 2.0) - Math.Pow(itsCollBW, 2.0)) / (2 * itsPitch * auxFront));
-
                 FrontSLA = Math.Atan2(itsCollBW * Math.Sin(CollectorTilt), itsPitch - itsCollBW * Math.Cos(CollectorTilt));
-
-                double auxBack = Math.Sqrt(Math.Pow(itsPitch, 2.0) + Math.Pow(itsCollBW, 2.0) - 2.0 * (itsCollBW * itsPitch * Math.Cos(Math.PI - CollectorTilt)));
-                double origBackSLA = Math.Acos((Math.Pow(itsPitch, 2.0) + Math.Pow(auxBack, 2.0) - Math.Pow(itsCollBW, 2.0)) / (2 * itsPitch * auxBack));
-
                 BackSLA = Math.Atan2(itsCollBW * Math.Sin(CollectorTilt), itsPitch + itsCollBW * Math.Cos(CollectorTilt));
-
-                if (Math.Abs(FrontSLA - origFrontSLA) > 0.00000001)
-                {
-                    Console.WriteLine("FrontSLA: {0}\taltFrontSLA: {1}", FrontSLA, origFrontSLA);
-                }
-                if (Math.Abs(BackSLA - origBackSLA) > 0.00000001)
-                {
-                    Console.WriteLine("BackSLA: {0}\taltBackSLA: {1}", BackSLA, origBackSLA);
-                }
 
                 FrontSLA = Math.Max(0, FrontSLA);
                 FrontSLA = Math.Min(Math.PI, FrontSLA);
