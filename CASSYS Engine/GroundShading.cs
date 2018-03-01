@@ -35,10 +35,11 @@ namespace CASSYS
         double itsPanelWidth;                       // Panel bandwidth [m]
         double itsClearance;                        // Panel ground clearance [panel slope lengths]
         double itsPitch;                            // The distance between the rows [panel slope lengths]
+        double itsPanelTilt;                        // The angle between the surface tilt of the module and the ground [radians]
         double transFactor;                         // Transmission factor [#]
         TrackMode itsTrackMode;                     // The tracking mode, used to determine when to calculate sky config factors [unitless]
         Shading itsShading;                         // Used to calculate partial shading on front/back of module
-        int n;                                      // Number of segments into which to divide up the ground [#]
+        public int n;                               // Number of segments into which to divide up the ground [#]
 
         // Ground Shading local variables/arrays and intermediate calculation variables and arrays
         int[] midGroundSH;                          // Ground shade factors for ground segments in the middle rows, 0 = not shaded, 1 = shaded [#]
@@ -55,7 +56,6 @@ namespace CASSYS
         public double midBackSH;                    // Fraction of the back surface of the PV panel that is shaded [# from 0-1]
         public double firstFrontSH;                 // Fraction of the front surface of the first PV panel that is shaded [# from 0-1]
         public double lastBackSH;                   // Fraction of the back surface of the last PV panel that is shaded [# from 0-1]
-        //public double maxShadow;                    // Maximum shadow length projected to front (-) or back (+) from front of interior module rows [panel slope lengths]
         public double[] midGroundGHI;               // Sum of irradiance components for each of the n ground segments in the middle PV rows [W/m2]
         public double[] firstGroundGHI;             // Sum of irradiance components for each of the n ground segments to front of the first PV row [W/m2]
         public double[] lastGroundGHI;              // Sum of irradiance components for each of the n ground segments to back of the last PV row [W/m2]
@@ -86,6 +86,7 @@ namespace CASSYS
             itsPanelWidth = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
             itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL));
             itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollGroundClearance", ErrLevel.FATAL));
+            itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
 
             // Convert ground clearance and pitch to panel slope lengths
             itsPitch /= itsPanelWidth;
@@ -107,8 +108,7 @@ namespace CASSYS
             // Calculate sky configuration factors if not a tracking system; otherwise, will be done in Calculate()
             if (itsTrackMode == TrackMode.NOAT)
             {
-                double PanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
-                CalcSkyConfigFactors(PanelTilt);
+                CalcSkyConfigFactors();
             }
         }
 
@@ -126,28 +126,29 @@ namespace CASSYS
             )
         {
             itsShading = SimShading;
+            itsPanelTilt = PanelTilt;
 
             // Calculate sky configuration factors if a tracking system; otherwise, has already been done in Config()
             if (itsTrackMode != TrackMode.NOAT)
             {
-                CalcSkyConfigFactors(PanelTilt);
+                CalcSkyConfigFactors();
             }
 
             // EC: delete printing code later
             modShad = Environment.NewLine + ts;
-            //string shFront = Environment.NewLine + ts;
-            //string shMid = Environment.NewLine + ts;
-            //string shBack = Environment.NewLine + ts;
+            string shFront = Environment.NewLine + ts;
+            string shMid = Environment.NewLine + ts;
+            string shBack = Environment.NewLine + ts;
             string irrFront = Environment.NewLine + ts;
             string irrMid = Environment.NewLine + ts;
             string irrBack = Environment.NewLine + ts;
             string ghi = Environment.NewLine + ts;
 
-            // Calculate shading for ground underneath PV modules. Three different patches accounted for: interior rows, front of first row, and back of last row
-            CalcGroundShading(SunZenith, SunAzimuth, PanelTilt, PanelAzimuth);
+            // Calculate shading for ground underneath PV modules. Three different area of ground are accounted for: interior rows, front of first row, and back of last row
+            CalcGroundShading(SunZenith, SunAzimuth, PanelAzimuth);
             modShad += "," + midFrontSH + "," + midBackSH + "," + firstFrontSH + "," + lastBackSH;
 
-            // Calculate irradiance for ground underneath PV modules. Three different patches accounted for: interior rows, front of first row, and back of last row
+            // Calculate irradiance for ground underneath PV modules. Three different areas of ground are accounted for: interior rows, front of first row, and back of last row
             for (int i = 0; i < n; i++)
             {
                 // Add diffuse sky component viewed by ground
@@ -189,24 +190,23 @@ namespace CASSYS
                 irrFront += "," + firstGroundGHI[i];
                 irrMid += "," + midGroundGHI[i];
                 irrBack += "," + lastGroundGHI[i];
-                //shFront += "," + firstGroundSH[i];
-                //shMid += "," + midGroundSH[i];
-                //shBack += "," + lastGroundSH[i];
+                shFront += "," + firstGroundSH[i];
+                shMid += "," + midGroundSH[i];
+                shBack += "," + lastGroundSH[i];
             }
-            File.AppendAllText("ghi.csv", ghi);
-            File.AppendAllText("irrFront.csv", irrFront);
-            File.AppendAllText("irrMid.csv", irrMid);
-            File.AppendAllText("irrBack.csv", irrBack);
+            //File.AppendAllText("ghi.csv", ghi);
+            //File.AppendAllText("irrFront.csv", irrFront);
+            //File.AppendAllText("irrMid.csv", irrMid);
+            //File.AppendAllText("irrBack.csv", irrBack);
             //File.AppendAllText("shFront.csv", shFront);
             //File.AppendAllText("shMid.csv", shMid);
             //File.AppendAllText("shBack.csv", shBack);
-            File.AppendAllText("modShad.csv", modShad);
+            //File.AppendAllText("modShad.csv", modShad);
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
         public void CalcSkyConfigFactors
             (
-              double PanelTilt                                  // The angle between the surface tilt of the module and the ground [radians]
             )
         {
             if (itsClearance < 0.0)
@@ -229,19 +229,19 @@ namespace CASSYS
 
                 // Calculate and summarize sky configuration factors ahead, above, and behind the ground segment for interior rows
                 // Directions are split into three so that view can extend freely backward and forward, until view is blocked.
-                skyAhead = CalcSkyConfigDirection(PanelTilt, x, RowType.INTERIOR, -1);
-                skyAbove = CalcSkyConfigDirection(PanelTilt, x, RowType.INTERIOR, 0);
-                skyBehind = CalcSkyConfigDirection(PanelTilt, x, RowType.INTERIOR, 1);
+                skyAhead = CalcSkyConfigDirection(x, RowType.INTERIOR, -1);
+                skyAbove = CalcSkyConfigDirection(x, RowType.INTERIOR, 0);
+                skyBehind = CalcSkyConfigDirection(x, RowType.INTERIOR, 1);
                 midSkyConfigFactors[i] = skyAhead + skyAbove + skyBehind;
                 skyConfig += Environment.NewLine + i + "," + skyAhead + "," + skyAbove + "," + skyBehind + "," + midSkyConfigFactors[i];
 
                 // Calculate sky configuration factor without front limiting panel to model front row.
-                skyAbove = CalcSkyConfigDirection(PanelTilt, x, RowType.FIRST, 0);
+                skyAbove = CalcSkyConfigDirection(x, RowType.FIRST, 0);
                 // Include skyBehind sum calculated with reference to interior rows
                 firstSkyConfigFactors[i] = skyAbove + skyBehind;
 
                 // Calculate sky configuration factor without back limiting panel to model back row.
-                skyAbove = CalcSkyConfigDirection(PanelTilt, x, RowType.LAST, 0);
+                skyAbove = CalcSkyConfigDirection(x, RowType.LAST, 0);
                 // Include skyAhead sum calculated with reference to interior rows
                 lastSkyConfigFactors[i] = skyAhead + skyAbove;
                 skyConfig += "," + firstSkyConfigFactors[i] + "," + lastSkyConfigFactors[i];
@@ -251,15 +251,14 @@ namespace CASSYS
 
         double CalcSkyConfigDirection
             (
-              double PanelTilt                                  // The angle between the surface tilt of the module and the ground [radians]
-            , double x                                          // Horizontal dimension in the row-to-row ground area
+              double x                                          // Horizontal dimension in the row-to-row ground area
             , RowType rowType                                   // The position of the row being calculated relative to others [unitless]
             , double direction                                  // The direction in which to move along the x-axis [-1, 0, 1]
             )
         {
-            double h = Math.Sin(PanelTilt);                     // Vertical height of sloped PV panel [panel slope lengths]
-            double x1 = Math.Cos(PanelTilt);                    // Horizontal distance from front of panel to back of panel [panel slope lengths]
-            double d = itsPitch - x1;                           // Horizontal distance from back of one row to front of the next [panel slope lengths]
+            double h = Math.Sin(itsPanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
+            double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
+            double d = itsPitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
 
             double offset = direction;                          // Initialize offset to begin at first unit of given direction
             double skyPatch = 0;                                // Configuration factor for view of sky in single row-to-row area
@@ -283,7 +282,7 @@ namespace CASSYS
                 else
                 {
                     // Angle from ground point to top of panel P
-                    angA = Math.Atan2(h + itsClearance, (offset + 1) * itsPitch + x1 - x);
+                    angA = Math.Atan2(h + itsClearance, (offset + 1) * itsPitch + b - x);
                     if (angA < 0.0)
                     {
                         angA += Math.PI;
@@ -305,7 +304,7 @@ namespace CASSYS
                 else
                 {
                     // Angle from ground point to top of panel Q
-                    angC = Math.Atan2(h + itsClearance, offset * itsPitch + x1 - x);
+                    angC = Math.Atan2(h + itsClearance, offset * itsPitch + b - x);
                     if (angC < 0.0)
                     {
                         angC += Math.PI;
@@ -337,21 +336,22 @@ namespace CASSYS
             (
               double SunZenith                                  // The zenith position of the sun with 0 being normal to the earth [radians]
             , double SunAzimuth                                 // The azimuth position of the sun relative to 0 being true south. Positive if west, negative if east [radians]
-            , double PanelTilt                                  // The angle between the surface tilt of the module and the ground [radians]
             , double PanelAzimuth                               // The azimuth direction in which the surface is facing. Positive if west, negative if east [radians]
             )
         {
-            double h = Math.Sin(PanelTilt);                 // Vertical height of sloped PV panel [panel slope lengths]
-            double x1 = Math.Cos(PanelTilt);                // Horizontal distance from front of panel to back of panel [panel slope lengths]
-            double d = itsPitch - x1;                       // Horizontal distance from back of one row to front of the next [panel slope lengths]
+            double h = Math.Sin(itsPanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
+            double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
+            double d = itsPitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
 
-            double SunElevation = (Math.PI / 2) - SunZenith;
-            // Horizontal length of shadow normal to row from module top to bottom (base of triangle formed by beam of sun and height of module top from bottom)
-            double Lh = (h / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);
-            // Horizontal length of shadow normal to row from module top to ground (base of triangle formed by beam of sun and height of module top from ground)
-            double Lhc = ((h + itsClearance) / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);
-            // Horizontal length of shadow normal to row from module bottom to ground (base of triangle formed by beam of sun and height of module bottom from ground)
-            double Lc = (itsClearance / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);
+            double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, PanelAzimuth);
+            double BackPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, PanelAzimuth + Math.PI);
+
+            //double Lh = (h / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);                       // Horizontal length of shadow normal to row from module top to bottom
+            //double Lhc = ((h + itsClearance) / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);     // Horizontal length of shadow normal to row from module top to ground
+            //double Lc = (itsClearance / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);            // Horizontal length of shadow normal to row from module bottom to ground
+            double Lh = h / Math.Tan(FrontPA);                          // Base of triangle formed by beam of sun and height of module top from bottom
+            double Lc = itsClearance / Math.Tan(FrontPA);               // Base of triangle formed by beam of sun and height of module bottom from ground
+            double Lhc = (h + itsClearance) / Math.Tan(FrontPA);        // Base of triangle formed by beam of sun and height of module top from ground
 
             double s1Start = 0;                             // Shading start position for first potential shading segment
             double s1End = 0;                               // Shading end position for first potential shading segment
@@ -360,15 +360,14 @@ namespace CASSYS
             double SStart = 0;                              // Shading start position for placeholder segment
             double SEnd = 0;                                // Shading start position for placeholder segment
 
-            double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, PanelAzimuth) * Util.RTOD;
-            double BackPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, PanelAzimuth + Math.PI) * Util.RTOD;
-            modShad += "," + (SunZenith * Util.RTOD) + "," + (SunAzimuth * Util.RTOD) + "," + (itsShading.FrontSLA * Util.RTOD) + "," + FrontPA + "," + (itsShading.BackSLA * Util.RTOD) + "," + BackPA;
+            modShad += "," + (SunZenith * Util.RTOD) + "," + (SunAzimuth * Util.RTOD) + "," + (itsShading.FrontSLA * Util.RTOD) + "," + (FrontPA * Util.RTOD) + "," + (itsShading.BackSLA * Util.RTOD) + "," + (BackPA * Util.RTOD);
+            //modShad += "," + Lh + "," + altLh + "," + Lhc + "," + altLhc + "," + Lc + "," + altLc;
 
             // Divide the row-to-row spacing into n intervals for calculating ground shade factors
             double delta = itsPitch / n;
 
             // When sun is below horizon, set everything to shaded
-            if (SunElevation < 0.0)
+            if (SunZenith > (Math.PI / 2))
             {
                 for (int i = 0; i < n; i++)
                 {
@@ -387,16 +386,16 @@ namespace CASSYS
                 // Front side of PV module partially shaded, back completely shaded, ground completely shaded
                 if (Lh > d)
                 {
-                    midFrontSH = itsShading.GetFrontShadedFraction(SunZenith, SunAzimuth, PanelTilt);
+                    midFrontSH = itsShading.GetFrontShadedFraction(SunZenith, SunAzimuth, itsPanelTilt);
                     midBackSH = 1.0;
                     s1Start = 0.0;
                     s1End = itsPitch;
                 }
                 // Front side of PV module completely shaded, back partially shaded, ground completely shaded
-                else if (Lh < -(itsPitch + x1))
+                else if (Lh < -(itsPitch + b))
                 {
                     midFrontSH = 1.0;
-                    midBackSH = itsShading.GetBackShadedFraction(SunZenith, SunAzimuth, PanelTilt);
+                    midBackSH = itsShading.GetBackShadedFraction(SunZenith, SunAzimuth, itsPanelTilt);
                     s1Start = 0.0;
                     s1End = itsPitch;
                 }
@@ -409,7 +408,7 @@ namespace CASSYS
                         midFrontSH = 0.0;
                         midBackSH = 1.0;
                         SStart = Lc;
-                        SEnd = Lhc + x1;
+                        SEnd = Lhc + b;
                         // Put shadow in correct row-to-row space if needed
                         while (SStart > itsPitch)
                         {
@@ -434,19 +433,19 @@ namespace CASSYS
                     else
                     {
                         // Sun hits front of module. Shadow cast by bottom of module extends further forward than shadow cast by top
-                        if (Lc < Lhc + x1)
+                        if (Lc < Lhc + b)
                         {
                             midFrontSH = 0.0;
                             midBackSH = 1.0;
                             SStart = Lc;
-                            SEnd = Lhc + x1;
+                            SEnd = Lhc + b;
                         }
                         // Sun hits back of module. Shadow cast by top of module extends further forward than shadow cast by bottom
                         else
                         {
                             midFrontSH = 1.0;
                             midBackSH = 0.0;
-                            SStart = Lhc + x1;
+                            SStart = Lhc + b;
                             SEnd = Lc;
                         }
                         // Put shadow in correct row-to-row space if needed
@@ -497,10 +496,10 @@ namespace CASSYS
                 {
                     firstFrontSH = 0.0;
                     s1Start = Lc;
-                    s1End = Lhc + x1;
+                    s1End = Lhc + b;
                 }
                 // Front side of PV module completely shaded, ground completely shaded
-                else if (Lh < -(itsPitch + x1))
+                else if (Lh < -(itsPitch + b))
                 {
                     firstFrontSH = 1.0;
                     s1Start = -itsPitch;
@@ -510,17 +509,17 @@ namespace CASSYS
                 else
                 {
                     // Sun hits front of module. Shadow cast by bottom of module extends further forward than shadow cast by top
-                    if (Lc < Lhc + x1)
+                    if (Lc < Lhc + b)
                     {
                         firstFrontSH = 0.0;
                         s1Start = Lc;
-                        s1End = Lhc + x1;
+                        s1End = Lhc + b;
                     }
                     // Sun hits back of module. Shadow cast by top of module extends further forward than shadow cast by bottom
                     else
                     {
                         firstFrontSH = 1.0;
-                        s1Start = Lhc + x1;
+                        s1Start = Lhc + b;
                         s1End = Lc;
                     }
                 }
@@ -557,17 +556,17 @@ namespace CASSYS
                 else
                 {
                     // Sun hits front of module. Shadow cast by bottom of module extends further forward than shadow cast by top
-                    if (Lc < Lhc + x1)
+                    if (Lc < Lhc + b)
                     {
                         lastBackSH = 1.0;
                         SStart = Lc;
-                        SEnd = Lhc + x1;
+                        SEnd = Lhc + b;
                     }
                     // Sun hits back of module. Shadow cast by top of module extends further forward than shadow cast by bottom
                     else
                     {
                         lastBackSH = 0.0;
-                        SStart = Lhc + x1;
+                        SStart = Lhc + b;
                         SEnd = Lc;
                     }
                 }
@@ -591,9 +590,6 @@ namespace CASSYS
                         lastGroundSH[i] = 0;
                     }
                 }
-
-                // Determine maximum shadow length projected from the front of the PV module row
-                //maxShadow = (Math.Abs(s1Start) > Math.Abs(s1End)) ? s1Start : s1End;
             }
         }
     }
