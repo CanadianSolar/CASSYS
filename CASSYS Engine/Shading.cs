@@ -37,7 +37,7 @@ namespace CASSYS
         // Parameters for the shading class
         double itsCollTilt;                         // Tilt of the collector [radians]
         double itsCollAzimuth;                      // Collector Azimuth [radians]
-        double itsCollBW;                           // Collector Distance [m]
+        double itsCollBW;                           // Collector Bandwidth [m]
         double itsPitch;                            // The distance between the rows [m]
         double itsRowsBlock;                        // The number of rows used in the farm set-up [#]
         double itsRowBlockFactor;                   // The factor applied to shading factors depending on the number of rows [#]
