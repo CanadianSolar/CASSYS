@@ -36,15 +36,15 @@ namespace CASSYS
     {
         // Parameters for the shading class
         double itsCollTilt;                         // Tilt of the collector [radians]
-        double itsCollAzimuth;                      // Collector Azimuth [radians]
-        double itsCollBW;                           // Collector Bandwidth [m]
+        double itsCollAzimuth;                      // Collector azimuth [radians]
+        double itsCollBW;                           // Collector bandwidth [m]
         double itsPitch;                            // The distance between the rows [m]
         double itsRowsBlock;                        // The number of rows used in the farm set-up [#]
         double itsRowBlockFactor;                   // The factor applied to shading factors depending on the number of rows [#]
         ShadModel itsShadModel;                     // The shading model used based on the type of installation
         bool useCellBasedShading;                   // Boolean used to determine if cell bases shading should be used [false, not used]
         int itsNumModTransverseStrings;             // The number of modules in a string (as they appear in the transverse direction)
-        double[] cellSetup;                         // The number of cells in the transverse direction of the entire table
+        double[] cellSetup;                         // The number of cells in the transvers direction of the entire table
         double[] shadingPC;                         // The different shading percentages that occur
         double CellSize;                            // The size of a cell in the module [user defined]
 
@@ -132,7 +132,11 @@ namespace CASSYS
               double CollectorTilt
             )
         {
-            if (CollectorTilt == 0)
+            if (CollectorTilt < 0)
+            {
+                ErrorLogger.Log("Collector tilt angle cannot be negative.", ErrLevel.FATAL);
+            }
+            else if (CollectorTilt == 0)
             {
                 FrontSLA = 0;
                 BackSLA = 0;
@@ -147,11 +151,12 @@ namespace CASSYS
                 FrontSLA = Math.Atan2(itsCollBW * Math.Sin(CollectorTilt), itsPitch - itsCollBW * Math.Cos(CollectorTilt));
                 BackSLA = Math.Atan2(itsCollBW * Math.Sin(CollectorTilt), itsPitch + itsCollBW * Math.Cos(CollectorTilt));
 
-                FrontSLA = Math.Max(0, FrontSLA);
-                FrontSLA = Math.Min(Math.PI, FrontSLA);
-
-                BackSLA = Math.Max(0, BackSLA);
-                BackSLA = Math.Min(Math.PI, BackSLA);
+                // EC: remove once known to be unnecessary
+                if (FrontSLA < 0 || BackSLA < 0)
+                {
+                    Console.WriteLine("Front SLA: " + (FrontSLA * Util.RTOD) + ", BackSLA: " + (BackSLA * Util.RTOD));
+                    ErrorLogger.Log("Negative shading limit angle(s) encountered.", ErrLevel.FATAL);
+                }
             }
         }
 

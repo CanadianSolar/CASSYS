@@ -31,15 +31,15 @@ namespace CASSYS
 
     class GroundShading
     {
-        // Input variables
-        double itsPanelWidth;                       // Panel bandwidth [m]
-        double itsClearance;                        // Panel ground clearance [panel slope lengths]
+        // Parameters for the ground shading class
+        double itsArrayBW;                          // Array bandwidth [m]
+        double itsClearance;                        // Array ground clearance [panel slope lengths]
         double itsPitch;                            // The distance between the rows [panel slope lengths]
         double itsPanelTilt;                        // The angle between the surface tilt of the module and the ground [radians]
-        double transFactor;                         // Transmission factor [#]
-        TrackMode itsTrackMode;                     // The tracking mode, used to determine when to calculate sky config factors [unitless]
+        double itsPanelAzimuth;                     // The angle between horizontal projection of normal to module surface and true South [radians]
+        double transFactor;                         // Fraction of light that is transmitted through the array [#]
         Shading itsShading;                         // Used to calculate partial shading on front/back of module
-        public int n;                               // Number of segments into which to divide up the ground [#]
+        int numGroundSegs;                          // Number of segments into which to divide up the ground [#]
 
         // Ground Shading local variables/arrays and intermediate calculation variables and arrays
         int[] midGroundSH;                          // Ground shade factors for ground segments in the middle rows, 0 = not shaded, 1 = shaded [#]
@@ -48,14 +48,12 @@ namespace CASSYS
         double[] midSkyConfigFactors;               // Fraction of isotropic diffuse sky radiation present on ground segments in the middle rows [#]
         double[] firstSkyConfigFactors;             // Fraction of isotropic diffuse sky radiation present on ground segments to the front of the first row [#]
         double[] lastSkyConfigFactors;              // Fraction of isotropic diffuse sky radiation present on ground segments to the back of the last row [#]
-        string modShad;                             // TODO: remove later
-        string skyConfig;                           // TODO: remove later
 
         // Output variables
-        public double midFrontSH;                   // Fraction of the front surface of the PV panel that is shaded [# from 0-1]
-        public double midBackSH;                    // Fraction of the back surface of the PV panel that is shaded [# from 0-1]
-        public double firstFrontSH;                 // Fraction of the front surface of the first PV panel that is shaded [# from 0-1]
-        public double lastBackSH;                   // Fraction of the back surface of the last PV panel that is shaded [# from 0-1]
+        public double midFrontSH;                   // Fraction of the front surface of the PV panel that is shaded [#]
+        public double midBackSH;                    // Fraction of the back surface of the PV panel that is shaded [#]
+        public double firstFrontSH;                 // Fraction of the front surface of the first PV panel that is shaded [#]
+        public double lastBackSH;                   // Fraction of the back surface of the last PV panel that is shaded [#]
         public double[] midGroundGHI;               // Sum of irradiance components for each of the n ground segments in the middle PV rows [W/m2]
         public double[] firstGroundGHI;             // Sum of irradiance components for each of the n ground segments to front of the first PV row [W/m2]
         public double[] lastGroundGHI;              // Sum of irradiance components for each of the n ground segments to back of the last PV row [W/m2]
@@ -72,25 +70,26 @@ namespace CASSYS
               int n                         // Number of segments into which to divide up the ground [#]
             )
         {
-            this.n = n;
+            numGroundSegs = n;
 
             // TODO: allow user to define?
             transFactor = 0;
 
-            // Create and configure tracker so that track mode can be read and interpreted
-            Tracker SimTracker = new Tracker();
-            SimTracker.Config();
-            itsTrackMode = SimTracker.itsTrackMode;
-
             // Read in values from .csyx file
-            itsPanelWidth = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
-            itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL));
+            itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
             itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollGroundClearance", ErrLevel.FATAL));
+            itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL));
+            itsPanelAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
             itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
 
+            if (itsClearance < 0.0)
+            {
+                ErrorLogger.Log("Ground clearance of panel cannot be negative.", ErrLevel.FATAL);
+            }
+
             // Convert ground clearance and pitch to panel slope lengths
-            itsPitch /= itsPanelWidth;
-            itsClearance /= itsPanelWidth;
+            itsPitch /= itsArrayBW;
+            itsClearance /= itsArrayBW;
 
             // Initialize arrays
             midGroundSH = new int[n];
@@ -105,11 +104,8 @@ namespace CASSYS
             firstGroundGHI = new double[n];
             lastGroundGHI = new double[n];
 
-            // Calculate sky configuration factors if not a tracking system; otherwise, will be done in Calculate()
-            if (itsTrackMode == TrackMode.NOAT)
-            {
-                CalcSkyConfigFactors();
-            }
+            // Calculate sky configuration factors. Will also be done in Calculate() if it is a tracking system
+            CalcSkyConfigFactors();
         }
 
         // Calculate manages calculations that need to be run for each time step
@@ -119,37 +115,28 @@ namespace CASSYS
             , double SunAzimuth                                 // The azimuth position of the sun relative to 0 being true south. Positive if west, negative if east [radians]
             , double PanelTilt                                  // The angle between the surface tilt of the module and the ground [radians]
             , double PanelAzimuth                               // The azimuth direction in which the surface is facing. Positive if west, negative if east [radians]
-            , double HDif                                       // Diffuse horizontal irradiance [W/m2]
+            , TrackMode trackMode                               // Used to determine whether sky config factors need to be recalculated
             , double HDir                                       // Direct horizontal irradiance [W/m2]
+            , double HDif                                       // Diffuse horizontal irradiance [W/m2]
             , Shading SimShading                                // Used to calculate front and back partial shading
-            , DateTime ts                                       // EC: delete later, only for printing convenience
+            , DateTime ts                                       // Time stamp analyzed, used for printing .csv files
             )
         {
-            itsShading = SimShading;
             itsPanelTilt = PanelTilt;
+            itsPanelAzimuth = PanelAzimuth;
+            itsShading = SimShading;
 
-            // Calculate sky configuration factors if a tracking system; otherwise, has already been done in Config()
-            if (itsTrackMode != TrackMode.NOAT)
+            // Calculate sky configuration factors if a tracking system; otherwise, calculations from Config() will be used
+            if (trackMode != TrackMode.NOAT)
             {
                 CalcSkyConfigFactors();
             }
 
-            // EC: delete printing code later
-            modShad = Environment.NewLine + ts;
-            string shFront = Environment.NewLine + ts;
-            string shMid = Environment.NewLine + ts;
-            string shBack = Environment.NewLine + ts;
-            string irrFront = Environment.NewLine + ts;
-            string irrMid = Environment.NewLine + ts;
-            string irrBack = Environment.NewLine + ts;
-            string ghi = Environment.NewLine + ts;
-
             // Calculate shading for ground underneath PV modules. Three different area of ground are accounted for: interior rows, front of first row, and back of last row
-            CalcGroundShading(SunZenith, SunAzimuth, PanelAzimuth);
-            modShad += "," + midFrontSH + "," + midBackSH + "," + firstFrontSH + "," + lastBackSH;
+            CalcGroundShading(SunZenith, SunAzimuth);
 
             // Calculate irradiance for ground underneath PV modules. Three different areas of ground are accounted for: interior rows, front of first row, and back of last row
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < numGroundSegs; i++)
             {
                 // Add diffuse sky component viewed by ground
                 midGroundGHI[i] = HDif * midSkyConfigFactors[i];
@@ -186,22 +173,9 @@ namespace CASSYS
                 {
                     lastGroundGHI[i] += HDir * transFactor;
                 }
-                ghi += "," + HDir;
-                irrFront += "," + firstGroundGHI[i];
-                irrMid += "," + midGroundGHI[i];
-                irrBack += "," + lastGroundGHI[i];
-                shFront += "," + firstGroundSH[i];
-                shMid += "," + midGroundSH[i];
-                shBack += "," + lastGroundSH[i];
             }
-            //File.AppendAllText("ghi.csv", ghi);
-            //File.AppendAllText("irrFront.csv", irrFront);
-            //File.AppendAllText("irrMid.csv", irrMid);
-            //File.AppendAllText("irrBack.csv", irrBack);
-            //File.AppendAllText("shFront.csv", shFront);
-            //File.AppendAllText("shMid.csv", shMid);
-            //File.AppendAllText("shBack.csv", shBack);
-            //File.AppendAllText("modShad.csv", modShad);
+            // Option to print details of the model in .csv files (takes about 10-11 seconds)
+            //PrintModel(ts, SunZenith, SunAzimuth, PanelAzimuth);
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
@@ -209,23 +183,18 @@ namespace CASSYS
             (
             )
         {
-            if (itsClearance < 0.0)
-            {
-                ErrorLogger.Log("Ground clearance of panel cannot be negative.", ErrLevel.FATAL);
-            }
-
             // Divide the row-to-row spacing into n intervals for calculating ground shade factors
-            double delta = itsPitch / n;
+            double delta = itsPitch / numGroundSegs;
             // Initialize horizontal dimension x to provide midpoint intervals
-            double x = -delta / 2.0;
+            double x = 0;
 
             double skyAhead = 0;
             double skyAbove = 0;
             double skyBehind = 0;
 
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < numGroundSegs; i++)
             {
-                x += delta;
+                x = (i + 0.5) * delta;
 
                 // Calculate and summarize sky configuration factors ahead, above, and behind the ground segment for interior rows
                 // Directions are split into three so that view can extend freely backward and forward, until view is blocked.
@@ -233,20 +202,17 @@ namespace CASSYS
                 skyAbove = CalcSkyConfigDirection(x, RowType.INTERIOR, 0);
                 skyBehind = CalcSkyConfigDirection(x, RowType.INTERIOR, 1);
                 midSkyConfigFactors[i] = skyAhead + skyAbove + skyBehind;
-                skyConfig += Environment.NewLine + i + "," + skyAhead + "," + skyAbove + "," + skyBehind + "," + midSkyConfigFactors[i];
 
                 // Calculate sky configuration factor without front limiting panel to model front row.
                 skyAbove = CalcSkyConfigDirection(x, RowType.FIRST, 0);
-                // Include skyBehind sum calculated with reference to interior rows
+                // Include the skyBehind sum calculated with reference to interior rows, since that will also be in view for the first panel
                 firstSkyConfigFactors[i] = skyAbove + skyBehind;
 
                 // Calculate sky configuration factor without back limiting panel to model back row.
                 skyAbove = CalcSkyConfigDirection(x, RowType.LAST, 0);
-                // Include skyAhead sum calculated with reference to interior rows
+                // Include the skyAhead sum calculated with reference to interior rows, since that will also be in view for the last panel
                 lastSkyConfigFactors[i] = skyAhead + skyAbove;
-                skyConfig += "," + firstSkyConfigFactors[i] + "," + lastSkyConfigFactors[i];
             }
-            File.WriteAllText("skyConfig.csv", skyConfig);
         }
 
         double CalcSkyConfigDirection
@@ -271,7 +237,8 @@ namespace CASSYS
             double beta1 = 0;
             double beta2 = 0;
 
-            // Sum sky configuration factors until sky can no longer be seen. Only loop the calculation for rows extending forward or backward, so break loop when direction = 0.
+            // Sum sky configuration factors until sky config factor contributes <= 1% of sum
+            // Only loop the calculation for rows extending forward or backward, so break loop when direction = 0.
             do
             {
                 // Set back limiting angle to 0 since there is no row behind.
@@ -283,16 +250,9 @@ namespace CASSYS
                 {
                     // Angle from ground point to top of panel P
                     angA = Math.Atan2(h + itsClearance, (offset + 1) * itsPitch + b - x);
-                    if (angA < 0.0)
-                    {
-                        angA += Math.PI;
-                    }
                     // Angle from ground point to bottom of panel P
                     angB = Math.Atan2(itsClearance, (offset + 1) * itsPitch - x);
-                    if (angB < 0.0)
-                    {
-                        angB += Math.PI;
-                    }
+
                     beta1 = Math.Max(angA, angB);
                 }
 
@@ -305,17 +265,17 @@ namespace CASSYS
                 {
                     // Angle from ground point to top of panel Q
                     angC = Math.Atan2(h + itsClearance, offset * itsPitch + b - x);
-                    if (angC < 0.0)
-                    {
-                        angC += Math.PI;
-                    }
                     // Angle from ground point to bottom of panel Q
                     angD = Math.Atan2(itsClearance, offset * itsPitch - x);
-                    if (angD < 0.0)
-                    {
-                        angD += Math.PI;
-                    }
+
                     beta2 = Math.Min(angC, angD);
+                }
+
+                // EC: remove once known to be unnecessary
+                if (angA < 0 || angB < 0 || angC < 0 || angD < 0)
+                {
+                    Console.WriteLine("angA: " + (angA * Util.RTOD) + ", angB: " + (angB * Util.RTOD) + ", angC: " + (angC * Util.RTOD) + ", angD: " + (angD * Util.RTOD));
+                    ErrorLogger.Log("Negative sky configuration angles encountered.", ErrLevel.FATAL);
                 }
 
                 skyPatch = 0;
@@ -326,7 +286,7 @@ namespace CASSYS
                 }
                 skySum += skyPatch;
                 offset += direction;
-            } while (offset != 0 && skyPatch > 0.0000000001);
+            } while (offset != 0 && skyPatch > (0.01 * skySum));
 
             return skySum;
         }
@@ -336,40 +296,12 @@ namespace CASSYS
             (
               double SunZenith                                  // The zenith position of the sun with 0 being normal to the earth [radians]
             , double SunAzimuth                                 // The azimuth position of the sun relative to 0 being true south. Positive if west, negative if east [radians]
-            , double PanelAzimuth                               // The azimuth direction in which the surface is facing. Positive if west, negative if east [radians]
             )
         {
-            double h = Math.Sin(itsPanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
-            double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
-            double d = itsPitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
-
-            double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, PanelAzimuth);
-            double BackPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, PanelAzimuth + Math.PI);
-
-            //double Lh = (h / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);                       // Horizontal length of shadow normal to row from module top to bottom
-            //double Lhc = ((h + itsClearance) / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);     // Horizontal length of shadow normal to row from module top to ground
-            //double Lc = (itsClearance / Math.Tan(SunElevation)) * Math.Cos(PanelAzimuth - SunAzimuth);            // Horizontal length of shadow normal to row from module bottom to ground
-            double Lh = h / Math.Tan(FrontPA);                          // Base of triangle formed by beam of sun and height of module top from bottom
-            double Lc = itsClearance / Math.Tan(FrontPA);               // Base of triangle formed by beam of sun and height of module bottom from ground
-            double Lhc = (h + itsClearance) / Math.Tan(FrontPA);        // Base of triangle formed by beam of sun and height of module top from ground
-
-            double s1Start = 0;                             // Shading start position for first potential shading segment
-            double s1End = 0;                               // Shading end position for first potential shading segment
-            double s2Start = 0;                             // Shading start position for second potential shading segment
-            double s2End = 0;                               // Shading end position for second potential shading segment
-            double SStart = 0;                              // Shading start position for placeholder segment
-            double SEnd = 0;                                // Shading start position for placeholder segment
-
-            modShad += "," + (SunZenith * Util.RTOD) + "," + (SunAzimuth * Util.RTOD) + "," + (itsShading.FrontSLA * Util.RTOD) + "," + (FrontPA * Util.RTOD) + "," + (itsShading.BackSLA * Util.RTOD) + "," + (BackPA * Util.RTOD);
-            //modShad += "," + Lh + "," + altLh + "," + Lhc + "," + altLhc + "," + Lc + "," + altLc;
-
-            // Divide the row-to-row spacing into n intervals for calculating ground shade factors
-            double delta = itsPitch / n;
-
             // When sun is below horizon, set everything to shaded
             if (SunZenith > (Math.PI / 2))
             {
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < numGroundSegs; i++)
                 {
                     midGroundSH[i] = 1;
                     firstGroundSH[i] = 1;
@@ -382,6 +314,31 @@ namespace CASSYS
             }
             else
             {
+                double h = Math.Sin(itsPanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
+                double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
+                double d = itsPitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
+
+                double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsPanelAzimuth);
+
+                //double Lh = (h / Math.Tan(SunElevation)) * Math.Cos(itsPanelAzimuth - SunAzimuth);                       // Horizontal length of shadow normal to row from module top to bottom
+                //double Lhc = ((h + itsClearance) / Math.Tan(SunElevation)) * Math.Cos(itsPanelAzimuth - SunAzimuth);     // Horizontal length of shadow normal to row from module top to ground
+                //double Lc = (itsClearance / Math.Tan(SunElevation)) * Math.Cos(itsPanelAzimuth - SunAzimuth);            // Horizontal length of shadow normal to row from module bottom to ground
+                double Lh = h / Math.Tan(FrontPA);                          // Base of triangle formed by beam of sun and height of module top from bottom
+                double Lc = itsClearance / Math.Tan(FrontPA);               // Base of triangle formed by beam of sun and height of module bottom from ground
+                double Lhc = (h + itsClearance) / Math.Tan(FrontPA);        // Base of triangle formed by beam of sun and height of module top from ground
+
+                double s1Start = 0;                             // Shading start position for first potential shading segment
+                double s1End = 0;                               // Shading end position for first potential shading segment
+                double s2Start = 0;                             // Shading start position for second potential shading segment
+                double s2End = 0;                               // Shading end position for second potential shading segment
+                double SStart = 0;                              // Shading start position for placeholder segment
+                double SEnd = 0;                                // Shading start position for placeholder segment
+
+                // Divide the row-to-row spacing into n intervals for calculating ground shade factors
+                double delta = itsPitch / numGroundSegs;
+                // Initialize horizontal dimension x to provide midpoint intervals
+                double x = 0;
+
                 // A. Calculate interior row shading.
                 // Front side of PV module partially shaded, back completely shaded, ground completely shaded
                 if (Lh > d)
@@ -470,14 +427,11 @@ namespace CASSYS
                     }
                 }
 
-                // Initialize horizontal dimension x to provide midpoint intervals
-                double x = -delta / 2.0;
-
                 // Determine whether shaded or sunny for each n ground segments
                 // TODO: improve accuracy (especially for n < 100) by setting 1 only if > 50% of segment is shaded
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < numGroundSegs; i++)
                 {
-                    x += delta;
+                    x = (i + 0.5) * delta;
                     if ((x >= s1Start && x < s1End) || (x >= s2Start && x < s2End))
                     {
                         // x within a shaded interval, so set to 1 to indicate shaded
@@ -524,14 +478,12 @@ namespace CASSYS
                     }
                 }
 
-                // Initialize horizontal dimension x to provide midpoint intervals
-                x = -itsPitch - (delta / 2.0);
-
                 // Determine whether shaded or sunny for each n ground segments
                 // TODO: improve accuracy (especially for n < 100) by setting 1 only if > 50% of segment is shaded
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < numGroundSegs; i++)
                 {
-                    x += delta;
+                    // Offset x coordinate by -itsPitch because row ahead is being measured
+                    x = (i + 0.5) * delta - itsPitch;
                     if (x >= s1Start && x < s1End)
                     {
                         // x within a shaded interval, so set to 1 to indicate shaded
@@ -549,7 +501,7 @@ namespace CASSYS
                 if (Lh > d)
                 {
                     lastBackSH = 1.0;
-                    s1Start = -itsPitch;
+                    s1Start = 0.0;
                     s1End = itsPitch;
                 }
                 // Shadow to front of row - either front or back might be shaded, depending on tilt and other factors
@@ -571,14 +523,11 @@ namespace CASSYS
                     }
                 }
 
-                // Initialize horizontal dimension x to provide midpoint intervals
-                x = delta / 2.0;
-
                 // Determine whether shaded or sunny for each n ground segments
                 // TODO: improve accuracy (especially for n < 100) by setting 1 only if > 50% of segment is shaded
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < numGroundSegs; i++)
                 {
-                    x += delta;
+                    x = (i + 0.5) * delta;
                     if (x >= s1Start && x < s1End)
                     {
                         // x within a shaded interval, so set to 1 to indicate shaded
@@ -591,6 +540,60 @@ namespace CASSYS
                     }
                 }
             }
+        }
+
+        void PrintModel
+            (
+              DateTime ts                                       // Time stamp analyzed, used for printing the model
+            , double SunZenith                                  // The zenith position of the sun with 0 being normal to the earth [radians]
+            , double SunAzimuth                                 // The azimuth position of the sun relative to 0 being true south. Positive if west, negative if east [radians]
+            )
+        {
+            double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsPanelAzimuth);
+            double BackPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsPanelAzimuth + Math.PI);
+
+            string shFirst = Environment.NewLine + ts;
+            string shMid = Environment.NewLine + ts;
+            string shLast = Environment.NewLine + ts;
+
+            string modShad = Environment.NewLine + ts + "," + (SunZenith * Util.RTOD) + "," + (SunAzimuth * Util.RTOD);
+            modShad += "," + (itsShading.FrontSLA * Util.RTOD) + "," + (FrontPA * Util.RTOD) + "," + (itsShading.BackSLA * Util.RTOD) + "," + (BackPA * Util.RTOD);
+            modShad += "," + midFrontSH + "," + midBackSH + "," + firstFrontSH + "," + lastBackSH;
+
+            string skyConfig = "";
+
+            string irrFirst = Environment.NewLine + ts;
+            string irrMid = Environment.NewLine + ts;
+            string irrLast = Environment.NewLine + ts;
+
+            for (int i = 0; i < numGroundSegs; i++)
+            {
+                shFirst += "," + firstGroundSH[i];
+                shMid += "," + midGroundSH[i];
+                shLast += "," + lastGroundSH[i];
+                irrFirst += "," + firstGroundGHI[i];
+                irrMid += "," + midGroundGHI[i];
+                irrLast += "," + lastGroundGHI[i];
+
+                skyConfig += Environment.NewLine + i + "," + firstSkyConfigFactors[i] + "," + midSkyConfigFactors[i] + "," + lastSkyConfigFactors[i];
+            }
+
+            // Profile of ground shading
+            File.AppendAllText("shFirst.csv", shFirst);
+            File.AppendAllText("shMid.csv", shMid);
+            File.AppendAllText("shLast.csv", shLast);
+
+            // Module shading geometry values
+            // SunZenith, SunAzimuth, FrontSLA, FrontPA, BackSLA, BackPA, midFrontSH, midBackSH, firstFrontSH, lastBackSH
+            File.AppendAllText("modShad.csv", modShad);
+
+            // Profile of static sky configuration factors received by ground
+            File.WriteAllText("skyConfig.csv", skyConfig);
+
+            // Profile of irradiance received by ground
+            File.AppendAllText("irrFirst.csv", irrFirst);
+            File.AppendAllText("irrMid.csv", irrMid);
+            File.AppendAllText("irrLast.csv", irrLast);
         }
     }
 }
