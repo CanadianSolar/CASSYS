@@ -89,7 +89,7 @@ namespace CASSYS
             SimShading.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimHorizonShading.TDir, RadProc.SimHorizonShading.TDif, RadProc.SimHorizonShading.TRef, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
 
             // Calculating shading of ground beneath solar panels
-            SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimSplitter.HDif, RadProc.SimSplitter.HDir, SimShading, RadProc.TimeStampAnalyzed);
+            SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.itsTrackMode, RadProc.SimSplitter.HDif, RadProc.SimSplitter.HDir, SimShading, RadProc.TimeStampAnalyzed);
 
             try
             {
