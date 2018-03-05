@@ -53,7 +53,6 @@ namespace CASSYS
         public double TDif;                                      // Diffuse irradiance allowing for horizon effects [W/m^2]
         public double TRef;                                      // Ground reflected irradiance allowing for horizon effects [W/m^2]
         public double TGlo;                                      // Total irradiance allowing for horizon effects [W/m^2]
-        public double GloRad;                                    // Total irradiance with no horizon shadin effects [W/m^2]
 
         public double LossDir;                                   // Beam losses due to horizon effects [W/m^2]
         public double LossDif;                                   // Diffuse losses due to horizon effects [W/m^2]

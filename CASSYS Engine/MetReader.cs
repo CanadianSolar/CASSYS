@@ -37,7 +37,6 @@ namespace CASSYS
         public double WindSpeed = double.NaN;                       // Windspeed [m/s]
         public double TModMeasured = double.NaN;                    // Measured module temperature [C]
         public String TimeStamp = null;                             // Timestamp initialized to null
-        public int lastDOY = 0;                                     // Holds the day of year that was simulated in the last interval.
         public int Year;                                            // Holds current year
         public int DayOfYear;                                       // Holds current day of year
         public int DayOfMonth;                                      // // Holds current day of month
@@ -145,7 +144,7 @@ namespace CASSYS
                 TAmbient = double.Parse(inputLineDelimited[6]);
                 HGlo = double.Parse(inputLineDelimited[13]);
                 HDiff = double.Parse(inputLineDelimited[15]);
-                WindSpeed = double.Parse(inputLineDelimited[20]);
+                WindSpeed = double.Parse(inputLineDelimited[21]);
                 
                 TimeStamp = dateAndTime.ToString("yyyy-MM-dd HH:mm:ss");
                 Util.timeFormat = "yyyy-MM-dd HH:mm:ss";
@@ -226,19 +225,10 @@ namespace CASSYS
             {
                 // Get the Inputs from the Input file as assigned by the .CSYX file
                 // The Input order is set up in weatherRefPos and then the input line is broken into its constituents based on the user assignment
-                simDateTime = DateTime.Parse(inputLineDelimited[0]).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
-                simDateTime = new DateTime(1990, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
+                // As of v. 1.3.1 date is handled first to correct potential issues with Feb 28 of leap year
+                simDateTime = DateTime.Parse(inputLineDelimited[0]);
+                simDateTime = new DateTime(1990, simDateTime.Month, simDateTime.Day).AddHours(Double.Parse(inputLineDelimited[1].Substring(0, inputLineDelimited[1].IndexOf(':'))));
 
-                if (simDateTime.DayOfYear >= lastDOY)
-                {
-                    lastDOY = simDateTime.DayOfYear;
-                }
-                else
-                {
-                    simDateTime = new DateTime(simDateTime.Year + 1, simDateTime.Month, simDateTime.Day, simDateTime.Hour, simDateTime.Minute, simDateTime.Second);
-                    lastDOY = simDateTime.DayOfYear;
-                }
-                
                 TimeStamp = simDateTime.ToString("yyyy-MM-dd HH:mm:ss");
 
                 Util.timeFormat = "yyyy-MM-dd HH:mm:ss";
