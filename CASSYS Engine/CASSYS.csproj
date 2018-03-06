@@ -75,6 +75,7 @@
     <Compile Include="ACWiring.cs" />
     <Compile Include="ASTME2848.cs" />
     <Compile Include="Astro.cs" />
+    <Compile Include="BackTilter.cs" />
     <Compile Include="CASSYSClass.cs" />
     <Compile Include="ErrorLogger.cs" />
     <Compile Include="GridConnectedSystem.cs" />

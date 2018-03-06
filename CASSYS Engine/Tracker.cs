@@ -382,6 +382,7 @@ namespace CASSYS
                         SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
                     }
                     break;
+
                 case "Fixed Tilted Plane Seasonal Adjustment":
                     itsTrackMode = TrackMode.FTSA;
                     SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AzimuthSeasonal", ErrLevel.FATAL));
@@ -402,6 +403,9 @@ namespace CASSYS
                     // Defining all the parameters for the shading of a unlimited row array configuration
                     SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
                     SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+                    itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL));
+                    itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
+
                     break;
 
                 case "Single Axis Elevation Tracking (E-W)":
@@ -413,15 +417,11 @@ namespace CASSYS
                     // Operational Limits
                     itsMinTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MinTiltSAET", ErrLevel.FATAL));
                     itsMaxTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MaxTiltSAET", ErrLevel.FATAL));
-
                     
                     // Backtracking Options
                     useBackTracking = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BacktrackOptSAET", ErrLevel.WARNING, _default: "false"));
-                    if (useBackTracking)
-                    {
-                        itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL));
-                        itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
-                    }
+                    itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL));
+                    itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
                     break;
 
                 case "Single Axis Horizontal Tracking (N-S)":
@@ -432,16 +432,11 @@ namespace CASSYS
 
                     // Operational Limits
                     itsMaxTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMaxSAST", ErrLevel.FATAL));
-
                     
                     // Backtracking Options
                     useBackTracking = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BacktrackOptSAST", ErrLevel.WARNING, _default: "false"));
-                    if (useBackTracking)
-                    {
-                        itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL));
-                        itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
-                        
-                    }
+                    itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL));
+                    itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
                     break;
 
                 

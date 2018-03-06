@@ -34,6 +34,7 @@ namespace CASSYS
 
         // Shading Related variables
         GroundShading SimGround = new GroundShading();          // Used to calculate ground shading
+        BackTilter SimBackTilter = new BackTilter();            // used to calculate back side irradiance
         HorizonShading SimHorizon = new HorizonShading();       // Used to calculate solar panel shading relative to a given horizon
         Shading SimShading = new Shading();                     // Used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
@@ -73,7 +74,8 @@ namespace CASSYS
         double farmACMinVoltageLoss = 0;                        // Loss of power when voltage of the array is too small and forces the inverters to 'shut off' and when inverter is not operating at MPP [W]
 
         // Calculate method
-        public void Calculate(
+        public void Calculate
+            (
                 RadiationProc RadProc,                          // Radiation related data
                 SimMeteo SimMet                                 // Meteological data from inputfile
             )
@@ -94,7 +96,8 @@ namespace CASSYS
             SimSpectral.Calculate(SimMet.HGlo, RadProc.SimSun.NExtra, RadProc.SimSun.Zenith);
 
             // Calculating shading of ground beneath solar panels
-            SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.itsTrackMode, RadProc.SimSplitter.HDif, RadProc.SimSplitter.HDir, SimShading, RadProc.TimeStampAnalyzed);
+            SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.itsTrackerPitch, RadProc.SimTracker.itsTrackerBW, RadProc.SimSplitter.HDir,
+                RadProc.SimSplitter.HDif, SimShading, RadProc.TimeStampAnalyzed);
 
             try
             {
@@ -103,6 +106,12 @@ namespace CASSYS
                 {
                     // Adjust the IV Curve based on based on Temperature and Irradiance
                     SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
+
+                    // double cosInc = Tilt.GetCosIncidenceAngle(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
+
+                    // Calculate back side global irradiance
+                    SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.itsTrackerPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[j].TGloEff, SimGround.midGroundGHI, SimGround.midBackSH,
+                        SimGround.numGroundSegs, RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterBack.IncidenceAngle, RadProc.SimTilterBack.TDir, RadProc.TimeStampAnalyzed);
 
                     // Check Inverter status to determine if the Inverter is ON or OFF
                     GetInverterStatus(j);
@@ -422,6 +431,7 @@ namespace CASSYS
         {
             SimShading.Config();
             SimGround.Config(100);
+            SimBackTilter.Config(6);
             SimTransformer.Config();
             SimSpectral.Config();
 
