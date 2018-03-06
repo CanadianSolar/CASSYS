@@ -29,9 +29,9 @@ namespace CASSYS
         public Tracker SimTracker = new Tracker();                      // Instance used for use in systems with tracking
         public HorizonShading SimHorizonShading = new HorizonShading(); // Instance used for Horizon shading calculations
         public Tilter SimTilter = new Tilter();                         // Instance used for tilter calculations
+        public Tilter SimTilterBack = new Tilter();                     // Instance used for back of tilter calculations
         public Splitter SimSplitter = new Splitter();                   // Instance used for splitter calculations
-        // EC: remove public from this later
-        public DateTime TimeStampAnalyzed;                                     // The time-stamp that used for Sun position calculations [yyyy-mm-dd hh:mm:ss]
+        public DateTime TimeStampAnalyzed;                              // The time-stamp that used for Sun position calculations [yyyy-mm-dd hh:mm:ss]
         double HourOfDay;                                               // Hour of day specific to radiation calculations
 
         Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
@@ -43,10 +43,9 @@ namespace CASSYS
 
         }
 
-        public void Calculate(
-            
-            SimMeteo SimMet                                             // Meteological data from inputfile
-
+        public void Calculate
+            (
+              SimMeteo SimMet                                             // Meteological data from inputfile
             )
         {
             // Calculating Sun position
@@ -166,6 +165,8 @@ namespace CASSYS
             SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth, SimMet.Year, SimMet.DayOfYear);
             SimTilter.itsSurfaceSlope = SimTracker.SurfSlope;
             SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
+            SimTilterBack.itsSurfaceSlope = Math.PI - SimTracker.SurfSlope;
+            SimTilterBack.itsSurfaceAzimuth = Math.PI + SimTracker.SurfAzimuth;
 
             if (double.IsNaN(SimMet.HDiff))
             {
@@ -180,7 +181,7 @@ namespace CASSYS
 
             // Calculate tilted irradiance
             SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
-
+            SimTilterBack.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
         }
 
         // De-transposition of the titled irradiance values to the global horizontal values
@@ -198,6 +199,10 @@ namespace CASSYS
             SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
             SimTilter.IncidenceAngle = SimTracker.IncidenceAngle;
 
+            SimTilterBack.itsSurfaceSlope = Math.PI - SimTracker.SurfSlope;
+            SimTilterBack.itsSurfaceAzimuth = Math.PI + SimTracker.SurfAzimuth;
+            SimTilterBack.IncidenceAngle = Math.PI - SimTracker.IncidenceAngle;
+
             // Calculating the Incidence Angle for the current setup
             double cosInc = Tilt.GetCosIncidenceAngle(SimSun.Zenith, SimSun.Azimuth, SimTilter.itsSurfaceSlope, SimTilter.itsSurfaceAzimuth);
 
@@ -206,6 +211,7 @@ namespace CASSYS
             {
                 SimSplitter.Calculate(SimSun.Zenith, 0, NExtra: SimSun.NExtra);
                 SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                SimTilterBack.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
             }
             else if ((SimSun.Zenith > 87.5 * Util.DTOR) || (cosInc <= Math.Cos(87.5 * Util.DTOR)))
             {
@@ -218,6 +224,7 @@ namespace CASSYS
                 SimSplitter.HDir = 0;
 
                 SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                SimTilterBack.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
             }
             // Otherwise, bisection loop
             else
@@ -229,6 +236,7 @@ namespace CASSYS
                     double HGloAv = (HGloLo + HGloHi) / 2;
                     SimSplitter.Calculate(SimSun.Zenith, _HGlo: HGloAv, NExtra: SimSun.NExtra);
                     SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                    SimTilterBack.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
                     double TGloAv = SimTilter.TGlo;
 
                     // Compare the TGloAv calculated from the Horizontal guess to the acutal TGlo and change the bounds for analysis
@@ -363,6 +371,7 @@ namespace CASSYS
             }
 
             SimTilter.Config();
+            SimTilterBack.Config();
         }
     }
 }

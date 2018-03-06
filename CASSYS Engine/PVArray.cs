@@ -173,8 +173,6 @@ namespace CASSYS
             // Calculation of effective irradiance reaching the cell (Soiling and IAM accounted for)
             CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber);
 
-            //CalcEffectiveBackIrradiance();
-
             // Calculation of temperature GetTemperature Method used (see below)
             CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
 
