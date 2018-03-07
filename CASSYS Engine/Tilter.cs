@@ -156,8 +156,9 @@ namespace CASSYS
             TGlo = TDif = TDir = TRef = 0;
 
             // Check arguments
-            if (NExtra < 0 || SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI || 
-            AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsSurfaceAzimuth < -Math.PI || itsSurfaceAzimuth > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
+            // EC: Allow itsSurfaceAzimuth < -Math.PI and itsSurfaceAzimuth > Math.PI for bifacial modelling
+            if (NExtra < 0 || SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI ||
+            AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
             {
                 ErrorLogger.Log("GetTiltCompIrradPerez: out of range arguments.", ErrLevel.FATAL);
             }

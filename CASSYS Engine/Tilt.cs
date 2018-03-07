@@ -55,13 +55,15 @@ namespace CASSYS
                 throw new System.ArgumentException("GetCosIncidenceAngle: Invalid sun azimuth.");
             }
             if (SurfaceSlope * Util.DTOR < 0 || SurfaceSlope * Util.DTOR > Math.PI)
+            // EC: if (SurfaceSlope < 0 || SurfaceSlope > Math.PI) ???
             {
                 throw new System.ArgumentException("GetCosIncidenceAngle: Invalid surface slope.");
             }
-            if (SurfaceAzimuth * Util.DTOR < -Math.PI || SurfaceAzimuth * Util.DTOR > Math.PI)
-            {
-                throw new System.ArgumentException("GetCosIncidenceAngle: Invalid surface Azimuth.");
-            }
+            //  EC: Allow itsSurfaceAzimuth < -Math.PI and itsSurfaceAzimuth > Math.PI for bifacial modelling
+            //if (SurfaceAzimuth < -Math.PI || SurfaceAzimuth > Math.PI)
+            //{
+            //    throw new System.ArgumentException("GetCosIncidenceAngle: Invalid surface Azimuth.");
+            //}
 
             // To prevent Incidence angle from being returned if sun is below horizon
             if (SunZenith > Math.PI / 2)

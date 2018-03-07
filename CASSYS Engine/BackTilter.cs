@@ -71,19 +71,19 @@ namespace CASSYS
             , double Clearance                      // Array ground clearance [panel slope lengths]
             , double HDif                           // Diffuse horizontal irradiance [W/m2]
             , double TGloEff                        // Front irradiance adjusted for incidence angle and soiling [W/m2]
+            , double Bo                             // ASHRAE Parameter used for IAM calculation
             , double[] midGroundGHI                 // Sum of irradiance components for each of the n ground segments in the middle PV rows [W/m2]
             , double midBackSH                      // Fraction of the back surface of the PV panel that is shaded [#]
+            , double midFrontSH                     // Fraction of the front surface of the PV panel that is shaded [#]
             , int numGroundSegs                     // Number of segments into which to divide up the ground [#]
             , double albedo                         // Albedo value for the current month [#]
-            , double incAngle                       // Angle of incidence for the beam to back of panel [radians]
+            , double InciAng                        // Angle of incidence for the beam to back of panel [radians]
             , double TBackDir                       // Back tilted beam irradiance [W/m2]
             , DateTime ts                           // Time stamp analyzed, used for printing .csv files
+            , double Azimuth
+            , double Zenith
             )
         {
-            // Assume back surface material is glass
-            // EC: used to index large array of correction values - might not need
-            //double refractionIndex = 1.526;
-
             double h = Math.Sin(PanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
             double b = Math.Cos(PanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
             double d = Pitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
@@ -98,6 +98,11 @@ namespace CASSYS
 
             double viewFactor = 0;
             double actualGroundGHI = 0;
+            // Assume front surface material is glass
+            double refractionIndex = 1.526;
+            // Reflectance at normal incidence (Duffie and Beckman, p.217)
+            double reflectFactor = Math.Pow((refractionIndex - 1.0) / (refractionIndex + 1.0), 2.0);
+
             // Calculate diffuse, reflected, and beam irradiance components for each cell row over its field of view of PI radians
             for (int i = 0; i < cellRows; i++)
             {
@@ -105,12 +110,9 @@ namespace CASSYS
                 double cellY = Clearance + h * (i + 0.5) / cellRows;                            // y value for location of cell
                 double elevUp = Math.Atan((topY - cellY) / (topX - cellX));                     // Elevation angle from PV cell to top of PV panel
                 double elevDown = Math.Atan((cellY - bottomY) / (bottomX - cellX));             // Elevation angle from PV cell to bottom of PV panel
-                //double L = (bottomX - cellX) / Math.Cos(elevDown);                              // Diagonal distance from PV cell to bottom of module in row behind
 
-                // EC: right now it rounds up or down... should I floor stopSky and ceil startGround?
                 int stopSky = Convert.ToInt32((PanelTilt - elevUp) * Util.RTOD);                // Last whole degree in arc range that sees sky; first is 0 [degrees]
                 int startGround = Convert.ToInt32((PanelTilt + elevDown) * Util.RTOD);          // First whole degree in arc range that sees ground; last is 180 [degrees]
-                //Console.Write("\n0-" + stopSky + ", " + stopSky + "-" + startGround + ", " + startGround + "-180");
 
                 backDif[i] = 0;
                 backFroRef[i] = 0;
@@ -118,38 +120,22 @@ namespace CASSYS
                 backDir[i] = 0;
 
                 // Add sky diffuse component
-                // EC: without AOI could be BDif += 0.5 * (Math.Cos(0) - Math.Cos(stopSky * Util.DTOR)) * HDif;
                 for (int j = 0; j < stopSky; j++)
                 {
-                    // EC: need to properly calculate AOI
-                    double AOIcorr = 1;
+                    double IAMDif = (1 - Bo * (1 / Math.Cos(j * Util.DTOR) - 1));
                     viewFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
-                    backDif[i] += viewFactor * HDif * AOIcorr;
+                    backDif[i] += viewFactor * HDif * IAMDif;
                 }
 
                 // Add front surface reflected component
                 for (int j = stopSky; j < startGround; j++)
                 {
-                    //double startAlpha = elevUp + elevDown - (j - stopSky) * Util.DTOR;
-                    //double stopAlpha = elevUp + elevDown - (j + 1 - stopSky) * Util.DTOR;
+                    // Calculate reflected irradiance from PV module
+                    double pvReflected = TGloEff * (1.0 - reflectFactor) * (1.0 - midFrontSH);
 
-                    //double m = L * Math.Sin(startAlpha);
-                    //double theta = Math.PI - elevDown - (Math.PI / 2.0 - startAlpha) - PanelTilt;
-                    //projX2 = m / Math.Cos(theta);
-                    //m = L * Math.Sin(stopAlpha);
-                    //theta = Math.PI - elevDown - (Math.PI / 2.0 - stopAlpha) - PanelTilt;
-                    //projX1 = m / Math.Cos(theta);
-                    //projX1 = Math.Max(projX1, 0.0);
-
-                    // Get reflected irradiance from PV module in the 1 degree field of view.
-                    // TGloEff is already corrected for shading and AOI. So do we need to know midFrontSH???
-                    //double pvReflected = ((projX2 - projX1) * TGloEff) / (projX2 - projX1); // * (1.0 - midFrontSH);
-                    double pvReflected = TGloEff; // * (1.0 - midFrontSH);
-
-                    // EC: need to properly calculate AOI
-                    double AOIcorr = 1;
+                    double IAMFroRef = (1 - Bo * (1 / Math.Cos(j * Util.DTOR) - 1));
                     viewFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
-                    backFroRef[i] += viewFactor * pvReflected * AOIcorr;
+                    backFroRef[i] += viewFactor * pvReflected * IAMFroRef;
                 }
 
                 // Add ground reflected component
@@ -186,12 +172,10 @@ namespace CASSYS
                         }
                         projX1 %= numGroundSegs;
                         projX2 %= numGroundSegs;
-                        //Console.WriteLine("projX1 = " + projX1 + ", projX2 = " + projX2);
 
                         // Determine indices (truncate values) for use with groundGHI arrays
                         int index1 = Convert.ToInt32(Math.Floor(projX1));
                         int index2 = Convert.ToInt32(Math.Floor(projX2));
-                        //Console.WriteLine("index1 = " + index1 + ", index2 = " + index2);
 
                         if (index1 == index2)
                         {
@@ -220,23 +204,23 @@ namespace CASSYS
                             actualGroundGHI /= projX2 - projX1;
                         }
                     }
-                    // EC: need to properly calculate AOI
-                    double AOIcorr = 1;
+                    double IAMGroRef = (1 - Bo * (1 / Math.Cos(j * Util.DTOR) - 1));
                     viewFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
-                    backGroRef[i] += viewFactor * actualGroundGHI * albedo * AOIcorr;
+                    backGroRef[i] += viewFactor * actualGroundGHI * albedo * IAMGroRef;
                 }
 
                 // Cell is fully shaded if > 1, fully unshaded if < 0, otherwise fractionally shaded
-                double cellShade = midBackSH * cellRows - i;
-                cellShade = Math.Min(cellShade, 1.0);
-                cellShade = Math.Max(cellShade, 0.0);
+                double backShade = midBackSH * cellRows - i;
+                backShade = Math.Min(backShade, 1.0);
+                backShade = Math.Max(backShade, 0.0);
 
                 // Add beam irradiance, corrected for shading and AOI
-                if (incAngle < (Math.PI / 2))
+                if (InciAng < (Math.PI / 2))
                 {
-                    // EC: need to properly calculate AOI
-                    double AOIcorr = 1;
-                    backDir[i] += (1.0 - cellShade) * TBackDir * AOIcorr;
+                    double IAMDir = Math.Cos(InciAng) > Bo / (1 + Bo) ? Math.Max((1 - Bo * (1 / Math.Cos(InciAng) - 1)), 0) : 0;
+                    backDir[i] += (1.0 - backShade) * TBackDir * IAMDir;
+                    //string tdir = Environment.NewLine + ts + "," + (InciAng * Util.RTOD) + "," + TBackDir + "," + (Azimuth * Util.RTOD) + "," + (Zenith * Util.RTOD);
+                    //File.AppendAllText("test.csv", tdir);
                 }
 
                 // Sum all components to get global back irradiance
@@ -257,7 +241,7 @@ namespace CASSYS
             }
             BGlo = BDif + BFroRef + BGroRef + BDir;
             // Option to print details of the model in .csv files (takes about 1 second)
-            PrintModel(ts);
+            //PrintModel(ts);
         }
 
         void PrintModel

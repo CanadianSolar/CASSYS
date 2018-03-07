@@ -164,7 +164,7 @@ namespace CASSYS
                 }
             }
             // Option to print details of the model in .csv files (takes about 12 seconds)
-            PrintModel(ts, SunZenith, SunAzimuth);
+            //PrintModel(ts, SunZenith, SunAzimuth);
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
