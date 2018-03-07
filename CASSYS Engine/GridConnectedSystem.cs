@@ -107,12 +107,6 @@ namespace CASSYS
                     // Adjust the IV Curve based on based on Temperature and Irradiance
                     SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
 
-                    // double cosInc = Tilt.GetCosIncidenceAngle(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
-
-                    // Calculate back side global irradiance
-                    SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.itsTrackerPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[j].TGloEff, SimGround.midGroundGHI, SimGround.midBackSH,
-                        SimGround.numGroundSegs, RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterBack.IncidenceAngle, RadProc.SimTilterBack.TDir, RadProc.TimeStampAnalyzed);
-
                     // Check Inverter status to determine if the Inverter is ON or OFF
                     GetInverterStatus(j);
 
@@ -136,7 +130,13 @@ namespace CASSYS
                     ReadFarmSettings.Outputlist["SubArray_Voltage_Inv" + (j + 1).ToString()] = SimInv[j].itsOutputVoltage;
                     ReadFarmSettings.Outputlist["SubArray_Power_Inv" + (j + 1).ToString()] = SimInv[j].ACPwrOut / 1000;
                 }
-                
+
+                // double cosInc = Tilt.GetCosIncidenceAngle(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
+                // Calculate back side global irradiance
+                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.itsTrackerPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[0].TGloEff, SimPVA[0].itsBo, SimGround.midGroundGHI,
+                    SimGround.midBackSH, SimGround.midFrontSH, SimGround.numGroundSegs, RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterOpposite.IncidenceAngle, RadProc.SimTilterOpposite.TDir,
+                    RadProc.TimeStampAnalyzed, RadProc.SimSun.Azimuth, RadProc.SimSun.Zenith);
+
                 //Calculating total farm output and total ohmic loss
                 farmACOutput = 0;
                 farmACOhmicLoss = 0;

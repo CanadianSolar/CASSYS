@@ -63,7 +63,7 @@ namespace CASSYS
         double itsSubArrayNum;                // The sub-array number that the PVArray belongs to. [#]
 
         // Module Temperature and Irradiance Coefficients
-        double itsBo;                                       // ASHARE Parameter used for IAM calculation (see Ref 5)
+        public double itsBo;                                // ASHRAE Parameter used for IAM calculation (see Ref 5)
         bool userIAMModel;                                  // If a userIAM profile is defined or the ASHRAE model is used.
         bool panIAMModel;                                   // If a panIAM profile is defined
         bool panAOIModel;
