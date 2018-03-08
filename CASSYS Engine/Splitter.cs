@@ -114,9 +114,8 @@ namespace CASSYS
                     // Compute diffuse fraction
                     else
                     {
-                        double kt = HGlo / NExtra / cosZ;
-                        double kd;
-                        kd = Sun.GetDiffuseFraction(kt);
+                        double kt = Sun.GetClearnessIndex(HGlo, NExtra, Zenith);
+                        double kd = Sun.GetDiffuseFraction(kt);
                         kd = Math.Min(kd, 1.0);
                         kd = Math.Max(kd, 0.0);
 

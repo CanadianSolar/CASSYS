@@ -196,7 +196,7 @@ namespace CASSYS
             mVoc = Voc / itsNSeries;
         }
 
-        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred plus spectral model corrections
+        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred, plus Spectral Model corrections
         void CalcEffectiveIrradiance
             (
               double TDir                            // Tilted Beam Irradiance [W/m^2]
@@ -236,16 +236,16 @@ namespace CASSYS
             // Calculating the IAM Modified Tilted Irradiance [W/m^2]
             IAMTGlo = TDir * IAMDir + TDif * IAMDif + TRef * IAMRef;
 
-            // Determing soiling loss based on month number specified from Time Stamp [%]
+            // Determine soiling loss based on month number specified from Time Stamp [%]
             itsSoilingLossPC = itsMonthlySoilingPC[MonthNumber];
 
             // Modified TGlo based on irradiance based on soiling and Incidence Angle modifier
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
 
-            // Determining spectral effects correction based on clearness index
+            // Determine spectral correction based on clearness index
             SpectralCorr = TGloEff * ClearCorr;
 
-            // Modified TGlo based on spectral effects model
+            // Modified TGlo based on spectral correction
             TGloEff = TGloEff * (1 + ClearCorr);
 
             // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem

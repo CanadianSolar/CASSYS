@@ -125,8 +125,7 @@ namespace CASSYS
             LossOutputs["Near_Shading_Losses"] = nearShadeLosses * Util.timeStep / 60;
             LossOutputs["Soiling_Losses"] = soilingLoss * Util.timeStep / 60;
             LossOutputs["Incidence_Angle_Losses"] = incidenceAngleLoss * Util.timeStep / 60;
-            // Make negative because positive spectral correction counts as gain
-            LossOutputs["Spectral_Correction"] = -spectralCorrection * Util.timeStep / 60;
+            LossOutputs["Spectral_Correction"] = -spectralCorrection * Util.timeStep / 60;      // Make negative because positive spectral correction counts as gain
             LossOutputs["Effective_POA_Radiation"] = effectivePOARad * Util.timeStep / 60;
             // PV CONVERSION takes place here
             // Losses at PV modules

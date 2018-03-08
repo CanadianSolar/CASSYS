@@ -38,7 +38,7 @@ namespace CASSYS
         double clearnessIndex;                                      // Clearness index
 
         // Settings used in the class
-        bool spectralModelUsed;                                     // Used to determine whether or not the user is using a spectral effects model
+        bool spectralModelUsed;                                     // Used to determine whether or not the user has provided a spectral effects model
 
         // Output variables
         public double clearnessCorrection;                          // Clearness correction
@@ -53,15 +53,15 @@ namespace CASSYS
             (
             )
         {
-            // Loads the Spectral Model from the .csyx document
+            // Loads the spectral model from the .csyx document
             spectralModelUsed = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Spectral", "UseSpectralModel", ErrLevel.WARNING, _default: "false"));
             if (spectralModelUsed == true)
             {
-                // Getting the Spectral Model information from the .csyx file
+                // Getting the spectral model information from the .csyx file
                 SpectralClearnessIndexStr = ReadFarmSettings.GetInnerText("Spectral", "ClearnessIndex/kt", ErrLevel.WARNING, "0.9", _default: "1");
                 SpectralClearnessCorrectionStr = ReadFarmSettings.GetInnerText("Spectral", "ClearnessIndex/ktCorrection", ErrLevel.WARNING, "0.9", _default: "0");
 
-                // Converts the Spectral Model imported from the .csyx file into an array of doubles
+                // Converts the spectral model imported from the .csyx file into an array of doubles
                 ClearnessIndexArr = SpectralCSVStringtoArray(SpectralClearnessIndexStr);
                 ClearnessCorrectionArr = SpectralCSVStringtoArray(SpectralClearnessCorrectionStr);
 
@@ -76,19 +76,6 @@ namespace CASSYS
                 ClearnessIndexArr = new double[] { 1 };
                 ClearnessCorrectionArr = new double[] { 0 };
             }
-            // TODO: remove later
-            for (int i = 0; i < ClearnessIndexArr.Length; i++)
-            {
-                Console.Write(ClearnessIndexArr[i]);
-                Console.Write(" ");
-            }
-            Console.WriteLine();
-            for (int i = 0; i < ClearnessCorrectionArr.Length; i++)
-            {
-                Console.Write(ClearnessCorrectionArr[i]);
-                Console.Write(" ");
-            }
-            Console.WriteLine();
         }
 
         // Calculate manages calculations that need to be run for each time step
@@ -104,7 +91,7 @@ namespace CASSYS
         }
 
         // Converts string array into an array of doubles that can be used by the program
-        public static double[] SpectralCSVStringtoArray(string SpectralString)
+        double[] SpectralCSVStringtoArray(string SpectralString)
         {
             string[] tempArray = SpectralString.Split(',');
             int arrayLength = tempArray.Length;

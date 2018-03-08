@@ -30,11 +30,11 @@ namespace CASSYS
         ACWiring[] SimACWiring;                                 // Array of Wires used in calculating AC wiring loss
         Transformer SimTransformer = new Transformer();         // Transformer instance used in calculations
 
-        SpectralEffects SimSpectral = new SpectralEffects();    // used to calculate spectral correction relative to a given model
+        SpectralEffects SimSpectral = new SpectralEffects();    // Used to calculate spectral correction relative to a given model
 
         // Shading Related variables
-        HorizonShading SimHorizon = new HorizonShading();       // used to calculate solar panel shading relative to a given horizon
-        Shading SimShading = new Shading();                     // used to calculate solar panel shading (row to row)
+        HorizonShading SimHorizon = new HorizonShading();       // Used to calculate solar panel shading relative to a given horizon
+        Shading SimShading = new Shading();                     // Used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
         double ShadGloFactor;                                   // Shading factor on the POA Global
         double ShadBeamLoss;                                    // Shading Losses to Beam
