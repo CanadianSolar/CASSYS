@@ -156,9 +156,9 @@ namespace CASSYS
             TGlo = TDif = TDir = TRef = 0;
 
             // Check arguments
-            // EC: Allow itsSurfaceAzimuth < -Math.PI and itsSurfaceAzimuth > Math.PI for bifacial modelling
+            // Allow itsSurfaceAzimuth < -Math.PI and itsSurfaceAzimuth > Math.PI for bifacial modelling
             if (NExtra < 0 || SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI ||
-            AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
+                AirMass < 1 || itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
             {
                 ErrorLogger.Log("GetTiltCompIrradPerez: out of range arguments.", ErrLevel.FATAL);
             }
@@ -279,10 +279,9 @@ namespace CASSYS
             TGlo = TDif = TDir = TRef = 0;
 
             //  Check arguments
-            //  EC: Allow itsSurfaceAzimuth < -Math.PI and itsSurfaceAzimuth > Math.PI for bifacial modelling
+            //  Allow itsSurfaceAzimuth < -Math.PI and itsSurfaceAzimuth > Math.PI for bifacial modelling
             if (NExtra < 0 || SunZenith < 0 || SunZenith > Math.PI || SunAzimuth < -Math.PI || SunAzimuth > Math.PI ||
                 itsSurfaceSlope < 0 || itsSurfaceSlope > Math.PI || itsMonthlyAlbedo[MonthNum] < 0 || itsMonthlyAlbedo[MonthNum] > 1)
-
             {
                 ErrorLogger.Log("GetTiltCompIrradHay: out of range arguments.", ErrLevel.FATAL);
             }
@@ -306,7 +305,7 @@ namespace CASSYS
             if (SunZenith < Math.PI / 2 && cosInc > 0)
                 Rb = cosInc / cosZenith;
             TDir = Math.Max(Math.Min(HDir * Rb, 0.9 * Util.SOLAR_CONST * cosInc), 0);
-           
+
 
             // Compute anisotropy index AI and diffuse radiation
             //  Duffie and Beckman (1991) eqn. 2.16.2 and 2.16.3 

@@ -30,9 +30,10 @@ namespace CASSYS
         ACWiring[] SimACWiring;                                 // Array of Wires used in calculating AC wiring loss
         Transformer SimTransformer = new Transformer();         // Transformer instance used in calculations
 
+        BackTilter SimBackTilter = new BackTilter();            // used to calculate back side irradiance
+
         // Shading Related variables
         GroundShading SimGround = new GroundShading();          // used to calculate ground shading
-        BackTilter SimBackTilter = new BackTilter();            // used to calculate back side irradiance
         HorizonShading SimHorizon = new HorizonShading();       // used to calculate solar panel shading relative to a given horizon
         Shading SimShading = new Shading();                     // used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
@@ -126,11 +127,10 @@ namespace CASSYS
                     ReadFarmSettings.Outputlist["SubArray_Power_Inv" + (j + 1).ToString()] = SimInv[j].ACPwrOut / 1000;
                 }
 
-                // double cosInc = Tilt.GetCosIncidenceAngle(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
                 // Calculate back side global irradiance
-                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.itsTrackerPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[0].TGloEff, SimPVA[0].itsBo, SimGround.midGroundGHI,
+                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, SimGround.itsPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[0].TGloEff, SimPVA[0].itsBo, SimGround.midGroundGHI,
                     SimGround.midBackSH, SimGround.midFrontSH, SimGround.numGroundSegs, RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterOpposite.IncidenceAngle, RadProc.SimTilterOpposite.TDir,
-                    RadProc.TimeStampAnalyzed, RadProc.SimSun.Azimuth, RadProc.SimSun.Zenith);
+                    RadProc.TimeStampAnalyzed);
 
                 //Calculating total farm output and total ohmic loss
                 farmACOutput = 0;
