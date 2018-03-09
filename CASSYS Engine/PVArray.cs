@@ -28,7 +28,6 @@
 // Ref 3: Quaschning & Hanitsch (1996): Numerical Simulation of I-V characteristics Solar Energy 
 //        Solar Energy 56, 513-520
 // Ref 4: (Website, Accessed 2014-09) PV Modelling Collaborative: http://pvpmc.sandia.gov/modeling-steps/2-dc-module-iv/cell-temperature/pvsyst-cell-temperature-model/
-// Ref 5: (Website, Accessed 2014-10) PV Modelling Collaborative: http://pvpmc.org/modeling-steps/shading-soiling-and-reflection-losses/incident-angle-reflection-losses/ashre-model/
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -140,7 +139,7 @@ namespace CASSYS
         {
 
             CalcAtMaximumPowerPoint(); // Calculate max power
-            
+
             if (!isMPPT)
             {
                 // If the Inverter is fixing/raising the Array to an MPPT Limit/Clipping Voltage, use the inverter voltage and calculate new power point 
@@ -207,7 +206,7 @@ namespace CASSYS
             , double ClearCorr                       // Clearness correction [unitless]
             )
         {
-            // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component (Calculated using ASHRAE Parameter, see Ref 5 in PV Array Class)
+            // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component
             if (panModelExists)
             {
                 InciAng = Math.Max(0, InciAng);
@@ -228,8 +227,8 @@ namespace CASSYS
             }
             else
             {
-                IAMDir = Math.Cos(InciAng) > itsBo / (1 + itsBo) ? Math.Max((1 - itsBo * (1 / Math.Cos(InciAng) - 1)), 0) : 0;
-                IAMDif = (1 - itsBo * (1 / Math.Cos(Util.DiffInciAng) - 1));
+                IAMDir = Tilt.GetASHRAEIAM(itsBo, InciAng);
+                IAMDif = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
                 IAMRef = IAMDif;
             }
 
