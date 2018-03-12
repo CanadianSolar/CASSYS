@@ -117,8 +117,8 @@ namespace CASSYS
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
         public double Efficiency;             // PV array efficiency [%] 
-        public double TGloEff;                // Irradiance adjusted for incidence angle, soiling, and spectral effects [W/m^2]
-        public double TDirRef;                // Direct effective irradiance that gets reflected from the front [W/m^2]
+        public double TGloEff;                // Irradiance adjusted for incidence angle and soiling, and spectral effects [W/m^2]
+        public double TFroRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
         public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
@@ -259,8 +259,8 @@ namespace CASSYS
             // Reflectance at normal incidence (Duffie and Beckman, p.217)
             double reflectionFactor = Math.Pow((refractionIndex - 1.0) / (refractionIndex + 1.0), 2.0);
 
-            // Calculate the amount of direct irradiance reflected off the front
-            TDirRef = (TDir * (1 - IAMDir * (1 - reflectionFactor)) * (1 - itsSoilingLossPC));
+            // Calculate the amount of diffuse irradiance reflected off the front
+            TFroRef = (TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC));
         }
 
         // Calculates the MPPT operating point of the module

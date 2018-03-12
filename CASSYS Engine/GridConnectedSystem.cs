@@ -132,7 +132,7 @@ namespace CASSYS
                 }
 
                 // Calculate back side global irradiance
-                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, SimGround.itsPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDirRef, SimPVA[0].itsBo, SimGround.midGroundGHI,
+                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, SimGround.itsPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[0].TFroRef, SimPVA[0].itsBo, SimGround.midGroundGHI,
                     SimGround.midBackSH, SimGround.midFrontSH, SimGround.numGroundSegs, RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterOpposite.IncidenceAngle, RadProc.SimTilterOpposite.TDir,
                     RadProc.TimeStampAnalyzed);
 
@@ -240,6 +240,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
             ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"] = SimPVA[0].TGloEff;
+            ReadFarmSettings.Outputlist["Effective_Backside_Irradiance"] = SimBackTilter.BGlo;
             ReadFarmSettings.Outputlist["Array_Nominal_Power"] = farmPnom / 1000;
             ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
             ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;

@@ -485,7 +485,7 @@ namespace CASSYS
             Console.WriteLine("CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems");
             Console.WriteLine("Copyright 2015 - " + currentYear + " CanadianSolar, All rights reserved.");
             Console.WriteLine("CASSYS Engine Version: " + EngineVersion);
-            Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE");
+            Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/LICENSE");
             Console.WriteLine("-------------------------------------------------------------------------------");
         }
 
