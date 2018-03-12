@@ -28,13 +28,14 @@ namespace CASSYS
         // Parameters for the back tilter class
         int numCellRows;                            // Number of cell rows on back of array [#]
 
+        // Back tilter local variables/arrays and intermediate calculation variables and arrays
         double[] backGlo;                           // Back tilted global irradiance for each cell row on back of array [W/m2]
         double[] backDir;                           // Back tilted beam irradiance for each cell row on back of array [W/m2]
         double[] backDif;                           // Back tilted diffuse irradiance for each cell row on back of array [W/m2]
         double[] backFroRef;                        // Back tilted front-panel-reflected irradiance for each cell row on back of array [W/m2]
         double[] backGroRef;                        // Back tilted ground-reflected irradiance for each cell row on back of array [W/m2]
 
-        double aveGroundGHI;
+        //double aveGroundGHI;
 
         // Output variables
         public double BGlo;                         // Back tilted global irradiance [W/m2]
@@ -72,25 +73,24 @@ namespace CASSYS
             , double Pitch                          // The distance between the rows [panel slope lengths]
             , double Clearance                      // Array ground clearance [panel slope lengths]
             , double HDif                           // Diffuse horizontal irradiance [W/m2]
-            , double TGloEff                        // Front tilted effective irradiance [W/m2]
+            , double TDirRef                        // Front reflected beam irradiance [W/m2]
             , double Bo                             // ASHRAE Parameter used for IAM calculation [#]
             , double[] midGroundGHI                 // Sum of irradiance components for each of the ground segments in the middle PV rows [W/m2]
             , double midBackSH                      // Fraction of the back surface of the PV panel that is shaded [#]
             , double midFrontSH                     // Fraction of the front surface of the PV panel that is shaded [#]
             , int numGroundSegs                     // Number of segments into which to divide up the ground [#]
             , double albedo                         // Albedo value for the current month [#]
-            , double InciAng                        // Angle of incidence for the beam to back of panel [radians]
+            , double IADir                          // Incidence angle for the beam to back of panel [radians]
             , double TBackDir                       // Back tilted beam irradiance [W/m2]
             , DateTime ts                           // Time stamp analyzed, used for printing .csv files
             )
         {
             double h = Math.Sin(PanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
             double b = Math.Cos(PanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
-            double d = Pitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
 
-            // Calculate x, y coordinates of bottom and top edges of PV row behind the desired PV row so that portions of sky and ground viewed by
-            // the PV cell may be determined. Coordinates are relative to (0,0) being the ground point below the lower front edge of desired PV row.
-            // The row behind the desired row is in the positive x direction.
+            // Calculate x, y coordinates of bottom and top edges of PV row behind the current PV row so that portions of sky and ground viewed by
+            // the PV cell may be determined. Coordinates are relative to (0,0) being the ground point below the lower front edge of current PV row.
+            // The row behind the current row is in the positive x direction.
             double bottomX = Pitch;                          // x value for point on bottom edge of PV panel behind current row
             double bottomY = Clearance;                      // y value for point on bottom edge of PV panel behind current row
             double topX = bottomX + b;                       // x value for point on top edge of PV panel behind current row
@@ -98,17 +98,12 @@ namespace CASSYS
 
             double configFactor = 0;
 
-            // Assume front surface material is glass
-            double refractionIndex = 1.526;
-            // Reflectance at normal incidence (Duffie and Beckman, p.217)
-            double reflectFactor = Math.Pow((refractionIndex - 1.0) / (refractionIndex + 1.0), 2.0);
-
-            aveGroundGHI = 0;
-            for (int k = 0; k < numGroundSegs; k++)
-            {
-                aveGroundGHI += midGroundGHI[k] / numGroundSegs;
-            }
-            aveGroundGHI *= albedo;
+            //aveGroundGHI = 0;
+            //for (int k = 0; k < numGroundSegs; k++)
+            //{
+            //    aveGroundGHI += midGroundGHI[k] / numGroundSegs;
+            //}
+            //aveGroundGHI *= albedo;
 
             //double actualGroundGHI = 0;
             // Calculate diffuse, reflected, and beam irradiance components for each cell row over its field of view of PI radians
@@ -131,7 +126,8 @@ namespace CASSYS
                 for (int j = 0; j < stopSky; j++)
                 {
                     // Get Incidence Angle modifier for current field of view
-                    double IAMDif = Tilt.GetASHRAEIAM(Bo, j * Util.DTOR);
+                    double IADif = Math.PI / 2 - ((j + 0.5) * Util.DTOR);
+                    double IAMDif = Tilt.GetASHRAEIAM(Bo, IADif);
 
                     configFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
                     backDif[i] += configFactor * HDif * IAMDif;
@@ -140,107 +136,31 @@ namespace CASSYS
                 // Add front surface reflected component
                 for (int j = stopSky; j < startGround; j++)
                 {
-                    // Calculate reflected irradiance from PV module
-                    // EC: not fully confident in how midFrontSH is factored in... does not account for WHERE the shading occurs on the panel
-                    double pvReflected = TGloEff * (1.0 - reflectFactor) * (1.0 - midFrontSH);
-
                     // Get Incidence Angle modifier for current field of view
-                    double IAMFroRef = Tilt.GetASHRAEIAM(Bo, j * Util.DTOR);
+                    double IAFroRef = Math.PI / 2 - ((j + 0.5) * Util.DTOR);
+                    double IAMFroRef = Tilt.GetASHRAEIAM(Bo, IAFroRef);
 
                     configFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
-                    backFroRef[i] += configFactor * pvReflected * IAMFroRef;
+                    backFroRef[i] += configFactor * TDirRef * (1.0 - midFrontSH) * IAMFroRef;
                 }
 
-                // Add ground reflected component
-                // Calculate and summarize ground configuration factors ahead, below, and behind the cell.
+                // Add ground reflected component: calculate and summarize ground configuration factors ahead, below, and behind the cell.
                 // Directions are split into three so that view can independently extend backward and forward.
                 backGroRef[i] += CalcGroundConfigDirection(-1, Pitch, PanelTilt, cellX, cellY, midGroundGHI, Bo, albedo, numGroundSegs);
                 backGroRef[i] += CalcGroundConfigDirection(0, Pitch, PanelTilt, cellX, cellY, midGroundGHI, Bo, albedo, numGroundSegs);
                 backGroRef[i] += CalcGroundConfigDirection(1, Pitch, PanelTilt, cellX, cellY, midGroundGHI, Bo, albedo, numGroundSegs);
-
-                //for (int j = startGround; j < 180; j++)
-                //{
-                //    // Get start and ending elevations for this (j, j + 1) pair
-                //    double startElevDown = elevDown + (j - startGround) * Util.DTOR;
-                //    double stopElevDown = elevDown + (j + 1 - startGround) * Util.DTOR;
-                //    // Projection onto ground in positive x direction
-                //    double projX2 = cellX + cellY / Math.Tan(startElevDown);
-                //    double projX1 = cellX + cellY / Math.Tan(stopElevDown);
-
-                //    // Initialize and get actualGroundGHI value
-                //    actualGroundGHI = 0;
-                //    if (Math.Abs(projX1 - projX2) > 0.99 * Pitch)
-                //    {
-                //        // Use average GHI if projection approximates the pitch
-                //        for (int k = 0; k < numGroundSegs; k++)
-                //        {
-                //            actualGroundGHI += midGroundGHI[k] / numGroundSegs;
-                //        }
-                //    }
-                //    else
-                //    {
-                //        // Normalize projections and multiply by n
-                //        projX1 = numGroundSegs * projX1 / Pitch;
-                //        projX2 = numGroundSegs * projX2 / Pitch;
-
-                //        // Shift array indices to be within interval [0, n)
-                //        while (projX1 < 0 || projX2 < 0)
-                //        {
-                //            projX1 += numGroundSegs;
-                //            projX2 += numGroundSegs;
-                //        }
-                //        projX1 %= numGroundSegs;
-                //        projX2 %= numGroundSegs;
-
-                //        // Determine indices (truncate values) for use with groundGHI arrays
-                //        int index1 = Convert.ToInt32(Math.Floor(projX1));
-                //        int index2 = Convert.ToInt32(Math.Floor(projX2));
-
-                //        if (index1 == index2)
-                //        {
-                //            // Use single value if projection falls within a single segment of ground
-                //            actualGroundGHI = midGroundGHI[index1];
-                //        }
-                //        else
-                //        {
-                //            // Sum the irradiances on the ground if the projection falls across multiple segments
-                //            for (int k = index1; k <= index2; k++)
-                //            {
-                //                if (k == index1)
-                //                {
-                //                    actualGroundGHI += midGroundGHI[k] * (k + 1.0 - projX1);
-                //                }
-                //                else if (k == index2)
-                //                {
-                //                    actualGroundGHI += midGroundGHI[k] * (projX2 - k);
-                //                }
-                //                else
-                //                {
-                //                    actualGroundGHI += midGroundGHI[k];
-                //                }
-                //            }
-                //            // Get irradiance on ground in the 1 degree field of view
-                //            actualGroundGHI /= projX2 - projX1;
-                //        }
-                //    }
-                //    double IAMGroRef = Math.Cos(j * Util.DTOR) > Bo / (1 + Bo) ? Math.Max((1 - Bo * (1 / Math.Cos(j * Util.DTOR) - 1)), 0) : 0;
-                //    configFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
-                //    backGroRef[i] += configFactor * actualGroundGHI * albedo * IAMGroRef;
-                //}
 
                 // Cell is fully shaded if > 1, fully unshaded if < 0, otherwise fractionally shaded
                 double backShade = midBackSH * numCellRows - i;
                 backShade = Math.Min(backShade, 1.0);
                 backShade = Math.Max(backShade, 0.0);
 
-                // Add beam irradiance, corrected for shading and AOI
-                if (InciAng < (Math.PI / 2))
-                {
-                    // Get Incidence Angle modifier for current field of view
-                    double IAMDir = Tilt.GetASHRAEIAM(Bo, InciAng);
+                //if (IADir < (Math.PI / 2))
+                // Get Incidence Angle modifier for current field of view
+                double IAMDir = Tilt.GetASHRAEIAM(Bo, IADir);
 
-                    backDir[i] += (1.0 - backShade) * TBackDir * IAMDir;
-                }
+                // Add beam irradiance, corrected for shading and AOI
+                backDir[i] += (1.0 - backShade) * TBackDir * IAMDir;
 
                 // Sum all components to get global back irradiance
                 backGlo[i] = backDif[i] + backFroRef[i] + backGroRef[i] + backDir[i];
@@ -306,7 +226,7 @@ namespace CASSYS
                 {
                     theta2 = Math.PI + theta2;
                 }
-                // Calculate the roughly equivalent ("j", "j + 1") field of view pair = (beta1, beta2)
+                // Calculate the field of view by which the cell sees this segment of ground - (beta1, beta2) roughly equivalent to (j, j + 1)
                 beta1 = theta1 + PanelTilt;                     // End of cell's field of view that sees the ground segment
                 beta2 = theta2 + PanelTilt;                     // Start of cell's field of view that sees the ground segment
 
@@ -319,7 +239,8 @@ namespace CASSYS
                 index %= numGroundSegs;
 
                 // Get Incidence Angle modifier for current field of view
-                double IAMGroRef = Tilt.GetASHRAEIAM(Bo, beta2);
+                double IAGroRef = Math.PI / 2 - (beta1 - beta2 / 2);
+                double IAMGroRef = Tilt.GetASHRAEIAM(Bo, IAGroRef);
 
                 double configFactor = 0.5 * (Math.Cos(beta2) - Math.Cos(beta1));
                 groundPatch = configFactor * midGroundGHI[index] * albedo * IAMGroRef;// * delta;
@@ -338,13 +259,13 @@ namespace CASSYS
             )
         {
             string irrBackSide = Environment.NewLine + ts;
-            string viewFactor = Environment.NewLine + ts + "," + aveGroundGHI + "," + BGroRef;
+            //string viewFactor = Environment.NewLine + ts + "," + aveGroundGHI + "," + BGroRef;
             for (int i = 0; i < numCellRows; i++)
             {
                 irrBackSide += "," + backDif[i] + "," + backFroRef[i] + "," + backGroRef[i] + "," + backDir[i] + "," + backGlo[i];
             }
             File.AppendAllText("irrBackSide.csv", irrBackSide);
-            File.AppendAllText("viewFactor.csv", viewFactor);
+            //File.AppendAllText("viewFactor.csv", viewFactor);
         }
     }
 }
