@@ -330,7 +330,7 @@ namespace CASSYS
 
                 // A. Calculate interior row shading.
                 // Front side of PV module partially shaded, back completely shaded, ground completely shaded
-                if (Lh > d)
+                if (Lh >= d)
                 {
                     midFrontSH = itsShading.GetFrontShadedFraction(SunZenith, SunAzimuth, itsPanelTilt);
                     midBackSH = 1.0;
@@ -369,7 +369,7 @@ namespace CASSYS
                             s1End = itsPitch;
                             s2Start = 0.0;
                             s2End = SEnd - itsPitch;
-                            if (s2End > s1Start)
+                            if (s2End - s1Start > 0.000001)
                             {
                                 ErrorLogger.Log("Unexpected shading coordinates encountered.", ErrLevel.FATAL);
                             }
@@ -408,7 +408,7 @@ namespace CASSYS
                             s1End = itsPitch;
                             s2Start = 0.0;
                             s2End = SEnd - itsPitch;
-                            if (s2End > s1Start)
+                            if (s2End - s1Start > 0.000001)
                             {
                                 ErrorLogger.Log("Unexpected shading coordinates encountered.", ErrLevel.FATAL);
                             }

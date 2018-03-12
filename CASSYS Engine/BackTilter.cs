@@ -73,7 +73,7 @@ namespace CASSYS
             , double Pitch                          // The distance between the rows [panel slope lengths]
             , double Clearance                      // Array ground clearance [panel slope lengths]
             , double HDif                           // Diffuse horizontal irradiance [W/m2]
-            , double TDirRef                        // Front reflected beam irradiance [W/m2]
+            , double TFroRef                        // Front reflected diffuse irradiance [W/m2]
             , double Bo                             // ASHRAE Parameter used for IAM calculation [#]
             , double[] midGroundGHI                 // Sum of irradiance components for each of the ground segments in the middle PV rows [W/m2]
             , double midBackSH                      // Fraction of the back surface of the PV panel that is shaded [#]
@@ -141,7 +141,7 @@ namespace CASSYS
                     double IAMFroRef = Tilt.GetASHRAEIAM(Bo, IAFroRef);
 
                     configFactor = 0.5 * (Math.Cos(j * Util.DTOR) - Math.Cos((j + 1) * Util.DTOR));
-                    backFroRef[i] += configFactor * TDirRef * (1.0 - midFrontSH) * IAMFroRef;
+                    backFroRef[i] += configFactor * TFroRef * (1.0 - midFrontSH) * IAMFroRef;
                 }
 
                 // Add ground reflected component: calculate and summarize ground configuration factors ahead, below, and behind the cell.
@@ -260,12 +260,14 @@ namespace CASSYS
         {
             string irrBackSide = Environment.NewLine + ts;
             //string viewFactor = Environment.NewLine + ts + "," + aveGroundGHI + "," + BGroRef;
+            string globalBSI = Environment.NewLine + ts + "," + BGlo;
             for (int i = 0; i < numCellRows; i++)
             {
                 irrBackSide += "," + backDif[i] + "," + backFroRef[i] + "," + backGroRef[i] + "," + backDir[i] + "," + backGlo[i];
             }
             File.AppendAllText("irrBackSide.csv", irrBackSide);
             //File.AppendAllText("viewFactor.csv", viewFactor);
+            File.AppendAllText("globalBSI.csv", globalBSI);
         }
     }
 }
