@@ -213,7 +213,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Ground_Reflected"] = ShadRefLoss;
             ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Incidence"] = SimPVA[0].IAMTGlo;
             ReadFarmSettings.Outputlist["Radiation_Soiling_Loss"] = SimPVA[0].RadSoilingLoss;
-            ReadFarmSettings.Outputlist["Spectral_Correction"] = SimPVA[0].SpectralCorr;
+            ReadFarmSettings.Outputlist["Radiation_Spectral_Loss"] = SimPVA[0].RadSpectralLoss;
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"] = SimShading.ShadTGlo - SimPVA[0].IAMTGlo;
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);

@@ -113,7 +113,7 @@ namespace CASSYS
         public double TModule;                // Temperature of module [C]
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
         public double RadSoilingLoss;         // Losses due to soiling of PV array [W/m^2]
-        public double SpectralCorr;           // Corrections due to spectral effects [W/m^2]
+        public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
@@ -164,14 +164,14 @@ namespace CASSYS
             , double WindSpeed                       // Wind speed [m/s]
             , double TModMeasured                    // Measured Module Temperature [C]
             , int MonthNumber                        // Month of the year [#, 1->12]
-            , double ClearCorr                       // Clearness correction [unitless]
+            , double ClearnessCorr                   // Clearness correction [unitless]
             )
         {
             // Assigning the Tilted Global value to a local holder (used for efficiency calculation)
             lossLessTGlo = TGlo;
 
             // Calculation of effective irradiance reaching the cell (Soiling, IAM, and spectral effects accounted for)
-            CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber, ClearCorr);
+            CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber, ClearnessCorr);
 
             // Calculation of temperature GetTemperature Method used (see below)
             CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
@@ -243,10 +243,10 @@ namespace CASSYS
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
 
             // Determine spectral correction based on clearness index
-            SpectralCorr = TGloEff * ClearCorr;
+            RadSpectralLoss = TGloEff * ClearCorr;
 
-            // Modified TGlo based on spectral correction
-            TGloEff = TGloEff * (1 + ClearCorr);
+            // Modified TGlo based on spectral losses
+            TGloEff = TGloEff * (1 - ClearCorr);
 
             // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
             // and only for the first array

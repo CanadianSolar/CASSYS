@@ -37,7 +37,7 @@ namespace CASSYS
         double nearShadeLosses = 0;         // Sum of radiation loss due to row to row shading fatctors 
         double soilingLoss = 0;             // Sum of radiation loss due to panel soiling
         double incidenceAngleLoss = 0;      // Sum of radiation loss due to incidence angle
-        double spectralCorrection = 0;      // Sum of spectral effect corrections
+        double spectralLoss = 0;            // Sum of radiation loss due to spectral effects
         double effectivePOARad = 0;         // Sum of effective radiation available for power conversion
 
         // PV array level values [kWh]
@@ -80,7 +80,7 @@ namespace CASSYS
             nearShadeLosses += ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"];
             soilingLoss += ReadFarmSettings.Outputlist["Radiation_Soiling_Loss"];
             incidenceAngleLoss += ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"];
-            spectralCorrection += ReadFarmSettings.Outputlist["Spectral_Correction"];
+            spectralLoss += ReadFarmSettings.Outputlist["Radiation_Spectral_Loss"];
             effectivePOARad += ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"];
 
             // PV array level values [kWh]
@@ -125,7 +125,7 @@ namespace CASSYS
             LossOutputs["Near_Shading_Losses"] = nearShadeLosses * Util.timeStep / 60;
             LossOutputs["Soiling_Losses"] = soilingLoss * Util.timeStep / 60;
             LossOutputs["Incidence_Angle_Losses"] = incidenceAngleLoss * Util.timeStep / 60;
-            LossOutputs["Spectral_Correction"] = -spectralCorrection * Util.timeStep / 60;      // Make negative because positive spectral correction counts as gain
+            LossOutputs["Spectral_Losses"] = spectralLoss * Util.timeStep / 60;
             LossOutputs["Effective_POA_Radiation"] = effectivePOARad * Util.timeStep / 60;
             // PV CONVERSION takes place here
             // Losses at PV modules

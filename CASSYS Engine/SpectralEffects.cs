@@ -87,7 +87,8 @@ namespace CASSYS
             )
         {
             clearnessIndex = Sun.GetClearnessIndex(HGlo, NExtra, SunZenith);
-            clearnessCorrection = Interpolate.Linear(ClearnessIndexArr, ClearnessCorrectionArr, clearnessIndex);
+            // Clearness correction is treated as a loss for consistency, but made negative so that it has the effect of a gain
+            clearnessCorrection = -1 * Interpolate.Linear(ClearnessIndexArr, ClearnessCorrectionArr, clearnessIndex);
         }
 
         // Converts string array into an array of doubles that can be used by the program
