@@ -86,10 +86,12 @@ namespace CASSYS
         public Boolean useBackTracking;	    // Boolean used to determine if backtracking is enabled
         public double itsTrackerPitch;		// Distance between two rows of trackers [m]
         public double itsTrackerBW;			// Width of single tracker array [m]
-       
+        public double itsTrackerClearance;  // Array ground clearance; for trackers with dynamic tilt, measured at tilt = 0 degrees [m]
+
         // Output Variables
         public double SurfSlope;			// Angle of tracker surface with respect to horizontal [radians]
         public double SurfAzimuth;			// Angle between horizontal projection of normal to module surface and true South [radians]
+        public double SurfClearance;        // Array ground clearance: distance from lowest point on array surface to ground [m]
         public double IncidenceAngle;       // Angle of a ray of light incident on the normal of panel surface [radians]
         public double RotAngle;				// Angle of rotation of surface about tracker axis [radians]
         public double AngleCorrection;      // With backtracking enabled, this angle adjustment is applied to the surface slope angle [radians]
@@ -246,6 +248,7 @@ namespace CASSYS
                             SurfAzimuth += (Math.PI) * 2;
                         }
                     }
+                    SurfClearance = itsTrackerClearance - (itsTrackerBW * Math.Sin(SurfSlope)) / 2;
                     break;
 
                 // Two Axis Tracking
@@ -403,6 +406,7 @@ namespace CASSYS
                     // Defining all the parameters for the shading of a unlimited row array configuration
                     SurfSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
                     SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
+                    SurfClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollClearance", ErrLevel.FATAL));
                     itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL));
                     itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
 
@@ -411,8 +415,9 @@ namespace CASSYS
                 case "Single Axis Elevation Tracking (E-W)":
                     // Tracker Parameters
                     itsTrackMode = TrackMode.SAXT;
-                    itsTrackerAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisAzimuthSAET", ErrLevel.FATAL));
                     itsTrackerSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisTiltSAET", ErrLevel.FATAL));
+                    itsTrackerAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisAzimuthSAET", ErrLevel.FATAL));
+                    itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "ClearanceSAET", ErrLevel.FATAL));
 
                     // Operational Limits
                     itsMinTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "MinTiltSAET", ErrLevel.FATAL));
@@ -429,6 +434,7 @@ namespace CASSYS
                     itsTrackMode = TrackMode.SAXT;
                     itsTrackerSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisTiltSAST", ErrLevel.FATAL));
                     itsTrackerAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisAzimuthSAST", ErrLevel.FATAL));
+                    itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "ClearanceSAST", ErrLevel.FATAL));
 
                     // Operational Limits
                     itsMaxTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMaxSAST", ErrLevel.FATAL));
@@ -445,6 +451,9 @@ namespace CASSYS
                     itsTrackMode = TrackMode.SAXT;
                     itsTrackerSlope = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisTiltTART", ErrLevel.FATAL));
                     itsTrackerAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisAzimuthTART", ErrLevel.FATAL));
+                    itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisClearanceTART", ErrLevel.FATAL));
+                    itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "AxisWActiveTART", ErrLevel.FATAL));
+
 
                     // Operational Limits
                     itsMinRotationAngle = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "RotationMinTART", ErrLevel.FATAL));

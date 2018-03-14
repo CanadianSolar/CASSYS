@@ -30,7 +30,6 @@ namespace CASSYS
         // Parameters for the ground shading class
         double itsArrayBW;                          // Array bandwidth [m]
         public double itsClearance;                 // Array ground clearance [panel slope lengths]
-        double itsClearanceRaw;                     // Array ground clearance [m]
         public double itsPitch;                     // The distance between the rows [panel slope lengths]
         double itsPanelTilt;                        // The angle between the surface tilt of the module and the ground [radians]
         double itsPanelAzimuth;                     // The angle between horizontal projection of normal to module surface and true South [radians]
@@ -72,15 +71,6 @@ namespace CASSYS
             // TODO: allow user to define?
             transFactor = 0;
 
-            // Read in values from .csyx file
-            itsClearanceRaw = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollGroundClearance", ErrLevel.FATAL));
-            //itsClearanceRaw = 2;
-
-            if (itsClearanceRaw < 0.0)
-            {
-                ErrorLogger.Log("Ground clearance of panel cannot be negative.", ErrLevel.FATAL);
-            }
-
             // Initialize arrays
             midGroundSH = new int[numGroundSegs];
             firstGroundSH = new int[numGroundSegs];
@@ -104,6 +94,7 @@ namespace CASSYS
             , double PanelAzimuth                               // The azimuth direction in which the surface is facing. Positive if west, negative if east [radians]
             , double Pitch                                      // The distance between the rows [panel slope lengths]
             , double ArrayBW                                    // Array bandwidth [m]
+            , double Clearance                                  // Array ground clearance [m]
             , double HDir                                       // Direct horizontal irradiance [W/m2]
             , double HDif                                       // Diffuse horizontal irradiance [W/m2]
             , Shading SimShading                                // Used to calculate front and back partial shading
@@ -112,7 +103,7 @@ namespace CASSYS
         {
             itsArrayBW = ArrayBW;
             itsPitch = Pitch / itsArrayBW;                      // Convert to panel slope lengths
-            itsClearance = itsClearanceRaw / itsArrayBW;        // Convert to panel slope lengths
+            itsClearance = Clearance / itsArrayBW;              // Convert to panel slope lengths
 
             itsPanelTilt = PanelTilt;
             itsPanelAzimuth = PanelAzimuth;
@@ -164,7 +155,7 @@ namespace CASSYS
                 }
             }
             // Option to print details of the model in .csv files (takes about 12 seconds)
-            PrintModel(ts, SunZenith, SunAzimuth);
+            PrintModel(ts, SunZenith, SunAzimuth, PanelAzimuth);
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
@@ -213,7 +204,6 @@ namespace CASSYS
         {
             double h = Math.Sin(itsPanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
             double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
-            double d = itsPitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
 
             double offset = direction;                          // Initialize offset to begin at first unit of given direction
             double skyPatch = 0;                                // Configuration factor for view of sky in single row-to-row area
@@ -305,13 +295,9 @@ namespace CASSYS
             {
                 double h = Math.Sin(itsPanelTilt);                  // Vertical height of sloped PV panel [panel slope lengths]
                 double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
-                double d = itsPitch - b;                            // Horizontal distance from back of one row to front of the next [panel slope lengths]
 
                 double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsPanelAzimuth);
-
-                //double Lh = (h / Math.Tan(SunElevation)) * Math.Cos(itsPanelAzimuth - SunAzimuth);                       // Horizontal length of shadow normal to row from module top to bottom
-                //double Lhc = ((h + itsClearance) / Math.Tan(SunElevation)) * Math.Cos(itsPanelAzimuth - SunAzimuth);     // Horizontal length of shadow normal to row from module top to ground
-                //double Lc = (itsClearance / Math.Tan(SunElevation)) * Math.Cos(itsPanelAzimuth - SunAzimuth);            // Horizontal length of shadow normal to row from module bottom to ground
+                
                 double Lh = h / Math.Tan(FrontPA);                          // Base of triangle formed by beam of sun and height of module top from bottom
                 double Lc = itsClearance / Math.Tan(FrontPA);               // Base of triangle formed by beam of sun and height of module bottom from ground
                 double Lhc = (h + itsClearance) / Math.Tan(FrontPA);        // Base of triangle formed by beam of sun and height of module top from ground
@@ -330,7 +316,7 @@ namespace CASSYS
 
                 // A. Calculate interior row shading.
                 // Front side of PV module partially shaded, back completely shaded, ground completely shaded
-                if (Lh >= d)
+                if (Lh > itsPitch - b)
                 {
                     midFrontSH = itsShading.GetFrontShadedFraction(SunZenith, SunAzimuth, itsPanelTilt);
                     midBackSH = 1.0;
@@ -487,7 +473,7 @@ namespace CASSYS
 
                 // C. Calculate last row shading. Do not account for front shading effects, since they will be the same as interior rows.
                 // Back side of PV module completely shaded, ground completely shaded
-                if (Lh > d)
+                if (Lh > itsPitch - b)
                 {
                     lastBackSH = 1.0;
                     s1Start = 0.0;
@@ -536,6 +522,7 @@ namespace CASSYS
               DateTime ts                                       // Time stamp analyzed, used for printing the model
             , double SunZenith                                  // The zenith position of the sun with 0 being normal to the earth [radians]
             , double SunAzimuth                                 // The azimuth position of the sun relative to 0 being true south. Positive if west, negative if east [radians]
+            , double PanelAzimuth                               // The azimuth direction in which the surface is facing. Positive if west, negative if east [radians]
             )
         {
             double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsPanelAzimuth);
@@ -588,9 +575,8 @@ namespace CASSYS
             //File.AppendAllText("irrLast.csv", irrLast);
 
             // Print details about the simulation
-            string setup = "panel tilt [deg], pitch [m], clearance [m], array bandwidth [m]";
-            setup += Environment.NewLine + (itsPanelTilt * Util.RTOD) + "," + (itsPitch * itsArrayBW) + "," + (itsClearance * itsArrayBW) + "," + itsArrayBW;
-            File.WriteAllText("setup.csv", setup);
+            string setup = Environment.NewLine + ts + "," + (PanelAzimuth * Util.RTOD) + "," + (itsPanelTilt * Util.RTOD) + "," + (itsPitch * itsArrayBW) + "," + (itsClearance * itsArrayBW) + "," + itsArrayBW;
+            File.AppendAllText("setup.csv", setup);
         }
     }
 }
