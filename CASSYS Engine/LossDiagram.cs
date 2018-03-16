@@ -37,6 +37,7 @@ namespace CASSYS
         double nearShadeLosses = 0;         // Sum of radiation loss due to row to row shading fatctors 
         double soilingLoss = 0;             // Sum of radiation loss due to panel soiling
         double incidenceAngleLoss = 0;      // Sum of radiation loss due to incidence angle
+        double bifacialGain = 0;            // Sum of radiation gain due to bifacial panels
         double effectivePOARad = 0;         // Sum of effective radiation available for power conversion
 
         // PV array level values [kWh]
@@ -79,6 +80,7 @@ namespace CASSYS
             nearShadeLosses += ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"];
             soilingLoss += ReadFarmSettings.Outputlist["Radiation_Soiling_Loss"];
             incidenceAngleLoss += ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"];
+            bifacialGain += ReadFarmSettings.Outputlist["Bifacial_Gain"];
             effectivePOARad += ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"];
 
             // PV array level values [kWh]
@@ -123,6 +125,7 @@ namespace CASSYS
             LossOutputs["Near_Shading_Losses"] = nearShadeLosses * Util.timeStep / 60;
             LossOutputs["Soiling_Losses"] = soilingLoss * Util.timeStep / 60;
             LossOutputs["Incidence_Angle_Losses"] = incidenceAngleLoss * Util.timeStep / 60;
+            LossOutputs["Bifacial_Gain"] = -1 * bifacialGain * Util.timeStep / 60;                  // Multiply by -1 to convert gains to losses
             LossOutputs["Effective_POA_Radiation"] = effectivePOARad * Util.timeStep / 60;
             // PV CONVERSION takes place here
             // Losses at PV modules

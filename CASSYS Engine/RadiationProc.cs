@@ -14,8 +14,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 // References and Supporting Documentation or Links
 ///////////////////////////////////////////////////////////////////////////////
-//
-//
+// Ref 1: Marion, B. et al. "A Practical Irradiance Model for Bifacial PV Modules"
+//     National Renewable Energy Laboratory, 2017
+//     https://www.nrel.gov/docs/fy17osti/67847.pdf
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -372,6 +373,16 @@ namespace CASSYS
 
             SimTilter.Config();
             SimTilterOpposite.Config();
+        }
+
+        // Calculates the view factor according to Ref. 1
+        public static double GetViewFactor
+            (
+              double beta1                              // First angle of the field of view
+            , double beta2                              // Last angle of the field of view
+            )
+        {
+            return 0.5 * (Math.Cos(beta1) - Math.Cos(beta2));
         }
     }
 }

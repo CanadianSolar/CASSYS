@@ -60,6 +60,7 @@ namespace CASSYS
         double itsRpRef;                      // Shunt resistance [ohms];
         double itsRw;                         // Global wiring resistance as seen from Inverter for entire Sub-Array [ohms]
         double itsSubArrayNum;                // The sub-array number that the PVArray belongs to. [#]
+        double biFactor;                      // The bifaciality factor [#]
 
 
         // Module Temperature and Irradiance Coefficients
@@ -117,9 +118,10 @@ namespace CASSYS
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
-        public double Efficiency;             // PV array efficiency [%] 
-        public double TGloEff;                // Irradiance adjusted for incidence angle and soiling [W/m^2]
-        public double TFroRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
+        public double Efficiency;             // PV array efficiency [%]
+        public double BifacialGain;           // Back side effective irradiance, weighted by the bifaciality factor [W/m^2]
+        public double TGloEff;                // Irradiance (front and back, if applicable) adjusted for incidence angle and soiling [W/m^2]
+        public double TDifRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
         public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
@@ -160,6 +162,7 @@ namespace CASSYS
             , double TDir                            // Tilted Beam Irradiance - Post Shading, if Shading model is defined [W/m^2]
             , double TDif                            // Tilted Diffuse Irradiance - Post Shading, if Shading model is defined [W/m^2]
             , double TRef                            // Tilted Ground Reflected Irradiance - Post Shading, if Shading model is defined [W/m^2]
+            , double BGlo                            // Tilted back side global irradiance [W/m^2]
             , double InciAng                         // Incidence Angle [radians]
             , double TAmbient                        // Ambient temperature [C]    
             , double WindSpeed                       // Wind speed [m/s]
@@ -172,6 +175,11 @@ namespace CASSYS
 
             // Calculation of effective irradiance reaching the cell (Soiling and IAM accounted for)
             CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber);
+
+            // Calculation of bifacial gain
+            BifacialGain = biFactor * BGlo;
+
+            TGloEff = TGloEff + BifacialGain;
 
             // Calculation of temperature GetTemperature Method used (see below)
             CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
@@ -197,7 +205,7 @@ namespace CASSYS
         }
 
         // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred
-        void CalcEffectiveIrradiance
+        public void CalcEffectiveIrradiance
             (
               double TDir                            // Tilted Beam Irradiance [W/m^2]
             , double TDif                            // Tilted Diffuse Irradiance [W/m^2]
@@ -253,7 +261,7 @@ namespace CASSYS
             double reflectionFactor = Math.Pow((refractionIndex - 1.0) / (refractionIndex + 1.0), 2.0);
 
             // Calculate the amount of diffuse irradiance reflected off the front
-            TFroRef = (TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC));
+            TDifRef = (TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC));
         }
 
         // Calculates the MPPT operating point of the module
@@ -496,6 +504,7 @@ namespace CASSYS
             itsSubArrayNum = ArrayNum;
             itsNSeries = int.Parse(ReadFarmSettings.GetInnerText("PV", "ModulesInString", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsNParallel = int.Parse(ReadFarmSettings.GetInnerText("PV", "NumStrings", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
+            biFactor = 0.75; // double.Parse(ReadFarmSettings.GetInnerText("PV", "BifacialityFactor", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsArea = double.Parse(ReadFarmSettings.GetInnerText("PV", "AreaM", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsPNom = double.Parse(ReadFarmSettings.GetInnerText("PV", "Pnom", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsVmppref = double.Parse(ReadFarmSettings.GetInnerText("PV", "Vmpp", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
