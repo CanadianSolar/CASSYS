@@ -39,6 +39,9 @@ namespace CASSYS
         static public int NRLIMIT = 30;                       // Maximum number of iterations allowed for NR Methods
         static public double DiffInciAng = 1.04719755;        // 60 degrees expressed in radians [radians], assumed incidence angle for diffuse component of irradiance
 
+        static public int NUM_GROUND_SEGS = 100;              // Number of segments into which to divide up the ground for ground irradiance calculation [#]
+        static public int NUM_CELLS_PANEL = 6;                // Number of cells in a PV panel
+
         // Other numerical constants
         static public double COS_LITTLE = 0.999993908;        // Cosine of 0.2 degrees. Used in Astro Class.
         static public int BADDATA = -9999;                    // Bad data marker based on Arithmetic errors during calculation

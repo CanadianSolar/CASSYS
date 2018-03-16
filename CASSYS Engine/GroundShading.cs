@@ -13,8 +13,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 // References and Supporting Documentation or Links
 ///////////////////////////////////////////////////////////////////////////////
-// Code adapted from https://github.com/NREL/bifacialvf which is based on
-// https://www.nrel.gov/docs/fy17osti/67847.pdf
+// Ref 1: Marion, B.; Ayala S.; Deline, C. "Bifacial PV View Factor model"
+//      National Renewable Energy Laboratory
+//      https://github.com/NREL/bifacialvf
+//
+// Ref 2: Marion, B. et al. "A Practical Irradiance Model for Bifacial PV Modules"
+//      National Renewable Energy Laboratory, 2017
+//      https://www.nrel.gov/docs/fy17osti/67847.pdf
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -29,21 +34,22 @@ namespace CASSYS
     {
         // Parameters for the ground shading class
         double itsArrayBW;                          // Array bandwidth [m]
-        public double itsClearance;                 // Array ground clearance [panel slope lengths]
-        public double itsPitch;                     // The distance between the rows [panel slope lengths]
+        double itsClearance;                        // Array ground clearance [panel slope lengths]
+        double itsPitch;                            // The distance between the rows [panel slope lengths]
         double itsPanelTilt;                        // The angle between the surface tilt of the module and the ground [radians]
         double itsPanelAzimuth;                     // The angle between horizontal projection of normal to module surface and true South [radians]
         double transFactor;                         // Fraction of light that is transmitted through the array [#]
         Shading itsShading;                         // Used to calculate partial shading on front/back of module
         public int numGroundSegs;                   // Number of segments into which to divide up the ground [#]
+        TrackMode itsTrackMode;                     // Used to determine tracking mode
 
         // Ground shading local variables/arrays and intermediate calculation variables and arrays
         int[] midGroundSH;                          // Ground shade factors for ground segments in the middle rows, 0 = not shaded, 1 = shaded [#]
         int[] firstGroundSH;                        // Ground shade factors for ground segments to the front of the first row, 0 = not shaded, 1 = shaded [#]
         int[] lastGroundSH;                         // Ground shade factors for ground segments to the back of the last row, 0 = not shaded, 1 = shaded [#]
-        double[] midSkyConfigFactors;               // Fraction of isotropic diffuse sky radiation present on ground segments in the middle rows [#]
-        double[] firstSkyConfigFactors;             // Fraction of isotropic diffuse sky radiation present on ground segments to the front of the first row [#]
-        double[] lastSkyConfigFactors;              // Fraction of isotropic diffuse sky radiation present on ground segments to the back of the last row [#]
+        double[] midSkyViewFactors;                 // Fraction of isotropic diffuse sky radiation present on ground segments in the middle rows [#]
+        double[] firstSkyViewFactors;               // Fraction of isotropic diffuse sky radiation present on ground segments to the front of the first row [#]
+        double[] lastSkyViewFactors;                // Fraction of isotropic diffuse sky radiation present on ground segments to the back of the last row [#]
 
         // Output variables
         public double midFrontSH;                   // Fraction of the front surface of the PV panel that is shaded [#]
@@ -61,28 +67,60 @@ namespace CASSYS
         }
 
         // Config manages calculations and initializations that need only to be run once
-        public void Config
-            (
-              int groundSegs                        // Number of segments into which to divide up the ground [#]
-            )
+        public void Config()
         {
-            numGroundSegs = groundSegs;
+            // Number of segments into which to divide up the ground [#]
+            numGroundSegs = Util.NUM_GROUND_SEGS;
 
-            // TODO: allow user to define?
-            transFactor = 0;
+            switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
+            {
+                // In all cases, pitch and clearance must be normalized to panel slope lengths
+                case "Unlimited Rows":
+                    itsTrackMode = TrackMode.NOAT;
+                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
+                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL)) / itsArrayBW;
+                    itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollClearance", ErrLevel.FATAL)) / itsArrayBW;
+                    itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+
+                    transFactor = 0;
+                    break;
+                case "Single Axis Elevation Tracking (E-W)":
+                    itsTrackMode = TrackMode.SAXT;
+                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
+                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL)) / itsArrayBW;
+
+                    transFactor = 0;
+                    break;
+                case "Single Axis Horizontal Tracking (N-S)":
+                    itsTrackMode = TrackMode.SAXT;
+                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
+                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL)) / itsArrayBW;
+
+                    transFactor = 0;
+                    break;
+                default:
+                    ErrorLogger.Log("Bifacial is not supported for the selected orientation and shading.", ErrLevel.FATAL);
+                    break;
+            }
 
             // Initialize arrays
             midGroundSH = new int[numGroundSegs];
             firstGroundSH = new int[numGroundSegs];
             lastGroundSH = new int[numGroundSegs];
 
-            midSkyConfigFactors = new double[numGroundSegs];
-            firstSkyConfigFactors = new double[numGroundSegs];
-            lastSkyConfigFactors = new double[numGroundSegs];
+            midSkyViewFactors = new double[numGroundSegs];
+            firstSkyViewFactors = new double[numGroundSegs];
+            lastSkyViewFactors = new double[numGroundSegs];
 
             midGroundGHI = new double[numGroundSegs];
             firstGroundGHI = new double[numGroundSegs];
             lastGroundGHI = new double[numGroundSegs];
+
+            // Calculate sky view factors for diffuse shading. Stays constant for non-tracking systems, so done here in Config()
+            if (itsTrackMode == TrackMode.NOAT)
+            {
+                CalcSkyViewFactors();
+            }
         }
 
         // Calculate manages calculations that need to be run for each time step
@@ -92,8 +130,6 @@ namespace CASSYS
             , double SunAzimuth                                 // The azimuth position of the sun relative to 0 being true south. Positive if west, negative if east [radians]
             , double PanelTilt                                  // The angle between the surface tilt of the module and the ground [radians]
             , double PanelAzimuth                               // The azimuth direction in which the surface is facing. Positive if west, negative if east [radians]
-            , double Pitch                                      // The distance between the rows [panel slope lengths]
-            , double ArrayBW                                    // Array bandwidth [m]
             , double Clearance                                  // Array ground clearance [m]
             , double HDir                                       // Direct horizontal irradiance [W/m2]
             , double HDif                                       // Diffuse horizontal irradiance [W/m2]
@@ -101,16 +137,18 @@ namespace CASSYS
             , DateTime ts                                       // Time stamp analyzed, used for printing .csv files
             )
         {
-            itsArrayBW = ArrayBW;
-            itsPitch = Pitch / itsArrayBW;                      // Convert to panel slope lengths
-            itsClearance = Clearance / itsArrayBW;              // Convert to panel slope lengths
-
-            itsPanelTilt = PanelTilt;
-            itsPanelAzimuth = PanelAzimuth;
             itsShading = SimShading;
 
-            // Calculate sky configuration factor for diffuse shading
-            CalcSkyConfigFactors();
+            // For tracking systems, panel tilt, azimuth, and ground clearance will change at each time step
+            itsPanelTilt = PanelTilt;
+            itsPanelAzimuth = PanelAzimuth;
+            itsClearance = Clearance / itsArrayBW;              // Convert to panel slope lengths
+
+            if (itsTrackMode != TrackMode.NOAT)
+            {
+                // Calculate sky view factors for diffuse shading. Changes every time step for tracking systems, so done here in Calculate()
+                CalcSkyViewFactors();
+            }
 
             // Calculate beam shading for ground underneath PV modules. Three different area of ground are accounted for: interior rows, front of first row, and back of last row
             CalcGroundShading(SunZenith, SunAzimuth);
@@ -119,7 +157,7 @@ namespace CASSYS
             for (int i = 0; i < numGroundSegs; i++)
             {
                 // Add diffuse sky component viewed by ground
-                midGroundGHI[i] = HDif * midSkyConfigFactors[i];
+                midGroundGHI[i] = HDif * midSkyViewFactors[i];
                 // Add direct beam component, depending on shading
                 if (midGroundSH[i] == 0)
                 {
@@ -131,7 +169,7 @@ namespace CASSYS
                 }
 
                 // Add diffuse sky component viewed by ground
-                firstGroundGHI[i] = HDif * firstSkyConfigFactors[i];
+                firstGroundGHI[i] = HDif * firstSkyViewFactors[i];
                 // Add direct beam component, depending on shading
                 if (firstGroundSH[i] == 0)
                 {
@@ -143,7 +181,7 @@ namespace CASSYS
                 }
 
                 // Add diffuse sky component viewed by ground
-                lastGroundGHI[i] = HDif * lastSkyConfigFactors[i];
+                lastGroundGHI[i] = HDif * lastSkyViewFactors[i];
                 // Add direct beam component, depending on shading
                 if (lastGroundSH[i] == 0)
                 {
@@ -159,7 +197,7 @@ namespace CASSYS
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
-        public void CalcSkyConfigFactors
+        public void CalcSkyViewFactors
             (
             )
         {
@@ -176,26 +214,26 @@ namespace CASSYS
             {
                 x = (i + 0.5) * delta;
 
-                // Calculate and summarize sky configuration factors ahead, above, and behind the ground segment for interior rows
+                // Calculate and summarize sky view factors ahead, above, and behind the ground segment for interior rows
                 // Directions are split into three so that view can extend freely backward and forward, until view is blocked.
-                skyAhead = CalcSkyConfigDirection(x, RowType.INTERIOR, -1);
-                skyAbove = CalcSkyConfigDirection(x, RowType.INTERIOR, 0);
-                skyBehind = CalcSkyConfigDirection(x, RowType.INTERIOR, 1);
-                midSkyConfigFactors[i] = skyAhead + skyAbove + skyBehind;
+                skyAhead = CalcSkyViewDirection(x, RowType.INTERIOR, -1);
+                skyAbove = CalcSkyViewDirection(x, RowType.INTERIOR, 0);
+                skyBehind = CalcSkyViewDirection(x, RowType.INTERIOR, 1);
+                midSkyViewFactors[i] = skyAhead + skyAbove + skyBehind;
 
-                // Calculate sky configuration factor without front limiting panel to model front row.
-                skyAbove = CalcSkyConfigDirection(x, RowType.FIRST, 0);
+                // Calculate sky view factor without front limiting panel to model front row.
+                skyAbove = CalcSkyViewDirection(x, RowType.FIRST, 0);
                 // Include the skyBehind sum calculated with reference to interior rows, since that will also be in view for the first panel
-                firstSkyConfigFactors[i] = skyAbove + skyBehind;
+                firstSkyViewFactors[i] = skyAbove + skyBehind;
 
-                // Calculate sky configuration factor without back limiting panel to model back row.
-                skyAbove = CalcSkyConfigDirection(x, RowType.LAST, 0);
+                // Calculate sky view factor without back limiting panel to model back row.
+                skyAbove = CalcSkyViewDirection(x, RowType.LAST, 0);
                 // Include the skyAhead sum calculated with reference to interior rows, since that will also be in view for the last panel
-                lastSkyConfigFactors[i] = skyAhead + skyAbove;
+                lastSkyViewFactors[i] = skyAhead + skyAbove;
             }
         }
 
-        double CalcSkyConfigDirection
+        double CalcSkyViewDirection
             (
               double x                                          // Horizontal dimension in the row-to-row ground area
             , RowType rowType                                   // The position of the row being calculated relative to others [unitless]
@@ -206,8 +244,8 @@ namespace CASSYS
             double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
 
             double offset = direction;                          // Initialize offset to begin at first unit of given direction
-            double skyPatch = 0;                                // Configuration factor for view of sky in single row-to-row area
-            double skySum = 0;                                  // Configuration factor for all sky views in given direction
+            double skyPatch = 0;                                // View factor for view of sky in single row-to-row area
+            double skySum = 0;                                  // View factor for all sky views in given direction
 
             double angA = 0;
             double angB = 0;
@@ -216,7 +254,7 @@ namespace CASSYS
             double beta1 = 0;                                   // Start of ground's field of view that sees the sky segment
             double beta2 = 0;                                   // End of ground's field of view that sees the sky segment
 
-            // Sum sky configuration factors until sky config factor contributes <= 1% of sum
+            // Sum sky view factors until sky view factor contributes <= 1% of sum
             // Only loop the calculation for rows extending forward or backward, so break loop when direction = 0.
             do
             {
@@ -250,19 +288,9 @@ namespace CASSYS
                     beta2 = Math.Min(angC, angD);
                 }
 
-                // EC: remove once known to be unnecessary
-                if (angA < 0 || angB < 0 || angC < 0 || angD < 0)
-                {
-                    Console.WriteLine("angA: " + (angA * Util.RTOD) + ", angB: " + (angB * Util.RTOD) + ", angC: " + (angC * Util.RTOD) + ", angD: " + (angD * Util.RTOD));
-                    ErrorLogger.Log("Negative sky configuration angles encountered.", ErrLevel.FATAL);
-                }
-
-                skyPatch = 0;
                 // If there is an opening in the sky through which the sun is seen, calculate view factor of sky patch
-                if (beta2 > beta1)
-                {
-                    skyPatch = 0.5 * (Math.Cos(beta1) - Math.Cos(beta2));
-                }
+                skyPatch = (beta2 > beta1) ? RadiationProc.GetViewFactor(beta1, beta2) : 0;
+
                 skySum += skyPatch;
                 offset += direction;
             } while (offset != 0 && skyPatch > (0.01 * skySum));
@@ -536,8 +564,8 @@ namespace CASSYS
             modShad += "," + (itsShading.FrontSLA * Util.RTOD) + "," + (FrontPA * Util.RTOD) + "," + (itsShading.BackSLA * Util.RTOD) + "," + (BackPA * Util.RTOD);
             modShad += "," + midFrontSH + "," + midBackSH + "," + firstFrontSH + "," + lastBackSH;
 
-            string skyConfigAll = Environment.NewLine + ts;
-            string skyConfigOne = "";
+            string skyViewAll = Environment.NewLine + ts;
+            string skyViewOne = "";
 
             string irrFirst = Environment.NewLine + ts;
             string irrMid = Environment.NewLine + ts;
@@ -552,8 +580,8 @@ namespace CASSYS
                 irrMid += "," + midGroundGHI[i];
                 irrLast += "," + lastGroundGHI[i];
 
-                skyConfigAll += "," + midSkyConfigFactors[i];
-                skyConfigOne += Environment.NewLine + i + "," + firstSkyConfigFactors[i] + "," + midSkyConfigFactors[i] + "," + lastSkyConfigFactors[i];
+                skyViewAll += "," + midSkyViewFactors[i];
+                skyViewOne += Environment.NewLine + i + "," + firstSkyViewFactors[i] + "," + midSkyViewFactors[i] + "," + lastSkyViewFactors[i];
             }
 
             // Profile of ground shading
@@ -565,16 +593,16 @@ namespace CASSYS
             //// SunZenith, SunAzimuth, FrontSLA, FrontPA, BackSLA, BackPA, midFrontSH, midBackSH, firstFrontSH, lastBackSH
             //File.AppendAllText("modShad.csv", modShad);
 
-            //// Profile of static sky configuration factors received by ground
-            //File.AppendAllText("skyConfigAll.csv", skyConfigAll);
-            //File.WriteAllText("skyConfigOne.csv", skyConfigOne);
+            //// Profile of static sky view factors received by ground
+            //File.AppendAllText("skyViewAll.csv", skyViewAll);
+            //File.WriteAllText("skyViewOne.csv", skyViewOne);
 
             //// Profile of irradiance received by ground
             //File.AppendAllText("irrFirst.csv", irrFirst);
             File.AppendAllText("irrMid.csv", irrMid);
             //File.AppendAllText("irrLast.csv", irrLast);
 
-            // Print details about the simulation
+            // Print details about the simulation geometry
             string setup = Environment.NewLine + ts + "," + (PanelAzimuth * Util.RTOD) + "," + (itsPanelTilt * Util.RTOD) + "," + (itsPitch * itsArrayBW) + "," + (itsClearance * itsArrayBW) + "," + itsArrayBW;
             File.AppendAllText("setup.csv", setup);
         }

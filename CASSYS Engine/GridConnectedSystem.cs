@@ -92,20 +92,34 @@ namespace CASSYS
             // Calculating solar panel shading
             SimShading.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimHorizonShading.TDir, RadProc.SimHorizonShading.TDif, RadProc.SimHorizonShading.TRef, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
 
+            if (RadProc.SimTracker.useBifacial)
+            {
+                // Calculating shading of ground beneath solar panels
+                SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDir,
+                    RadProc.SimSplitter.HDif, SimShading, RadProc.TimeStampAnalyzed);
+
+                // Get front reflected irradiance, since it contributes to the back
+                SimPVA[0].CalcEffectiveIrradiance(SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.MonthOfYear);
+
+                // Calculate back side global irradiance
+                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimGround.midGroundGHI, SimGround.midBackSH, SimGround.midFrontSH,
+                    RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterOpposite.IncidenceAngle, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
+            }
+            else
+            {
+                SimBackTilter.BGlo = 0;
+            }
+
             // Calculating spectral model effects
             SimSpectral.Calculate(SimMet.HGlo, RadProc.SimSun.NExtra, RadProc.SimSun.Zenith);
-
-            // Calculating shading of ground beneath solar panels
-            SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.itsTrackerPitch, RadProc.SimTracker.itsTrackerBW, RadProc.SimTracker.SurfClearance,
-                RadProc.SimSplitter.HDir, RadProc.SimSplitter.HDif, SimShading, RadProc.TimeStampAnalyzed);
 
             try
             {
                 // Calculate PV Array Output for inputs read in this loop
                 for (int j = 0; j < ReadFarmSettings.SubArrayCount; j++)
                 {
-                    // Adjust the IV Curve based on based on Temperature and Irradiance
-                    SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
+                    // Adjust the IV Curve based on Temperature and Irradiance.
+                    SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, SimBackTilter.BGlo, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
 
                     // Check Inverter status to determine if the Inverter is ON or OFF
                     GetInverterStatus(j);
@@ -130,10 +144,6 @@ namespace CASSYS
                     ReadFarmSettings.Outputlist["SubArray_Voltage_Inv" + (j + 1).ToString()] = SimInv[j].itsOutputVoltage;
                     ReadFarmSettings.Outputlist["SubArray_Power_Inv" + (j + 1).ToString()] = SimInv[j].ACPwrOut / 1000;
                 }
-
-                // Calculate back side global irradiance. Use pitch and clearance values from SimGround because they are already normalized with ArrayBW = 1
-                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, SimGround.itsPitch, SimGround.itsClearance, RadProc.SimSplitter.HDif, SimPVA[0].TFroRef, SimGround.numGroundSegs, SimGround.midGroundGHI,
-                    SimGround.midBackSH, SimGround.midFrontSH, RadProc.SimTilter.itsMonthlyAlbedo[SimMet.MonthOfYear], RadProc.SimTilterOpposite.IncidenceAngle, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
 
                 //Calculating total farm output and total ohmic loss
                 farmACOutput = 0;
@@ -239,7 +249,8 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
             ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"] = SimPVA[0].TGloEff;
-            ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Back"] = SimBackTilter.BGlo;
+            ReadFarmSettings.Outputlist["Effective_Irradiance_in_Back"] = SimBackTilter.BGlo;
+            ReadFarmSettings.Outputlist["Bifacial_Gain"] = SimPVA[0].BifacialGain;
             ReadFarmSettings.Outputlist["Array_Nominal_Power"] = farmPnom / 1000;
             ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
             ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;
@@ -429,8 +440,8 @@ namespace CASSYS
         public void Config()
         {
             SimShading.Config();
-            SimGround.Config(100);
-            SimBackTilter.Config(6);
+            SimGround.Config();
+            SimBackTilter.Config();
             SimTransformer.Config();
             SimSpectral.Config();
 
