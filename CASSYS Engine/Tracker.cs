@@ -252,6 +252,11 @@ namespace CASSYS
                     if (useBifacial)
                     {
                         SurfClearance = itsTrackerClearance - (itsTrackerBW * Math.Sin(SurfSlope)) / 2;
+
+                        if (SurfClearance < 0)
+                        {
+                            ErrorLogger.Log("Tracker surface ground clearance cannot be negative. Check the maximum rotation angle and ground clearance values.", ErrLevel.FATAL);
+                        }
                     }
                     break;
 
@@ -374,6 +379,8 @@ namespace CASSYS
         // Gathering the tracker mode, and relevant operational limits, and tracking axis characteristics.
         public void Config()
         {
+            useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
+
             switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
             {
                 case "Fixed Tilted Plane":
@@ -398,7 +405,7 @@ namespace CASSYS
                     itsSummerDay = int.Parse(ReadFarmSettings.GetInnerText("O&S", "SummerDay", _Error: ErrLevel.FATAL));
                     itsWinterDay = int.Parse(ReadFarmSettings.GetInnerText("O&S", "WinterDay", _Error: ErrLevel.FATAL));
                     itsPlaneTiltSummer = Util.DTOR * double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltSummer", _Error: ErrLevel.FATAL));
-                    itsPlaneTiltWinter = Util.DTOR* double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltWinter", _Error: ErrLevel.FATAL));
+                    itsPlaneTiltWinter = Util.DTOR * double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltWinter", _Error: ErrLevel.FATAL));
 
                     // Assume the simualtion will begin when the array is in the summer tilt
                     SurfSlope = itsPlaneTiltSummer;
@@ -412,11 +419,9 @@ namespace CASSYS
                     SurfAzimuth = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Azimuth", ErrLevel.FATAL));
 
                     // Bifacial Options
-                    useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BifacialOpt", ErrLevel.WARNING, _default: "false"));
-
                     if (useBifacial)
                     {
-                        SurfClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollClearance", ErrLevel.FATAL));
+                        SurfClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL));
                     }
                     break;
 
@@ -440,11 +445,9 @@ namespace CASSYS
                     }
 
                     // Bifacial Options
-                    useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BifacialOptSAET", ErrLevel.WARNING, _default: "false"));
-
                     if (useBifacial)
                     {
-                        itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "ClearanceSAET", ErrLevel.FATAL));
+                        itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL));
                         itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL));
                         itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
                     }
@@ -469,11 +472,9 @@ namespace CASSYS
                     }
 
                     // Bifacial Options
-                    useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("O&S", "BifacialOptSAST", ErrLevel.WARNING, _default: "false"));
-
                     if (useBifacial)
                     {
-                        itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "ClearanceSAST", ErrLevel.FATAL));
+                        itsTrackerClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL));
                         itsTrackerPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL));
                         itsTrackerBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
                     }

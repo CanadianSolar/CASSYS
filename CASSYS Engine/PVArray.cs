@@ -511,7 +511,6 @@ namespace CASSYS
             itsSubArrayNum = ArrayNum;
             itsNSeries = int.Parse(ReadFarmSettings.GetInnerText("PV", "ModulesInString", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsNParallel = int.Parse(ReadFarmSettings.GetInnerText("PV", "NumStrings", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
-            biFactor = 0.75; // double.Parse(ReadFarmSettings.GetInnerText("PV", "BifacialityFactor", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsArea = double.Parse(ReadFarmSettings.GetInnerText("PV", "AreaM", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsPNom = double.Parse(ReadFarmSettings.GetInnerText("PV", "Pnom", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsVmppref = double.Parse(ReadFarmSettings.GetInnerText("PV", "Vmpp", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
@@ -658,6 +657,16 @@ namespace CASSYS
 
             // Gathering wiring losses from the CSYX File
             itsRw = double.Parse(ReadFarmSettings.GetInnerText("PV", "GlobWireResist", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "1")) / 1000;
+
+            // Defining the bifaciality factor
+            if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL)))
+            {
+                biFactor = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "BifacialityFactor", ErrLevel.FATAL));
+            }
+            else
+            {
+                biFactor = 0;
+            }
         }
 
         // Calculate Gamma, IrsRef, IphiRef for the module provided using equations for Impp condition and Voc condition with N-R method to calculate Gamma

@@ -314,6 +314,12 @@ namespace CASSYS
                         case "O&S":
                             Path = "/Site/Orientation_and_Shading/" + NodeName;
                             break;
+                        case "Bifacial":
+                            Path = "/Site/Bifacial/" + NodeName;
+                            break;
+                        case "BifAlbedo":
+                            Path = "/Site/Bifacial/BifAlbedo/" + NodeName;
+                            break;
                         case "System":
                             Path = "/Site/System/" + NodeName;
                             break;
@@ -402,6 +408,12 @@ namespace CASSYS
                             break;
                         case "O&S":
                             Path = "/Site/Orientation_and_Shading" + _Adder;
+                            break;
+                        case "Bifacial":
+                            Path = "/Site/Bifacial" + _Adder;
+                            break;
+                        case "BifAlbedo":
+                            Path = "/Site/Bifacial/BifAlbedo" + _Adder;
                             break;
                         case "System":
                             Path = "/Site/System" + _Adder;

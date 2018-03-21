@@ -69,57 +69,58 @@ namespace CASSYS
         // Config manages calculations and initializations that need only to be run once
         public void Config()
         {
-            // Number of segments into which to divide up the ground [#]
-            numGroundSegs = Util.NUM_GROUND_SEGS;
+            Boolean useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
 
-            switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
+            if (useBifacial)
             {
-                // In all cases, pitch and clearance must be normalized to panel slope lengths
-                case "Unlimited Rows":
-                    itsTrackMode = TrackMode.NOAT;
-                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
-                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL)) / itsArrayBW;
-                    itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollClearance", ErrLevel.FATAL)) / itsArrayBW;
-                    itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                // Number of segments into which to divide up the ground [#]
+                numGroundSegs = Util.NUM_GROUND_SEGS;
 
-                    transFactor = 0;
-                    break;
-                case "Single Axis Elevation Tracking (E-W)":
-                    itsTrackMode = TrackMode.SAXT;
-                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
-                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL)) / itsArrayBW;
+                switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
+                {
+                    // In all cases, pitch and clearance must be normalized to panel slope lengths
+                    case "Unlimited Rows":
+                        itsTrackMode = TrackMode.NOAT;
+                        itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
+                        itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL)) / itsArrayBW;
+                        itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL)) / itsArrayBW;
+                        break;
+                    case "Single Axis Elevation Tracking (E-W)":
+                        itsTrackMode = TrackMode.SAXT;
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
+                        itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL)) / itsArrayBW;
+                        break;
+                    case "Single Axis Horizontal Tracking (N-S)":
+                        itsTrackMode = TrackMode.SAXT;
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
+                        itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL)) / itsArrayBW;
+                        break;
+                    default:
+                        ErrorLogger.Log("Bifacial is not supported for the selected orientation and shading.", ErrLevel.FATAL);
+                        break;
+                }
 
-                    transFactor = 0;
-                    break;
-                case "Single Axis Horizontal Tracking (N-S)":
-                    itsTrackMode = TrackMode.SAXT;
-                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
-                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL)) / itsArrayBW;
+                transFactor = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "PanelTransFactor", ErrLevel.FATAL));
 
-                    transFactor = 0;
-                    break;
-                default:
-                    ErrorLogger.Log("Bifacial is not supported for the selected orientation and shading.", ErrLevel.FATAL);
-                    break;
-            }
+                // Initialize arrays
+                midGroundSH = new int[numGroundSegs];
+                firstGroundSH = new int[numGroundSegs];
+                lastGroundSH = new int[numGroundSegs];
 
-            // Initialize arrays
-            midGroundSH = new int[numGroundSegs];
-            firstGroundSH = new int[numGroundSegs];
-            lastGroundSH = new int[numGroundSegs];
+                midSkyViewFactors = new double[numGroundSegs];
+                firstSkyViewFactors = new double[numGroundSegs];
+                lastSkyViewFactors = new double[numGroundSegs];
 
-            midSkyViewFactors = new double[numGroundSegs];
-            firstSkyViewFactors = new double[numGroundSegs];
-            lastSkyViewFactors = new double[numGroundSegs];
+                midGroundGHI = new double[numGroundSegs];
+                firstGroundGHI = new double[numGroundSegs];
+                lastGroundGHI = new double[numGroundSegs];
 
-            midGroundGHI = new double[numGroundSegs];
-            firstGroundGHI = new double[numGroundSegs];
-            lastGroundGHI = new double[numGroundSegs];
-
-            // Calculate sky view factors for diffuse shading. Stays constant for non-tracking systems, so done here in Config()
-            if (itsTrackMode == TrackMode.NOAT)
-            {
-                CalcSkyViewFactors();
+                // Calculate sky view factors for diffuse shading. Stays constant for non-tracking systems, so done here in Config()
+                if (itsTrackMode == TrackMode.NOAT)
+                {
+                    CalcSkyViewFactors();
+                }
             }
         }
 
@@ -192,8 +193,9 @@ namespace CASSYS
                     lastGroundGHI[i] += HDir * transFactor;
                 }
             }
+
             // Option to print details of the model in .csv files (takes about 12 seconds)
-            PrintModel(ts, SunZenith, SunAzimuth, PanelAzimuth);
+            //PrintModel(ts, SunZenith, SunAzimuth, PanelAzimuth);
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
@@ -325,7 +327,7 @@ namespace CASSYS
                 double b = Math.Cos(itsPanelTilt);                  // Horizontal distance from front of panel to back of panel [panel slope lengths]
 
                 double FrontPA = Tilt.GetProfileAngle(SunZenith, SunAzimuth, itsPanelAzimuth);
-                
+
                 double Lh = h / Math.Tan(FrontPA);                          // Base of triangle formed by beam of sun and height of module top from bottom
                 double Lc = itsClearance / Math.Tan(FrontPA);               // Base of triangle formed by beam of sun and height of module bottom from ground
                 double Lhc = (h + itsClearance) / Math.Tan(FrontPA);        // Base of triangle formed by beam of sun and height of module top from ground

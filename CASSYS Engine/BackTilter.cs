@@ -39,6 +39,8 @@ namespace CASSYS
         int numCellRows;                            // Number of cell rows on back of array [#]
 
         // Back tilter local variables/arrays and intermediate calculation variables and arrays
+        double structLossFactor;                    // Percentage loss attributed to shading from back obstructions [#]
+        double[] itsMonthlyAlbedo;                  // Array to store monthly albedo values
         double[] backGlo;                           // Tilted global irradiance for each cell row on back of array [W/m2]
         double[] backDir;                           // Tilted beam irradiance for each cell row on back of array [W/m2]
         double[] backDif;                           // Tilted diffuse irradiance for each cell row on back of array [W/m2]
@@ -61,45 +63,53 @@ namespace CASSYS
         // Config manages calculations and initializations that need only to be run once
         public void Config()
         {
-            switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
+            Boolean useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
+
+            if (useBifacial)
             {
-                // In all cases, pitch must be normalized to panel slope lengths
-                case "Unlimited Rows":
-                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
-                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL)) / itsArrayBW;
-                    itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollClearance", ErrLevel.FATAL)) / itsArrayBW;
-                    itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
+                {
+                    // In all cases, pitch must be normalized to panel slope lengths
+                    case "Unlimited Rows":
+                        itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
+                        itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "Pitch", ErrLevel.FATAL)) / itsArrayBW;
+                        itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL)) / itsArrayBW;
 
-                    // Find number of cell rows on back of array [#]
-                    numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWid", ErrLevel.WARNING, _default: "1"));
-                    break;
-                case "Single Axis Elevation Tracking (E-W)":
-                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
-                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL)) / itsArrayBW;
+                        // Find number of cell rows on back of array [#]
+                        numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWid", ErrLevel.WARNING, _default: "1"));
+                        break;
+                    case "Single Axis Elevation Tracking (E-W)":
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAET", ErrLevel.FATAL));
+                        itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAET", ErrLevel.FATAL)) / itsArrayBW;
 
-                    // Find number of cell rows on back of array [#]
-                    numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAET", ErrLevel.WARNING, _default: "1"));
-                    break;
-                case "Single Axis Horizontal Tracking (N-S)":
-                    itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
-                    itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL)) / itsArrayBW;
+                        // Find number of cell rows on back of array [#]
+                        numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAET", ErrLevel.WARNING, _default: "1"));
+                        break;
+                    case "Single Axis Horizontal Tracking (N-S)":
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "WActiveSAST", ErrLevel.FATAL));
+                        itsPitch = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PitchSAST", ErrLevel.FATAL)) / itsArrayBW;
 
-                    // Find number of cell rows on back of array [#]
-                    numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAST", ErrLevel.WARNING, _default: "1"));
-                    break;
-                default:
-                    ErrorLogger.Log("Bifacial is not supported for the selected orientation and shading.", ErrLevel.FATAL);
-                    break;
+                        // Find number of cell rows on back of array [#]
+                        numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAST", ErrLevel.WARNING, _default: "1"));
+                        break;
+                    default:
+                        ErrorLogger.Log("Bifacial is not supported for the selected orientation and shading.", ErrLevel.FATAL);
+                        break;
+                }
+
+                itsBo = Convert.ToDouble(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _Error: ErrLevel.WARNING, _default: "0.05"));
+                structLossFactor = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "StructBlockingFactor", ErrLevel.FATAL));
+
+                // Initialize arrays
+                backGlo = new double[numCellRows];
+                backDir = new double[numCellRows];
+                backDif = new double[numCellRows];
+                backFroRef = new double[numCellRows];
+                backGroRef = new double[numCellRows];
+
+                ConfigAlbedo();
             }
-
-            itsBo = double.Parse(ReadFarmSettings.GetInnerText("Losses", "IncidenceAngleModifier/bNaught", _Error: ErrLevel.WARNING, _default: "0.05"));
-
-            // Initialize arrays
-            backGlo = new double[numCellRows];
-            backDir = new double[numCellRows];
-            backDif = new double[numCellRows];
-            backFroRef = new double[numCellRows];
-            backGroRef = new double[numCellRows];
         }
 
         // Calculate manages calculations that need to be run for each time step
@@ -112,7 +122,7 @@ namespace CASSYS
             , double[] groundGHI                    // Sum of irradiance components for each of the interior ground segments [W/m2]
             , double backSH                         // Fraction of the back surface of the PV array that is shaded [#]
             , double frontSH                        // Fraction of the front surface of the PV array that is shaded [#]
-            , double albedo                         // Albedo value for the current month [#]
+            , int month                             // Current month, used for getting albedo value [#]
             , double InciAng                        // Incidence angle for the beam to back of panel [radians]
             , double TDir                           // Back tilted beam irradiance [W/m2]
             , DateTime ts                           // Time stamp analyzed, used for printing .csv files
@@ -141,6 +151,9 @@ namespace CASSYS
                 aveGroundGHI += groundGHI[k] / numGroundSegs;
             }
 
+            // Get general Incidence Angle modifier for diffuse and reflected irradiances
+            double IAM = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
+
             // Accumulate diffuse, reflected, and beam irradiance components for each cell row over its field of view of PI radians
             for (int i = 0; i < numCellRows; i++)
             {
@@ -152,14 +165,14 @@ namespace CASSYS
                 int stopSky = Convert.ToInt32((itsPanelTilt - elevUp) * Util.RTOD);             // Last whole degree in arc range that sees sky; first is 0 [degrees]
                 int startGround = Convert.ToInt32((itsPanelTilt + elevDown) * Util.RTOD);       // First whole degree in arc range that sees ground; last is 180 [degrees]
 
-                // Add sky diffuse component
-                backDif[i] = RadiationProc.GetViewFactor(0, stopSky * Util.DTOR) * HDif;
+                // Add sky diffuse component, corrected for AOI
+                backDif[i] = RadiationProc.GetViewFactor(0, stopSky * Util.DTOR) * HDif * IAM;
 
-                // Add front surface reflected component, corrected for front shading
-                backFroRef[i] = RadiationProc.GetViewFactor(stopSky * Util.DTOR, startGround * Util.DTOR) * TDifRef * (1.0 - frontSH);
+                // Add front surface reflected component, corrected for front shading and AOI
+                backFroRef[i] = RadiationProc.GetViewFactor(stopSky * Util.DTOR, startGround * Util.DTOR) * TDifRef * (1.0 - frontSH) * IAM;
 
                 backGroRef[i] = 0;
-                // Add ground reflected component, corrected for back shading and albedo
+                // Add ground reflected component, corrected for albedo and AOI
                 for (int j = startGround; j < 180; j++)
                 {
                     // Get start and ending elevations for this (j, j + 1) pair
@@ -223,7 +236,7 @@ namespace CASSYS
                             actualGroundGHI /= projX2 - projX1;
                         }
                     }
-                    backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * albedo;
+                    backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * itsMonthlyAlbedo[month] * IAM;
                 }
 
                 // Cell is fully shaded if > 1, fully unshaded if < 0, otherwise fractionally shaded
@@ -231,19 +244,17 @@ namespace CASSYS
                 backShade = Math.Min(backShade, 1.0);
                 backShade = Math.Max(backShade, 0.0);
 
-                // Add beam irradiance, corrected for shading
-                backDir[i] = TDir * (1.0 - backShade);
-
                 // Get Incidence Angle modifier (IAM) for beam irradiance
                 double IAMDir = Tilt.GetASHRAEIAM(itsBo, InciAng);
-                // Get general Incidence Angle modifier for diffuse and reflected irradiances
-                double IAM = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
 
-                // Sum all components to get global back irradiance, corrected for AOI
-                backGlo[i] = (backDif[i] + backFroRef[i] + backGroRef[i]) * IAM + backDir[i] * IAMDir;
+                // Add beam irradiance, corrected for back shading and AOI
+                backDir[i] = TDir * (1.0 - backShade) * IAMDir;
 
-                // Correct for <other losses>
-                backGlo[i] = backGlo[i];
+                // Sum all components to get global back irradiance 
+                backGlo[i] = backDif[i] + backFroRef[i] + backGroRef[i] + backDir[i];
+
+                // Correct for structure shading losses
+                backGlo[i] = backGlo[i] * (1 - structLossFactor);
             }
 
             BDif = 0;
@@ -259,8 +270,53 @@ namespace CASSYS
                 BDir += backDir[i] / numCellRows;
             }
             BGlo = BDif + BFroRef + BGroRef + BDir;
+
             // Option to print details of the model in .csv files (takes about 3 seconds)
-            PrintModel(ts);
+            //PrintModel(ts);
+        }
+
+        // Config the albedo value based on monthly/yearly values defined on file
+        void ConfigAlbedo()
+        {
+            // Determine whether to use site albedo values, or inter-row specific albedo values
+            string whichAlbedo;
+            if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("BifAlbedo", "UseBifAlb", ErrLevel.FATAL)))
+            {
+                whichAlbedo = "BifAlbedo";
+            }
+            else
+            {
+                whichAlbedo = "Albedo";
+            }
+
+            // Initializing the expected list
+            itsMonthlyAlbedo = new double[13];
+            if (ReadFarmSettings.GetAttribute(whichAlbedo, "Frequency", ErrLevel.WARNING) == "Monthly")
+            {
+                // Using the month number as the index, populate the albedo vales from each corresponding node
+                itsMonthlyAlbedo[1] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Jan", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[2] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Feb", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[3] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Mar", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[4] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Apr", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[5] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "May", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[6] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Jun", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[7] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Jul", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[8] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Aug", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[9] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Sep", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[10] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Oct", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[11] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Nov", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[12] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Dec", ErrLevel.WARNING, _default: "0.2"));
+            }
+            else if (ReadFarmSettings.GetAttribute(whichAlbedo, "Frequency", ErrLevel.WARNING) == "Yearly")
+            {
+                itsMonthlyAlbedo[1] = Convert.ToDouble(ReadFarmSettings.GetInnerText(whichAlbedo, "Yearly", ErrLevel.WARNING, _default: "0.2"));
+
+                // Apply the same albedo to all months
+                for (int i = 3; i < itsMonthlyAlbedo.Length + 1; i++)
+                {
+                    itsMonthlyAlbedo[i - 1] = itsMonthlyAlbedo[1];
+                }
+            }
         }
 
         void PrintModel
