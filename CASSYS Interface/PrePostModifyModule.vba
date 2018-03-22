@@ -44,7 +44,7 @@ End Sub
 Public Sub PostModify(Sheet As Worksheet, ByRef Status As sheetStatus)
 
     If (Status.IsProtected) Then Sheet.Protect
-    Sheet.Activate
+    Status.ActSht.Activate
     Application.ScreenUpdating = Status.IsScreenUpdating
     Application.Calculation = Status.IsCalculationAuto
 End Sub

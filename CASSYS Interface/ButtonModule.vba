@@ -31,7 +31,7 @@ Sub LoadButton()
     ResultSht.Visible = xlSheetHidden
     SummarySht.Visible = xlSheetHidden
     ChartConfigSht.Visible = xlSheetHidden
-    ReportSht.Visible = xlSheetVeryHidden
+    ReportSht.Visible = xlSheetHidden
     CompChart1.Visible = xlSheetHidden
     CompChart2.Visible = xlSheetHidden
     CompChart3.Visible = xlSheetHidden

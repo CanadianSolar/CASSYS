@@ -256,7 +256,7 @@ End Sub
 '
 Sub UpdateLossDiagram()
     Dim currentSht As sheetStatus
-    Dim xDoc As DOMDocument
+    Dim xDoc As DOMDocument60
     Dim xNode As IXMLDOMNode
     Dim nodePath As String
     Dim i As Integer
@@ -268,7 +268,7 @@ Sub UpdateLossDiagram()
     'LossDiagramValueSht.HorizontalGlobIrradiance
     i = 10
     
-    Set xDoc = New DOMDocument
+    Set xDoc = New DOMDocument60
     
     
     If xDoc.Load(Application.ThisWorkbook.path & "\LossDiagramOutputs.xml") Then

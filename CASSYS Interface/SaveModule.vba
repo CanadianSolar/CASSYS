@@ -27,6 +27,7 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     Dim transElement As IXMLDOMElement ' Element used for transformer data
     Dim lossElement As IXMLDOMElement ' Element used for loss data
     Dim losstypeElement As IXMLDOMElement ' Element used to hold soiling loss data
+    Dim spectralElement As IXMLDOMElement ' Element used to hold spectral data
     Dim inputElement As IXMLDOMElement ' Element used for defining input file style
     Dim outputElement As IXMLDOMElement ' Element used for defining output file style
     'Dim Iterations As IXMLDOMElement ' Element used for holding iterative mode parameters   '--------Commenting out Iterative Functionality for this version--------'
@@ -166,7 +167,11 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     
             'Add Losses Info And Value
             Call Add_Loss_Info(newdoc, lossElement, element, losstypeElement)
-        
+            
+            'Add spectral element, then info and value
+            Set spectralElement = newdoc.createElement("Spectral")
+            rootElement.appendChild spectralElement
+            Call Add_Spectral_Info(newdoc, spectralElement, element)
         End If
         
     End If 'end of mode select
@@ -493,6 +498,23 @@ Sub Add_Trans_Info(ByRef newdoc As DOMDocument60, ByRef transElement As IXMLDOME
     Call Add_Element(newdoc, transElement, element, TransformerSht.Range("PNomTrf,PIronLossTrf,PFullLoadLss,PResLssTrf,ACCapSTC,NightlyDisconnect"))
 End Sub
 
+' Add_Spectral_Info Function
+'
+' Arguments:
+' newDoc - The XML Document
+' spectralElement - Element used for the spectral data
+' element - Element used to add data to other elements
+'
+' The purpose of this function is to add the spectral information
+' to the XML document
+Sub Add_Spectral_Info(ByRef newdoc As DOMDocument60, ByRef spectralElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
+    Dim clearnessIndexElement As IXMLDOMElement         ' Element used to hold the clearness index group of data
+    Call Add_Element(newdoc, spectralElement, element, SpectralSht.Range("UseSpectralModel"))
+    Set clearnessIndexElement = newdoc.createElement("ClearnessIndex")
+    spectralElement.appendChild clearnessIndexElement
+    Call Add_Element(newdoc, clearnessIndexElement, element, SpectralSht.Range("kt"))
+    Call Add_Element(newdoc, clearnessIndexElement, element, SpectralSht.Range("ktCorrection"))
+End Sub
 
 ' Add_Inv_Info Function
 '
@@ -797,20 +819,21 @@ Sub Add_Output_Info(ByRef newdoc As DOMDocument60, ByRef outputElement As IXMLDO
     Call Add_Element(newdoc, outputElement, element, OutputFileSht.Range("OutputParam"), True)
 End Sub
 
+' Save albedo information
 Sub Add_Albedo_Info(ByRef newdoc As DOMDocument60, ByRef albedoElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
 
-    ' If albedo is set to yearly add yearly albedo values
-    Dim monthlyMax As Integer
     Dim monthlyMin As Integer
-    monthlyMax = 16
-    monthlyMin = 5
+    monthlyMin = 5                   ' First column of albedo values
+    Dim AlbRngName() As String       ' Names of the ranges used for albedo values
+    AlbRngName = Split("AlbJan,AlbFeb,AlbMar,AlbApr,AlbMay,AlbJun,AlbJul,AlbAug,AlbSep,AlbOct,AlbNov,AlbDec", ",")
     Dim i As Integer
     If (SiteSht.Range("AlbFreqVal").Value = "Yearly") Then
+        ' If albedo is set to yearly add yearly albedo values
         Call AddArray_Element(newdoc, albedoElement, element, SiteSht.Range("AlbFreqVal"), SiteSht.Range("AlbYearly"))
     ElseIf (SiteSht.Range("AlbFreqVal").Value = "Monthly") Then
         ' If albedo is set to monthly add monthly albedo values
-        For i = monthlyMin To monthlyMax
-            Call AddArray_Element(newdoc, albedoElement, element, SiteSht.Cells(29, i).Value, SiteSht.Range("AlbJan,AlbFeb,AlbMar,AlbApr,AlbMay,AlbJun,AlbJul,AlbAug,AlbSep,AlbOct,AlbNov,AlbDec"))
+        For i = 0 To 11
+            Call AddArray_Element(newdoc, albedoElement, element, SiteSht.Cells(29, monthlyMin + i).Value, SiteSht.Range(AlbRngName(i)).Value)
         Next i
     End If
     

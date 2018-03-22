@@ -57,6 +57,7 @@ Sub ExportReportToPDF(ByVal fileName As String)
         SetPrintFormatSystem
         SetPrintFormatLosses
         SetPrintFormatSoiling
+        SetPrintFormatSpectral
         SetPrintFormatTransformer
         SetPrintFormatInput
         SetPrintFormatSummary
@@ -114,7 +115,7 @@ fileAlreadyOpen:
 
 normalEnd:
     'Rehide the report sheet and restore application statuses
-    'ReportSht.Visible = xlSheetHidden
+    ReportSht.Visible = xlSheetHidden
     Application.ScreenUpdating = True
     Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
@@ -218,7 +219,7 @@ Private Sub SetPrintFormatHorizon()
     Call PostModify(Horizon_ShadingSht, currentShtStatus)
     
     ' update current document length and set page break if needed
-    currentDocLength = Application.Max(ReportSht.Range("D" & Rows.count).End(xlUp).row, lastShapeRow)
+    currentDocLength = Application.Max(ReportSht.Range("B" & Rows.count).End(xlUp).row, lastShapeRow)
     Call PageBreak(initialPasteRow, currentDocLength)
 End Sub
 '
@@ -370,6 +371,40 @@ Private Sub SetPrintFormatSoiling()
     ReportSht.Range("A" & initialPasteRow).Offset(7, 1).PasteSpecial (xlPasteAll)
     
     Call PostModify(SoilingSht, currentShtStatus)
+    
+    ' update current document length and set page break if needed
+    GetLastShapeRow
+    currentDocLength = Application.Max(ReportSht.Range("B" & Rows.count).End(xlUp).row, lastShapeRow)
+    Call PageBreak(initialPasteRow, currentDocLength)
+End Sub
+'
+' This function is called to copy and paste the desired
+' contents from the Spectral sheet into the report sheet
+'
+Private Sub SetPrintFormatSpectral()
+    Dim currentShtStatus As sheetStatus
+    Dim initialPasteRow As Integer ' The first row in which the data is pasted. Ranges are specified in offsets; changes only have to be made to the initialPasteRow to paste in a different place.
+    Dim chartHeight As Integer
+    
+    initialPasteRow = currentDocLength + 2
+    
+    Call PreModify(SpectralSht, currentShtStatus)
+    
+    Call PasteHeader(SpectralSht, initialPasteRow)
+    Call CopyPaste(SpectralSht.Range("PrintSpectral1"), ReportSht.Range("B" & initialPasteRow).Offset(2, 0))
+    
+    ' Print the rest of the sheet only if UseSpectralModel is set to Yes
+    If SpectralSht.Range("UseSpectralModel").Value = "Yes" Then
+        ' Copy and paste spectral info
+        ReportSht.Range("B" & initialPasteRow).Offset(4, 0).Value = "kt"
+        ReportSht.Range("B" & initialPasteRow).Offset(5, 0).Value = "Correction"
+        Call CopyPaste(SpectralSht.Range("PrintSpectral2"), ReportSht.Range("C" & initialPasteRow).Offset(4, 0))
+        
+        ' Copy and paste spectral chart
+        Call CopyPasteChart(SpectralSht, "ktSpectralChart", SpectralSht.ChartObjects("ktSpectralChart"), ReportSht.Range("D" & initialPasteRow).Offset(8, 0))
+    End If
+    
+    Call PostModify(SpectralSht, currentShtStatus)
     
     ' update current document length and set page break if needed
     GetLastShapeRow

@@ -103,6 +103,7 @@ Private Sub Workbook_Open()
     SystemSht.Visible = xlSheetVisible
     LossesSht.Visible = xlSheetVisible
     SoilingSht.Visible = xlSheetVisible
+    SpectralSht.Visible = xlSheetVisible
     TransformerSht.Visible = xlSheetVisible
     InputFileSht.Visible = xlSheetVisible
     OutputFileSht.Visible = xlSheetVisible
@@ -113,7 +114,7 @@ Private Sub Workbook_Open()
     ErrorSht.Visible = xlSheetHidden
     ResultSht.Visible = xlSheetHidden
     SummarySht.Visible = xlSheetHidden
-    ReportSht.Visible = xlSheetVeryHidden
+    ReportSht.Visible = xlSheetHidden
     ChartConfigSht.Visible = xlSheetHidden
     Inverter_DatabaseSht.Visible = xlSheetHidden
     PV_DatabaseSht.Visible = xlSheetHidden
@@ -128,7 +129,7 @@ Private Sub Workbook_Open()
     ' Version number for current development of CASSYS (this is for extra protection, in case it gets overwritten)
     IntroSht.Unprotect
     'NB: increased version number
-    IntroSht.Range("Version").Value = "1.3.0"
+    IntroSht.Range("Version").Value = "1.4.0"
     IntroSht.Protect
     IntroSht.Activate
     Application.ScreenUpdating = True
@@ -138,6 +139,7 @@ Private Sub Workbook_Open()
     Application.DisplayAlerts = False
     ThisWorkbook.ChangeFileAccess Mode:=xlReadOnly
     Application.DisplayAlerts = True
+    Application.Calculation = xlCalculationAutomatic
     
      
 End Sub
