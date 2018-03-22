@@ -119,7 +119,7 @@ namespace CASSYS
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
         public double Efficiency;             // PV array efficiency [%]
         public double BifacialGain;           // Back side effective irradiance, weighted by the bifaciality factor [W/m^2]
-        public double TGloEff;                // Irradiance (front and back, if applicable) adjusted for incidence angle, soiling, and spectral effects [W/m^2]
+        public double TGloEff;                // Irradiance (front and back, for bifacial) adjusted for incidence angle, soiling, and spectral effects [W/m^2]
         public double TDifRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
@@ -175,6 +175,11 @@ namespace CASSYS
 
             // Calculation of effective irradiance reaching the cell (Soiling, IAM, and spectral effects accounted for)
             CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber, ClearnessCorr);
+
+            // Calculation of bifacial gain
+            BifacialGain = biFactor * BGlo;
+
+            TGloEff = TGloEff + BifacialGain;
 
             // Calculation of bifacial gain
             BifacialGain = biFactor * BGlo;
@@ -511,6 +516,7 @@ namespace CASSYS
             itsSubArrayNum = ArrayNum;
             itsNSeries = int.Parse(ReadFarmSettings.GetInnerText("PV", "ModulesInString", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsNParallel = int.Parse(ReadFarmSettings.GetInnerText("PV", "NumStrings", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
+            biFactor = 0.75; // double.Parse(ReadFarmSettings.GetInnerText("PV", "BifacialityFactor", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsArea = double.Parse(ReadFarmSettings.GetInnerText("PV", "AreaM", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsPNom = double.Parse(ReadFarmSettings.GetInnerText("PV", "Pnom", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsVmppref = double.Parse(ReadFarmSettings.GetInnerText("PV", "Vmpp", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));

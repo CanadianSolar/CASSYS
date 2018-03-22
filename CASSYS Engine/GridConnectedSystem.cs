@@ -32,9 +32,10 @@ namespace CASSYS
 
         SpectralEffects SimSpectral = new SpectralEffects();    // Used to calculate spectral correction relative to a given model
 
+        BackTilter SimBackTilter = new BackTilter();            // Used to calculate back side irradiance
+
         // Shading Related variables
         GroundShading SimGround = new GroundShading();          // Used to calculate ground shading
-        BackTilter SimBackTilter = new BackTilter();            // used to calculate back side irradiance
         HorizonShading SimHorizon = new HorizonShading();       // Used to calculate solar panel shading relative to a given horizon
         Shading SimShading = new Shading();                     // Used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
