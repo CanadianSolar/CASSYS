@@ -84,6 +84,7 @@ Sub SwitchMode(ByVal Selection As String)
         SystemSht.Visible = xlSheetHidden
         LossesSht.Visible = xlSheetHidden
         SoilingSht.Visible = xlSheetHidden
+        SpectralSht.Visible = xlSheetHidden
         TransformerSht.Visible = xlSheetHidden
         Orientation_and_ShadingSht.Visible = xlSheetVisible
         Horizon_ShadingSht.Visible = xlSheetVisible
@@ -158,6 +159,7 @@ Sub SwitchMode(ByVal Selection As String)
         SystemSht.Visible = xlSheetHidden
         LossesSht.Visible = xlSheetHidden
         SoilingSht.Visible = xlSheetHidden
+        SpectralSht.Visible = xlSheetHidden
         TransformerSht.Visible = xlSheetHidden
         ResultSht.Visible = xlSheetHidden
         ReportSht.Visible = xlSheetHidden
@@ -202,6 +204,7 @@ Sub SwitchMode(ByVal Selection As String)
         SystemSht.Visible = xlSheetVisible
         LossesSht.Visible = xlSheetVisible
         SoilingSht.Visible = xlSheetVisible
+        SpectralSht.Visible = xlSheetVisible
         TransformerSht.Visible = xlSheetVisible
         Horizon_ShadingSht.Visible = xlSheetVisible
         Orientation_and_ShadingSht.Visible = xlSheetVisible

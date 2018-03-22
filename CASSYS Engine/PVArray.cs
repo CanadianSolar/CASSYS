@@ -61,7 +61,6 @@ namespace CASSYS
         double itsRpRef;                      // Shunt resistance [ohms];
         double itsRw;                         // Global wiring resistance as seen from Inverter for entire Sub-Array [ohms]
         double itsSubArrayNum;                // The sub-array number that the PVArray belongs to. [#]
-        
 
         // Module Temperature and Irradiance Coefficients
         double itsBo;                                       // ASHARE Parameter used for IAM calculation (see Ref 5)
@@ -85,7 +84,6 @@ namespace CASSYS
         double itsConstHTC;                   // Constant Heat Transfer Coefficient (CHTC)
         double itsConvHTC;                    // Convective Heat Transfer Coefficient (ConvHTC)
         double itsAdsorp = 0.9;               // Adsorption, default 0.9 for PVSyst
-       
 
         // PV Array local & intermediate calculation variables
         double lossLessTGlo;                  // Tilted Global Irradiance (used for efficiency calculations)
@@ -95,7 +93,7 @@ namespace CASSYS
         double mVout;                         // Module voltage [V]
         double mIout;                         // Module current [A]
         public double mPower;                 // Module Power produced [W]
-        public double mPMPP;                  // Module power at maximum power point [W]      
+        public double mPMPP;                  // Module power at maximum power point [W]
 
         // Array Related Variables
         public double itsNSeries;             // Number of modules in series [#]
@@ -115,11 +113,12 @@ namespace CASSYS
         public double TModule;                // Temperature of module [C]
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
         public double RadSoilingLoss;         // Losses due to soiling of PV array [W/m^2]
+        public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
         public double Efficiency;             // PV array efficiency [%] 
-        public double TGloEff;                // Irradiance adjusted for incidence angle and soiling [W/m^2]
+        public double TGloEff;                // Irradiance adjusted for incidence angle, soiling, and spectral effects [W/m^2]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
         public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
@@ -165,13 +164,14 @@ namespace CASSYS
             , double WindSpeed                       // Wind speed [m/s]
             , double TModMeasured                    // Measured Module Temperature [C]
             , int MonthNumber                        // Month of the year [#, 1->12]
+            , double ClearnessCorr                   // Clearness correction [unitless]
             )
         {
             // Assigning the Tilted Global value to a local holder (used for efficiency calculation)
             lossLessTGlo = TGlo;
 
-            // Calculation of effective irradiance reaching the cell (Soiling and IAM accounted for)
-            CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber);
+            // Calculation of effective irradiance reaching the cell (Soiling, IAM, and spectral effects accounted for)
+            CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber, ClearnessCorr);
 
             // Calculation of temperature GetTemperature Method used (see below)
             CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
@@ -196,7 +196,7 @@ namespace CASSYS
             mVoc = Voc / itsNSeries;
         }
 
-        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred
+        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred, plus Spectral Model corrections
         void CalcEffectiveIrradiance
             (
               double TDir                            // Tilted Beam Irradiance [W/m^2]
@@ -204,6 +204,7 @@ namespace CASSYS
             , double TRef                            // Tilted Ground Reflected Irradiance [W/m^2]
             , double InciAng                         // Incidence Angle [radians]
             , int MonthNumber                        // Month of the Year [#]
+            , double ClearCorr                       // Clearness correction [unitless]
             )
         {
             // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component (Calculated using ASHRAE Parameter, see Ref 5 in PV Array Class)
@@ -235,11 +236,17 @@ namespace CASSYS
             // Calculating the IAM Modified Tilted Irradiance [W/m^2]
             IAMTGlo = TDir * IAMDir + TDif * IAMDif + TRef * IAMRef;
 
-            // Determing soiling loss based on month number specified from Time Stamp [%]
+            // Determine soiling loss based on month number specified from Time Stamp [%]
             itsSoilingLossPC = itsMonthlySoilingPC[MonthNumber];
 
             // Modified TGlo based on irradiance based on soiling and Incidence Angle modifier
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
+
+            // Determine spectral correction based on clearness index
+            RadSpectralLoss = TGloEff * ClearCorr;
+
+            // Modified TGlo based on spectral losses
+            TGloEff = TGloEff * (1 - ClearCorr);
 
             // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
             // and only for the first array
@@ -822,6 +829,6 @@ namespace CASSYS
 
             // Determining the resulting coefficient. Linear assumption allows a calculation with one temperature change to determine the coefficient.
             itsGammaCoeff = (gammaTrial - itsGammaRef) / (TrialTModule - itsTref);
-        }        
+        }
     }
 }

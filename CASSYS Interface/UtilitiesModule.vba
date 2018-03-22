@@ -31,7 +31,7 @@ Sub ClearAll()
     SummarySht.Visible = xlSheetHidden
     ResultSht.Visible = xlSheetHidden
     ChartConfigSht.Visible = xlSheetHidden
-    ReportSht.Visible = xlSheetVeryHidden
+    ReportSht.Visible = xlSheetHidden
     CompChart1.Visible = xlSheetHidden
     CompChart2.Visible = xlSheetHidden
     CompChart3.Visible = xlSheetHidden
@@ -227,6 +227,18 @@ Sub ClearAll()
      
      Call PostModify(SoilingSht, currentShtStatus)
      
+    ' Disable spectral model
+     Call PreModify(SpectralSht, currentShtStatus)
+     
+     Application.EnableEvents = True
+     SpectralSht.Range("UseSpectralModel") = "No"
+     Application.EnableEvents = False
+          
+     ' Clear spectral modification values losses
+     SpectralSht.Range("ktCorrectionValues").Value = 0
+     
+     Call PostModify(SpectralSht, currentShtStatus)
+     
      ' Clear InputFilePath and Output file
      
      Call PreModify(InputFileSht, currentShtStatus)
@@ -385,6 +397,7 @@ Public Sub PrepareForRelease()
     SystemSht.Protect
     LossesSht.Protect
     SoilingSht.Protect
+    SpectralSht.Protect
     TransformerSht.Protect
     InputFileSht.Protect
     OutputFileSht.Unprotect
@@ -413,12 +426,13 @@ Public Sub PrepareForRelease()
     SystemSht.Visible = xlSheetHidden
     LossesSht.Visible = xlSheetHidden
     SoilingSht.Visible = xlSheetHidden
+    SpectralSht.Visible = xlSheetHidden
     TransformerSht.Visible = xlSheetHidden
     InputFileSht.Visible = xlSheetHidden
     OutputFileSht.Visible = xlSheetHidden
     ResultSht.Visible = xlSheetHidden
     SummarySht.Visible = xlSheetHidden
-    ReportSht.Visible = xlSheetVeryHidden
+    ReportSht.Visible = xlSheetHidden
     ChartConfigSht.Visible = xlSheetHidden
     CompChart1.Visible = xlSheetHidden
     CompChart2.Visible = xlSheetHidden
@@ -454,6 +468,7 @@ Public Sub PrepareForWork()
     SystemSht.Unprotect
     LossesSht.Unprotect
     SoilingSht.Unprotect
+    SpectralSht.Unprotect
     TransformerSht.Unprotect
     InputFileSht.Unprotect
     OutputFileSht.Unprotect
@@ -483,6 +498,7 @@ Public Sub PrepareForWork()
     SystemSht.Visible = xlSheetVisible
     LossesSht.Visible = xlSheetVisible
     SoilingSht.Visible = xlSheetVisible
+    SpectralSht.Visible = xlSheetVisible
     TransformerSht.Visible = xlSheetVisible
     InputFileSht.Visible = xlSheetVisible
     OutputFileSht.Visible = xlSheetVisible

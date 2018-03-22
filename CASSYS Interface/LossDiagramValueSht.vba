@@ -26,17 +26,29 @@ End Sub
 'and secondary axes in the losses diagram when a
 'value is changed in the outlined table
 '
+' The algorithm is as follows:
+' - find the max of the radiation and energy parts
+' - adjust the axes so that the max is at 90% of full scale
+' - and the effective POA radiation (axis 2) and PV nominal energy (on axis 1) align
+' This translates into Geff/scale2 = Enom/scale1
+' and max(Gmax/scale2, Emax/scale1) = 0.9
+' which is solved for scale1 and scale2
 Public Sub AxesAlignment()
     Dim chartObj As ChartObject
+    Dim Gmax, Emax As Double
+    Dim Scale1, Scale2 As Double
 
+    Gmax = WorksheetFunction.Max(Range("LossDiagramRadiations"))
+    Emax = WorksheetFunction.Max(Range("LossDiagramEnergies"))
+    Scale1 = WorksheetFunction.Max(Gmax * Range("ArrayNomEnergy").Value / Range("Effective_POA_Radiation").Value, Emax) / 0.9
+    Scale2 = Scale1 * Range("Effective_POA_Radiation").Value / Range("ArrayNomEnergy").Value
     Set chartObj = Sheets("Losses Diagram").ChartObjects(1)
 
     With chartObj
-        chartObj.Chart.Axes(xlValue, xlPrimary).MaximumScale = Range("ArrayNomEnergy").Value + (Range("ArrayNomEnergy").Value * 0.25)
-        chartObj.Chart.Axes(xlValue, xlSecondary).MaximumScale = Range("Effective_POA_Radiation").Value + (Range("Effective_POA_Radiation").Value * 0.25)
+        chartObj.Chart.Axes(xlValue, xlPrimary).MaximumScale = Scale1
+        chartObj.Chart.Axes(xlValue, xlSecondary).MaximumScale = Scale2
     End With
 
 End Sub
-
 
 

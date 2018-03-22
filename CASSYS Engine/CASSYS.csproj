@@ -89,6 +89,7 @@
     <Compile Include="ReadFarmSettings.cs" />
     <Compile Include="Shading.cs" />
     <Compile Include="Simulation.cs" />
+    <Compile Include="SpectralEffects.cs" />
     <Compile Include="Splitter.cs" />
     <Compile Include="Sun.cs" />
     <Compile Include="Tilt.cs" />

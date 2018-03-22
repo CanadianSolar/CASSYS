@@ -131,6 +131,11 @@ Sub Load()
             Call loadSoilingSht(newdoc)
             Call PostModify(SoilingSht, currentShtStatus)
         
+            ' Add Spectral Information
+            Call PreModify(SpectralSht, currentShtStatus)
+            Call loadSpectralSht(newdoc)
+            Call PostModify(SpectralSht, currentShtStatus)
+        
             ' Add Transformer Information
             Call PreModify(TransformerSht, currentShtStatus)
             Call loadTransformerSht(newdoc)
@@ -431,6 +436,33 @@ Private Sub loadSoilingSht(ByRef newdoc As DOMDocument60)
         Call InsertValue(newdoc, "//Site/System/Losses/SoilingLosses/*", SoilingSht.Range("D15:O15"))
     End If
 
+End Sub
+' Loads the Spectral Sheet
+Private Sub loadSpectralSht(ByRef newdoc As DOMDocument60)
+    
+    Dim EventsEnabled As Boolean
+    EventsEnabled = Application.EnableEvents
+    
+    Application.EnableEvents = True              ' Required to update the Spectral sheet depending upon the value of UseSpectralModel
+    
+    ' No spectral information in files prior to version 1.4.0
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.4.0") < 0) Then
+        SpectralSht.Range("UseSpectralModel") = "No"
+    
+    ' Spectral information present
+    Else
+    
+        ' Check if spectral model is used
+        Call InsertValue_BoolToYesNo(newdoc, "//Site/Spectral/UseSpectralModel", SpectralSht.Range("UseSpectralModel"))
+    
+        ' Add values of soiling as a function of clearness index
+        ' The double call to WorksheetFunction.Transpose magically transforms the strings into values (!)
+        If SpectralSht.Range("UseSpectralModel").Value = "Yes" Then
+            Range("ktCorrectionValues").Value = WorksheetFunction.Transpose(WorksheetFunction.Transpose(Split(newdoc.SelectSingleNode("//Site/Spectral/ClearnessIndex/ktCorrection").text, ",")))
+        End If
+    End If
+    
+    Application.EnableEvents = EventsEnabled
 End Sub
 ' Loads the Transformer Sheet
 Private Sub loadTransformerSht(ByRef newdoc As DOMDocument60)

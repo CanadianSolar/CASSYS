@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <StartWorkingDirectory>C:\Users\tynan.sears\Documents\Work\Dev\Testing\CASSYS\</StartWorkingDirectory>
-    <StartArguments>"Sample Site - Toronto.csyx" "Toronto_ClimateFile_CWEC.csv" "Toronto_Output.csv"</StartArguments>
+    <StartWorkingDirectory>H:\Dev\Test\</StartWorkingDirectory>
+    <StartArguments>"H:\Dev\Sample Site - Toronto_v1_4a.csyx" "H:\Dev\Toronto_ClimateFile_CWEC.csv" "Toronto_Output.csv"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <StartWorkingDirectory>U:\CASS\Engineering\Monitoring\Simulation\Far Shading\CASSYS Horizon Shading\</StartWorkingDirectory>

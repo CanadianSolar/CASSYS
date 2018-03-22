@@ -30,9 +30,11 @@ namespace CASSYS
         ACWiring[] SimACWiring;                                 // Array of Wires used in calculating AC wiring loss
         Transformer SimTransformer = new Transformer();         // Transformer instance used in calculations
 
+        SpectralEffects SimSpectral = new SpectralEffects();    // Used to calculate spectral correction relative to a given model
+
         // Shading Related variables
-        HorizonShading SimHorizon = new HorizonShading();       // used to calculate solar panel shading relative to a given horizon
-        Shading SimShading = new Shading();                     // used to calculate solar panel shading (row to row)
+        HorizonShading SimHorizon = new HorizonShading();       // Used to calculate solar panel shading relative to a given horizon
+        Shading SimShading = new Shading();                     // Used to calculate solar panel shading (row to row)
         double ShadGloLoss;                                     // Shading Losses in POA Global
         double ShadGloFactor;                                   // Shading factor on the POA Global
         double ShadBeamLoss;                                    // Shading Losses to Beam
@@ -86,15 +88,18 @@ namespace CASSYS
 
             // Calculating solar panel shading
             SimShading.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimHorizonShading.TDir, RadProc.SimHorizonShading.TDif, RadProc.SimHorizonShading.TRef, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth);
-            
+
+            // Calculating spectral model effects
+            SimSpectral.Calculate(SimMet.HGlo, RadProc.SimSun.NExtra, RadProc.SimSun.Zenith);
+
             try
             {
                 // Calculate PV Array Output for inputs read in this loop
                 for (int j = 0; j < ReadFarmSettings.SubArrayCount; j++)
                 {
                     // Adjust the IV Curve based on based on Temperature and Irradiance
-                    SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear);
-                    
+                    SimPVA[j].CalcIVCurveParameters(SimMet.TGlo, SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.TAmbient, SimMet.WindSpeed, SimMet.TModMeasured, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
+
                     // Check Inverter status to determine if the Inverter is ON or OFF
                     GetInverterStatus(j);
 
@@ -208,6 +213,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Ground_Reflected"] = ShadRefLoss;
             ReadFarmSettings.Outputlist["Global_POA_Irradiance_Corrected_for_Incidence"] = SimPVA[0].IAMTGlo;
             ReadFarmSettings.Outputlist["Radiation_Soiling_Loss"] = SimPVA[0].RadSoilingLoss;
+            ReadFarmSettings.Outputlist["Radiation_Spectral_Loss"] = SimPVA[0].RadSpectralLoss;
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"] = SimShading.ShadTGlo - SimPVA[0].IAMTGlo;
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Beam"] = SimShading.ShadTDir * (1 - SimPVA[0].IAMDir);
             ReadFarmSettings.Outputlist["Incidence_Loss_for_Diffuse"] = SimShading.ShadTDif * (1 - SimPVA[0].IAMDif);
@@ -412,6 +418,7 @@ namespace CASSYS
         {
             SimShading.Config();
             SimTransformer.Config();
+            SimSpectral.Config();
 
             // Array of PVArray, Inverter and Wiring objects based on the number of Sub-Arrays 
             SimPVA = new PVArray[ReadFarmSettings.SubArrayCount];
