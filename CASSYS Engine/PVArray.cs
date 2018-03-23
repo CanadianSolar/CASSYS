@@ -161,7 +161,7 @@ namespace CASSYS
             , double TDir                            // Tilted Beam Irradiance - Post Shading, if Shading model is defined [W/m^2]
             , double TDif                            // Tilted Diffuse Irradiance - Post Shading, if Shading model is defined [W/m^2]
             , double TRef                            // Tilted Ground Reflected Irradiance - Post Shading, if Shading model is defined [W/m^2]
-            , double BGlo                            // Tilted back side global irradiance [W/m^2]
+            , double BGlo                            // Tilted Back Side Global Irradiance [W/m^2]
             , double InciAng                         // Incidence Angle [radians]
             , double TAmbient                        // Ambient temperature [C]    
             , double WindSpeed                       // Wind speed [m/s]
@@ -174,17 +174,7 @@ namespace CASSYS
             lossLessTGlo = TGlo;
 
             // Calculation of effective irradiance reaching the cell (Soiling, IAM, and spectral effects accounted for)
-            CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber, ClearnessCorr);
-
-            // Calculation of bifacial gain
-            BifacialGain = biFactor * BGlo;
-
-            TGloEff = TGloEff + BifacialGain;
-
-            // Calculation of bifacial gain
-            BifacialGain = biFactor * BGlo;
-
-            TGloEff = TGloEff + BifacialGain;
+            CalcEffectiveIrradiance(TDir, TDif, TRef, BGlo, InciAng, MonthNumber, ClearnessCorr);
 
             // Calculation of temperature GetTemperature Method used (see below)
             CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
@@ -215,6 +205,7 @@ namespace CASSYS
               double TDir                            // Tilted Beam Irradiance [W/m^2]
             , double TDif                            // Tilted Diffuse Irradiance [W/m^2]
             , double TRef                            // Tilted Ground Reflected Irradiance [W/m^2]
+            , double BGlo                            // Tilted Back Side Global Irradiance [W/m^2]
             , double InciAng                         // Incidence Angle [radians]
             , int MonthNumber                        // Month of the Year [#]
             , double ClearCorr                       // Clearness correction [unitless]
@@ -246,8 +237,11 @@ namespace CASSYS
                 IAMRef = IAMDif;
             }
 
-            // Calculating the IAM Modified Tilted Irradiance [W/m^2]
+            // Calculate the IAM Modified Tilted Irradiance [W/m^2]
             IAMTGlo = TDir * IAMDir + TDif * IAMDif + TRef * IAMRef;
+
+            // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
+            // and only for the first array
 
             // Determine soiling loss based on month number specified from Time Stamp [%]
             itsSoilingLossPC = itsMonthlySoilingPC[MonthNumber];
@@ -255,25 +249,39 @@ namespace CASSYS
             // Modified TGlo based on irradiance based on soiling and Incidence Angle modifier
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
 
-            // Determine spectral correction based on clearness index
-            RadSpectralLoss = TGloEff * ClearCorr;
-
-            // Modified TGlo based on spectral losses
-            TGloEff = TGloEff * (1 - ClearCorr);
-
-            // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
-            // and only for the first array
-
             // Calculate soiling losses in irradiance
             RadSoilingLoss = IAMTGlo * itsSoilingLossPC;
 
-            // Assume front surface material is glass
-            double refractionIndex = 1.526;
-            // Reflectance at normal incidence (Duffie and Beckman, p.217)
-            double reflectionFactor = Math.Pow((refractionIndex - 1.0) / (refractionIndex + 1.0), 2.0);
+            // Calculate bifacial gain
+            BifacialGain = biFactor * BGlo;
+
+            // Modified TGloEff based on bifacial gain
+            TGloEff += BifacialGain;
+
+            // Reflectance of diffuse irradiance at average angle of 60 degrees, assuming front surface material is glass
+            double reflectionFactor = GetDiffuseReflectionFactor(Util.GlassRefractionIndex, Util.DiffInciAng);
 
             // Calculate the amount of diffuse irradiance reflected off the front
-            TDifRef = (TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC));
+            TDifRef = TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC);
+
+            // Determine spectral loss based on clearness correction value
+            RadSpectralLoss = TGloEff * ClearCorr;
+
+            // Modified TGloEff based on spectral losses
+            TGloEff = TGloEff * (1 - ClearCorr);
+        }
+
+        // Calculates the reflection factor for a given refraction index and angle of incidence (Duffie and Beckman, pp.216-218)
+        double GetDiffuseReflectionFactor
+            (
+              double refIndex
+            , double inciAngle
+            )
+        {
+            double refAngle = Math.Asin(Math.Sin(inciAngle) / refIndex);
+            double refFactor = ((Math.Pow(Math.Sin(refAngle - inciAngle),2) / Math.Pow(Math.Sin(refAngle + inciAngle),2)) +
+                                    (Math.Pow(Math.Tan(refAngle - inciAngle), 2) / Math.Pow(Math.Tan(refAngle + inciAngle), 2))) / 2.0;
+            return refFactor;
         }
 
         // Calculates the MPPT operating point of the module

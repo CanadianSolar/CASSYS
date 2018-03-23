@@ -38,6 +38,7 @@ namespace CASSYS
         static public double GOLDEN = 0.61803398875;          // Golden ratio, used in GetVmpp Method
         static public int NRLIMIT = 30;                       // Maximum number of iterations allowed for NR Methods
         static public double DiffInciAng = 1.04719755;        // 60 degrees expressed in radians [radians], assumed incidence angle for diffuse component of irradiance
+        static public double GlassRefractionIndex = 1.526;    // Average index of refraction of glass
 
         static public int NUM_GROUND_SEGS = 100;              // Number of segments into which to divide up the ground for ground irradiance calculation [#]
         static public int NUM_CELLS_PANEL = 6;                // Number of cells in a PV panel

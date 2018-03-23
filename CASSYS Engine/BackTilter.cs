@@ -40,14 +40,18 @@ namespace CASSYS
 
         // Back tilter local variables/arrays and intermediate calculation variables and arrays
         double structLossFactor;                    // Percentage loss attributed to shading from back obstructions [#]
-        double[] itsMonthlyAlbedo;                  // Array to store monthly albedo values
+        double[] itsMonthlyAlbedo;                  // Array to store monthly albedo values [#]
         double[] backGlo;                           // Tilted global irradiance for each cell row on back of array [W/m2]
         double[] backDir;                           // Tilted beam irradiance for each cell row on back of array [W/m2]
         double[] backDif;                           // Tilted diffuse irradiance for each cell row on back of array [W/m2]
         double[] backFroRef;                        // Tilted front-panel-reflected irradiance for each cell row on back of array [W/m2]
         double[] backGroRef;                        // Tilted ground-reflected irradiance for each cell row on back of array [W/m2]
+        public double IAM;                          // Incidence Angle Modifier to use generally for diffuse and reflected irradiances [#]
+        public double IAMDir;                       // Incidence Angle Modifier to use specificially for beam irradiance [#]
+        public double IrrInhomogeneity;             // The inhomogeneity of values that are present across the back of the array [W/m2]
 
         // Output variables
+        public double Albedo;                       // Monthly albedo value [#]
         public double BGlo;                         // Effective back tilted global irradiance [W/m2]
         public double BDir;                         // Back tilted beam irradiance [W/m2]
         public double BDif;                         // Back tilted diffuse irradiance [W/m2]
@@ -152,7 +156,10 @@ namespace CASSYS
             }
 
             // Get general Incidence Angle modifier for diffuse and reflected irradiances
-            double IAM = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
+            IAM = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
+
+            // Get albedo value for the month
+            Albedo = itsMonthlyAlbedo[month];
 
             // Accumulate diffuse, reflected, and beam irradiance components for each cell row over its field of view of PI radians
             for (int i = 0; i < numCellRows; i++)
@@ -236,7 +243,7 @@ namespace CASSYS
                             actualGroundGHI /= projX2 - projX1;
                         }
                     }
-                    backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * itsMonthlyAlbedo[month] * IAM;
+                    backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * Albedo * IAM;
                 }
 
                 // Cell is fully shaded if > 1, fully unshaded if < 0, otherwise fractionally shaded
@@ -245,31 +252,45 @@ namespace CASSYS
                 backShade = Math.Max(backShade, 0.0);
 
                 // Get Incidence Angle modifier (IAM) for beam irradiance
-                double IAMDir = Tilt.GetASHRAEIAM(itsBo, InciAng);
+                IAMDir = Tilt.GetASHRAEIAM(itsBo, InciAng);
 
                 // Add beam irradiance, corrected for back shading and AOI
                 backDir[i] = TDir * (1.0 - backShade) * IAMDir;
 
-                // Sum all components to get global back irradiance 
-                backGlo[i] = backDif[i] + backFroRef[i] + backGroRef[i] + backDir[i];
+                // Correct each component for structure shading losses
+                backDif[i] *= (1 - structLossFactor);
+                backFroRef[i] *= (1 - structLossFactor);
+                backGroRef[i] *= (1 - structLossFactor);
+                backDir[i] *= (1 - structLossFactor);
 
-                // Correct for structure shading losses
-                backGlo[i] = backGlo[i] * (1 - structLossFactor);
+                // Sum all components to get global back irradiance
+                backGlo[i] = backDif[i] + backFroRef[i] + backGroRef[i] + backDir[i];
             }
 
             BDif = 0;
             BFroRef = 0;
             BGroRef = 0;
             BDir = 0;
-            // Calculate mean irradiance components
+
+            double maxGlo = backGlo[0];
+            double minGlo = backGlo[0];
+
             for (int i = 0; i < numCellRows; i++)
             {
+                // Calculate mean irradiance components
                 BDif += backDif[i] / numCellRows;
                 BFroRef += backFroRef[i] / numCellRows;
                 BGroRef += backGroRef[i] / numCellRows;
                 BDir += backDir[i] / numCellRows;
+
+                // Find the max and min global irradiance values
+                maxGlo = Math.Max(maxGlo, backGlo[i]);
+                minGlo = Math.Min(minGlo, backGlo[i]);
             }
             BGlo = BDif + BFroRef + BGroRef + BDir;
+
+            // Calculate the homogeneity of values as the range normalized by the sum
+            IrrInhomogeneity = (BGlo > 0) ? 1 - ((maxGlo - minGlo) / BGlo) : 0;
 
             // Option to print details of the model in .csv files (takes about 3 seconds)
             //PrintModel(ts);

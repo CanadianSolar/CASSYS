@@ -99,8 +99,8 @@ namespace CASSYS
                 SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDir,
                     RadProc.SimSplitter.HDif, SimShading, RadProc.TimeStampAnalyzed);
 
-                // Get front reflected irradiance, since it contributes to the back
-                SimPVA[0].CalcEffectiveIrradiance(SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, RadProc.SimTilter.IncidenceAngle, SimMet.MonthOfYear);
+                // Get front reflected diffuse irradiance, since it contributes to the back
+                SimPVA[0].CalcEffectiveIrradiance(SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, SimBackTilter.BGlo, RadProc.SimTilter.IncidenceAngle, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
 
                 // Calculate back side global irradiance
                 SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimGround.midGroundGHI, SimGround.midBackSH, SimGround.midFrontSH,
@@ -250,7 +250,15 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
             ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"] = SimPVA[0].TGloEff;
-            ReadFarmSettings.Outputlist["Effective_Irradiance_in_Back"] = SimBackTilter.BGlo;
+            ReadFarmSettings.Outputlist["IAM_Factor_on_Beam_Back"] = SimBackTilter.IAMDir;
+            ReadFarmSettings.Outputlist["IAM_Factor_on_Diffuse_Back"] = SimBackTilter.IAM;
+            ReadFarmSettings.Outputlist["Interrow_Albedo"] = SimBackTilter.Albedo;
+            ReadFarmSettings.Outputlist["Effective_Back_Diffuse_Irradiance"] = SimBackTilter.BDif;
+            ReadFarmSettings.Outputlist["Effective_Back_Front_Reflected_Irradiance"] = SimBackTilter.BFroRef;
+            ReadFarmSettings.Outputlist["Effective_Back_Ground_Reflected_Irradiance"] = SimBackTilter.BGroRef;
+            ReadFarmSettings.Outputlist["Effective_Back_Beam_Irradiance"] = SimBackTilter.BDir;
+            ReadFarmSettings.Outputlist["Effective_Back_Global_Irradiance"] = SimBackTilter.BGlo;
+            ReadFarmSettings.Outputlist["Back_Global_Irradiance_Inhomogeneity"] = SimBackTilter.IrrInhomogeneity;
             ReadFarmSettings.Outputlist["Bifacial_Gain"] = SimPVA[0].BifacialGain;
             ReadFarmSettings.Outputlist["Array_Nominal_Power"] = farmPnom / 1000;
             ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
