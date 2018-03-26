@@ -21,31 +21,25 @@
  <h2 class="project-tagline">Canadian Solar Simulation Program for Grid-Connected PV Systems</h2>
 	
 <a href="https://github.com/CanadianSolar/CASSYS" class="btn">View on GitHub</a>
-      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.3.1</a>	
+      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.4.0</a>
 <h3>
 <a id="program-goals-and-description" class="anchor" href="#program-goals-and-description" aria-hidden="true"><span class="octicon octicon-link"></span></a>Program goals and description</h3>
 
 <hr>
 
 <p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
-<p><i>Current Version: 1.3.1</i></p>
+<p><i>Current Version: 1.4.0</i></p>
 
-<p><i>New in this version:</i></p>  
+<p><i>New Additions:</i></p>
 <ol>
-<li>Loss diagram sheet added as a simulation output</li>
-<li>Loss diagram class added to carry out reading and outputting losses to the interface</li>
-<li>EPW weather files are now compatible with CASSYS and can be used for simulations</li>
-<li>MetReader now has the necessary capabilities to read from epw files</li>
-<li>GridConnectedSystems class has been slightly restructured in order to add and slightly modify some calculations</li>
-<li>PVArray now has additional calculations for previously uncalculated losses</li>
-<li>Exporting the CASSYS summary as a PDF is now an option using the Export as PDF button on the summary sheet</li>
+<li>Spectral Effects class to calculate spectral correction value, which is applied to the effective irradiance reaching the PV cell</li>
+<li>Spectral sheet in interface to allow user to define a spectral correction curve, based on clearness index</li>
+<li>Loss Diagram and Output sheets to include spectral gains/losses</li>
 </ol>
 <p><i>Bug Fixes:</i></p>
 <ol>
-<li>Inverter Database: Fixed issue with OND files not uploading if missing non-pertinent information for calculations</li>
-<li>Fixed small issues with loss diagram</li>
-<li>Fixed bugs in EPW and TMY3 readers</li>
-<li>Fixed bug with DOMDocument reader</li>
+<li>Issue where monthly albedo values were not saved correctly to .csyx</li>
+<li>Issue with PDF report generation</li>
 </ol>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
@@ -79,7 +73,7 @@
 <hr>
 
 <p><a href="https://github.com/CanadianSolar/CASSYS/tree/master/Documents%20and%20Help" title="Documents and Help">Documents and Help</a>
-contains a user's manual and various documents to better understand the models used in the simulation engine.</p>
+contains a user's manual and various documents to better understand the models used in the simulation engine. See <a href="https://github.com/CanadianSolar/CASSYS/wiki/Release-Notes" title="Release Notes">Release Notes</a> for a list of changes made to newest versions of CASSYS.</p>
 
 <h3>
 <a id="licensing" class="anchor" href="#licensing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Licensing</h3>
