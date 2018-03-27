@@ -46,8 +46,9 @@ namespace CASSYS
         double[] backDif;                           // Tilted diffuse irradiance for each cell row on back of array [W/m2]
         double[] backFroRef;                        // Tilted front-panel-reflected irradiance for each cell row on back of array [W/m2]
         double[] backGroRef;                        // Tilted ground-reflected irradiance for each cell row on back of array [W/m2]
-        public double IAM;                          // Incidence Angle Modifier to use generally for diffuse and reflected irradiances [#]
-        public double IAMDir;                       // Incidence Angle Modifier to use specificially for beam irradiance [#]
+        public double IAMDir;                       // Incidence Angle Modifier for beam irradiance [#]
+        public double IAMDif;                       // Incidence Angle Modifier for diffuse irradiance [#]
+        public double IAMRef;                       // Incidence Angle Modifier for reflected irradiances [#]
         public double IrrInhomogeneity;             // The inhomogeneity of values that are present across the back of the array [W/m2]
 
         // Output variables
@@ -67,7 +68,7 @@ namespace CASSYS
         // Config manages calculations and initializations that need only to be run once
         public void Config()
         {
-            Boolean useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
+            bool useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
 
             if (useBifacial)
             {
@@ -124,10 +125,8 @@ namespace CASSYS
             , double HDif                           // Diffuse horizontal irradiance [W/m2]
             , double TDifRef                        // Front reflected diffuse irradiance [W/m2]
             , double[] groundGHI                    // Sum of irradiance components for each of the interior ground segments [W/m2]
-            , double backSH                         // Fraction of the back surface of the PV array that is shaded [#]
-            , double frontSH                        // Fraction of the front surface of the PV array that is shaded [#]
+            , double backSH                         // Fraction of the back surface of the PV array that is unshaded [#]
             , int month                             // Current month, used for getting albedo value [#]
-            , double InciAng                        // Incidence angle for the beam to back of panel [radians]
             , double TDir                           // Back tilted beam irradiance [W/m2]
             , DateTime ts                           // Time stamp analyzed, used for printing .csv files
             )
@@ -155,9 +154,6 @@ namespace CASSYS
                 aveGroundGHI += groundGHI[k] / numGroundSegs;
             }
 
-            // Get general Incidence Angle modifier for diffuse and reflected irradiances
-            IAM = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
-
             // Get albedo value for the month
             Albedo = itsMonthlyAlbedo[month];
 
@@ -173,10 +169,10 @@ namespace CASSYS
                 int startGround = Convert.ToInt32((itsPanelTilt + elevDown) * Util.RTOD);       // First whole degree in arc range that sees ground; last is 180 [degrees]
 
                 // Add sky diffuse component, corrected for AOI
-                backDif[i] = RadiationProc.GetViewFactor(0, stopSky * Util.DTOR) * HDif * IAM;
+                backDif[i] = RadiationProc.GetViewFactor(0, stopSky * Util.DTOR) * HDif * IAMDif;
 
-                // Add front surface reflected component, corrected for front shading and AOI
-                backFroRef[i] = RadiationProc.GetViewFactor(stopSky * Util.DTOR, startGround * Util.DTOR) * TDifRef * (1.0 - frontSH) * IAM;
+                // Add front surface reflected component, corrected for AOI
+                backFroRef[i] = RadiationProc.GetViewFactor(stopSky * Util.DTOR, startGround * Util.DTOR) * TDifRef * IAMRef;
 
                 backGroRef[i] = 0;
                 // Add ground reflected component, corrected for albedo and AOI
@@ -243,25 +239,22 @@ namespace CASSYS
                             actualGroundGHI /= projX2 - projX1;
                         }
                     }
-                    backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * Albedo * IAM;
+                    backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * Albedo * IAMRef;
                 }
 
                 // Cell is fully shaded if > 1, fully unshaded if < 0, otherwise fractionally shaded
-                double backShade = backSH * numCellRows - i;
+                double backShade = (1.0 - backSH) * numCellRows - i;
                 backShade = Math.Min(backShade, 1.0);
                 backShade = Math.Max(backShade, 0.0);
-
-                // Get Incidence Angle modifier (IAM) for beam irradiance
-                IAMDir = Tilt.GetASHRAEIAM(itsBo, InciAng);
 
                 // Add beam irradiance, corrected for back shading and AOI
                 backDir[i] = TDir * (1.0 - backShade) * IAMDir;
 
                 // Correct each component for structure shading losses
-                backDif[i] *= (1 - structLossFactor);
-                backFroRef[i] *= (1 - structLossFactor);
-                backGroRef[i] *= (1 - structLossFactor);
-                backDir[i] *= (1 - structLossFactor);
+                backDif[i] *= (1.0 - structLossFactor);
+                backFroRef[i] *= (1.0 - structLossFactor);
+                backGroRef[i] *= (1.0 - structLossFactor);
+                backDir[i] *= (1.0 - structLossFactor);
 
                 // Sum all components to get global back irradiance
                 backGlo[i] = backDif[i] + backFroRef[i] + backGroRef[i] + backDir[i];
@@ -293,7 +286,7 @@ namespace CASSYS
             IrrInhomogeneity = (BGlo > 0) ? 1 - ((maxGlo - minGlo) / BGlo) : 0;
 
             // Option to print details of the model in .csv files (takes about 3 seconds)
-            //PrintModel(ts);
+            PrintModel(ts);
         }
 
         // Config the albedo value based on monthly/yearly values defined on file

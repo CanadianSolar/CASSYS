@@ -19,6 +19,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.IO;
 
 namespace CASSYS
 {
@@ -102,9 +103,14 @@ namespace CASSYS
                 // Get front reflected diffuse irradiance, since it contributes to the back
                 SimPVA[0].CalcEffectiveIrradiance(SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, SimBackTilter.BGlo, RadProc.SimTilter.IncidenceAngle, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
 
+                // Get incidence angle modifiers for components of irradiance
+                SimPVA[0].CalcIAM(out SimBackTilter.IAMDir, out SimBackTilter.IAMDif, out SimBackTilter.IAMRef, RadProc.SimTilterOpposite.IncidenceAngle);
+
                 // Calculate back side global irradiance
-                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimGround.midGroundGHI, SimGround.midBackSH, SimGround.midFrontSH,
-                    SimMet.MonthOfYear, RadProc.SimTilterOpposite.IncidenceAngle, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
+                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimGround.midGroundGHI, SimShading.BackBeamSF,
+                    SimMet.MonthOfYear, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
+
+                //File.AppendAllText("modShad.csv", Environment.NewLine + RadProc.TimeStampAnalyzed + "," + SimShading.BackBeamSF + "," + SimShading.BeamSF);
             }
             else
             {
@@ -251,7 +257,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
             ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"] = SimPVA[0].TGloEff;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Beam_Back"] = SimBackTilter.IAMDir;
-            ReadFarmSettings.Outputlist["IAM_Factor_on_Diffuse_Back"] = SimBackTilter.IAM;
+            ReadFarmSettings.Outputlist["IAM_Factor_on_Diffuse_Back"] = SimBackTilter.IAMDif;
             ReadFarmSettings.Outputlist["Interrow_Albedo"] = SimBackTilter.Albedo;
             ReadFarmSettings.Outputlist["Effective_Back_Diffuse_Irradiance"] = SimBackTilter.BDif;
             ReadFarmSettings.Outputlist["Effective_Back_Front_Reflected_Irradiance"] = SimBackTilter.BFroRef;

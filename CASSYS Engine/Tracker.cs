@@ -83,8 +83,8 @@ namespace CASSYS
         double itsMinAzimuth;				// Min. angle of horizontal proj. of normal to module surface and true South [radians]
         double itsMaxAzimuth;				// Max. angle of horizontal proj. of normal to module surface and true South [radians]
         double itsAzimuthRef;               // Describes whether the tracker is in the northern or southern hemisphere
-        public Boolean useBackTracking;	    // Boolean used to determine if backtracking is enabled
-        public Boolean useBifacial;         // Boolean used to determine if panels are bifacial
+        public bool useBackTracking;	    // Boolean used to determine if backtracking is enabled
+        public bool useBifacial;            // Boolean used to determine if panels are bifacial
         public double itsTrackerPitch;		// Distance between two rows of trackers [m]
         public double itsTrackerBW;			// Width of single tracker array [m]
         public double itsTrackerClearance;  // Array ground clearance; for trackers with dynamic tilt, measured at tilt = 0 degrees [m]

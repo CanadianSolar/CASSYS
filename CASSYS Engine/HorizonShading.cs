@@ -43,7 +43,7 @@ namespace CASSYS
         double RefDiffFactor;                                    // View factor for the ground 
 
         // Settings used in the class
-        Boolean horizonDefined;                                  // Used to determine whether or not the user defined a horizon
+        bool horizonDefined;                                  // Used to determine whether or not the user defined a horizon
 
         // Output variables
         public double DiffFactor;                                // Diffuse global factor caused by the far-shading of the sky [#]

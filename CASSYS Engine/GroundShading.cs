@@ -52,10 +52,6 @@ namespace CASSYS
         double[] lastSkyViewFactors;                // Fraction of isotropic diffuse sky radiation present on ground segments to the back of the last row [#]
 
         // Output variables
-        public double midFrontSH;                   // Fraction of the front surface of the PV panel that is shaded [#]
-        public double midBackSH;                    // Fraction of the back surface of the PV panel that is shaded [#]
-        public double firstFrontSH;                 // Fraction of the front surface of the first PV panel that is shaded [#]
-        public double lastBackSH;                   // Fraction of the back surface of the last PV panel that is shaded [#]
         public double[] midGroundGHI;               // Sum of irradiance components for each of the ground segments in the middle PV rows [W/m2]
         public double[] firstGroundGHI;             // Sum of irradiance components for each of the ground segments to front of the first PV row [W/m2]
         public double[] lastGroundGHI;              // Sum of irradiance components for each of the ground segments to back of the last PV row [W/m2]
@@ -69,7 +65,7 @@ namespace CASSYS
         // Config manages calculations and initializations that need only to be run once
         public void Config()
         {
-            Boolean useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
+            bool useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
 
             if (useBifacial)
             {
@@ -195,7 +191,7 @@ namespace CASSYS
             }
 
             // Option to print details of the model in .csv files (takes about 12 seconds)
-            //PrintModel(ts, SunZenith, SunAzimuth, PanelAzimuth);
+            PrintModel(ts, SunZenith, SunAzimuth, PanelAzimuth);
         }
 
         // Divides the ground between two PV rows into n segments and determines the fraction of isotropic diffuse sky radiation present on each segment
@@ -316,10 +312,6 @@ namespace CASSYS
                     firstGroundSH[i] = 1;
                     lastGroundSH[i] = 1;
                 }
-                midFrontSH = 1.0;
-                midBackSH = 1.0;
-                firstFrontSH = 1.0;
-                lastBackSH = 1.0;
             }
             else
             {
@@ -348,16 +340,12 @@ namespace CASSYS
                 // Front side of PV module partially shaded, back completely shaded, ground completely shaded
                 if (Lh > itsPitch - b)
                 {
-                    midFrontSH = itsShading.GetFrontShadedFraction(SunZenith, SunAzimuth, itsPanelTilt);
-                    midBackSH = 1.0;
                     s1Start = 0.0;
                     s1End = itsPitch;
                 }
                 // Front side of PV module completely shaded, back partially shaded, ground completely shaded
                 else if (Lh < -(itsPitch + b))
                 {
-                    midFrontSH = 1.0;
-                    midBackSH = itsShading.GetBackShadedFraction(SunZenith, SunAzimuth, itsPanelTilt);
                     s1Start = 0.0;
                     s1End = itsPitch;
                 }
@@ -367,8 +355,6 @@ namespace CASSYS
                     // Shadow to back of row - module front unshaded, back shaded
                     if (Lhc >= 0.0)
                     {
-                        midFrontSH = 0.0;
-                        midBackSH = 1.0;
                         SStart = Lc;
                         SEnd = Lhc + b;
                         // Put shadow in correct row-to-row space if needed
@@ -397,16 +383,12 @@ namespace CASSYS
                         // Sun hits front of module. Shadow cast by bottom of module extends further forward than shadow cast by top
                         if (Lc < Lhc + b)
                         {
-                            midFrontSH = 0.0;
-                            midBackSH = 1.0;
                             SStart = Lc;
                             SEnd = Lhc + b;
                         }
                         // Sun hits back of module. Shadow cast by top of module extends further forward than shadow cast by bottom
                         else
                         {
-                            midFrontSH = 1.0;
-                            midBackSH = 0.0;
                             SStart = Lhc + b;
                             SEnd = Lc;
                         }
@@ -453,14 +435,12 @@ namespace CASSYS
                 // Front side of PV module completely sunny, ground partially shaded
                 if (Lh > 0.0)
                 {
-                    firstFrontSH = 0.0;
                     s1Start = Lc;
                     s1End = Lhc + b;
                 }
                 // Front side of PV module completely shaded, ground completely shaded
                 else if (Lh < -(itsPitch + b))
                 {
-                    firstFrontSH = 1.0;
                     s1Start = -itsPitch;
                     s1End = itsPitch;
                 }
@@ -470,14 +450,12 @@ namespace CASSYS
                     // Sun hits front of module. Shadow cast by bottom of module extends further forward than shadow cast by top
                     if (Lc < Lhc + b)
                     {
-                        firstFrontSH = 0.0;
                         s1Start = Lc;
                         s1End = Lhc + b;
                     }
                     // Sun hits back of module. Shadow cast by top of module extends further forward than shadow cast by bottom
                     else
                     {
-                        firstFrontSH = 1.0;
                         s1Start = Lhc + b;
                         s1End = Lc;
                     }
@@ -505,7 +483,6 @@ namespace CASSYS
                 // Back side of PV module completely shaded, ground completely shaded
                 if (Lh > itsPitch - b)
                 {
-                    lastBackSH = 1.0;
                     s1Start = 0.0;
                     s1End = itsPitch;
                 }
@@ -515,14 +492,12 @@ namespace CASSYS
                     // Sun hits front of module. Shadow cast by bottom of module extends further forward than shadow cast by top
                     if (Lc < Lhc + b)
                     {
-                        lastBackSH = 1.0;
                         SStart = Lc;
                         SEnd = Lhc + b;
                     }
                     // Sun hits back of module. Shadow cast by top of module extends further forward than shadow cast by bottom
                     else
                     {
-                        lastBackSH = 0.0;
                         SStart = Lhc + b;
                         SEnd = Lc;
                     }
@@ -562,10 +537,6 @@ namespace CASSYS
             string shMid = Environment.NewLine + ts;
             string shLast = Environment.NewLine + ts;
 
-            string modShad = Environment.NewLine + ts + "," + (SunZenith * Util.RTOD) + "," + (SunAzimuth * Util.RTOD);
-            modShad += "," + (itsShading.FrontSLA * Util.RTOD) + "," + (FrontPA * Util.RTOD) + "," + (itsShading.BackSLA * Util.RTOD) + "," + (BackPA * Util.RTOD);
-            modShad += "," + midFrontSH + "," + midBackSH + "," + firstFrontSH + "," + lastBackSH;
-
             string skyViewAll = Environment.NewLine + ts;
             string skyViewOne = "";
 
@@ -591,22 +562,18 @@ namespace CASSYS
             //File.AppendAllText("shMid.csv", shMid);
             //File.AppendAllText("shLast.csv", shLast);
 
-            //// Module shading geometry values
-            //// SunZenith, SunAzimuth, FrontSLA, FrontPA, BackSLA, BackPA, midFrontSH, midBackSH, firstFrontSH, lastBackSH
-            //File.AppendAllText("modShad.csv", modShad);
-
             //// Profile of static sky view factors received by ground
             //File.AppendAllText("skyViewAll.csv", skyViewAll);
             //File.WriteAllText("skyViewOne.csv", skyViewOne);
 
             //// Profile of irradiance received by ground
             //File.AppendAllText("irrFirst.csv", irrFirst);
-            File.AppendAllText("irrMid.csv", irrMid);
+            //File.AppendAllText("irrMid.csv", irrMid);
             //File.AppendAllText("irrLast.csv", irrLast);
 
             // Print details about the simulation geometry
-            string setup = Environment.NewLine + ts + "," + (PanelAzimuth * Util.RTOD) + "," + (itsPanelTilt * Util.RTOD) + "," + (itsPitch * itsArrayBW) + "," + (itsClearance * itsArrayBW) + "," + itsArrayBW;
-            File.AppendAllText("setup.csv", setup);
+            //string setup = Environment.NewLine + ts + "," + (PanelAzimuth * Util.RTOD) + "," + (itsPanelTilt * Util.RTOD) + "," + (itsPitch * itsArrayBW) + "," + (itsClearance * itsArrayBW) + "," + itsArrayBW;
+            //File.AppendAllText("setup.csv", setup);
         }
     }
 }

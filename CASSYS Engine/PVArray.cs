@@ -199,19 +199,15 @@ namespace CASSYS
             mVoc = Voc / itsNSeries;
         }
 
-        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred, plus Spectral Model corrections
-        public void CalcEffectiveIrradiance
+        // Computes the Incidence Angle Modifier for Beam, Diffuse and Albedo Component
+        public void CalcIAM
             (
-              double TDir                            // Tilted Beam Irradiance [W/m^2]
-            , double TDif                            // Tilted Diffuse Irradiance [W/m^2]
-            , double TRef                            // Tilted Ground Reflected Irradiance [W/m^2]
-            , double BGlo                            // Tilted Back Side Global Irradiance [W/m^2]
+              out double IAMDir                      // Incidence Angle Modifier for beam irradiance [#]
+            , out double IAMDif                      // Incidence Angle Modifier for diffuse irradiance [#]
+            , out double IAMRef                      // Incidence Angle Modifier for reflected irradiance [#]
             , double InciAng                         // Incidence Angle [radians]
-            , int MonthNumber                        // Month of the Year [#]
-            , double ClearCorr                       // Clearness correction [unitless]
             )
         {
-            // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component
             if (panModelExists)
             {
                 InciAng = Math.Max(0, InciAng);
@@ -236,6 +232,22 @@ namespace CASSYS
                 IAMDif = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
                 IAMRef = IAMDif;
             }
+        }
+
+        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred, plus Spectral Model corrections
+        public void CalcEffectiveIrradiance
+            (
+              double TDir                            // Tilted Beam Irradiance [W/m^2]
+            , double TDif                            // Tilted Diffuse Irradiance [W/m^2]
+            , double TRef                            // Tilted Ground Reflected Irradiance [W/m^2]
+            , double BGlo                            // Tilted Back Side Global Irradiance [W/m^2]
+            , double InciAng                         // Incidence Angle [radians]
+            , int MonthNumber                        // Month of the Year [#]
+            , double ClearCorr                       // Clearness correction [unitless]
+            )
+        {
+            // Calculate the incidence angle modifier (IAM)
+            CalcIAM(out IAMDir, out IAMDif, out IAMRef, InciAng);
 
             // Calculate the IAM Modified Tilted Irradiance [W/m^2]
             IAMTGlo = TDir * IAMDir + TDif * IAMDif + TRef * IAMRef;

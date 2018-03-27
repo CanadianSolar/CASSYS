@@ -44,7 +44,7 @@ namespace CASSYS
         ShadModel itsShadModel;                     // The shading model used based on the type of installation
         bool useCellBasedShading;                   // Boolean used to determine if cell bases shading should be used [false, not used]
         int itsNumModTransverseStrings;             // The number of modules in a string (as they appear in the transverse direction)
-        double[] cellSetup;                         // The number of cells in the transvers direction of the entire table
+        double[] cellSetup;                         // The number of cells in the transverse direction of the entire table
         double[] shadingPC;                         // The different shading percentages that occur
         double CellSize;                            // The size of a cell in the module [user defined]
 
@@ -53,6 +53,7 @@ namespace CASSYS
         public double BackSLA;                      // The shading limit angle for back side of module [radians]
         public double DiffuseSF;                    // Diffuse shading fraction [%]
         public double BeamSF;                       // Beam shading fraction  [%]
+        public double BackBeamSF;                   // Beam shading fraction on the back side [%]
         public double ReflectedSF;                  // Shading fraction applied to the Ground reflected component [%]
         public double FrontProfileAng;              // Profile angle from front side of module [radians] (see Ref 1.)
         public double BackProfileAng;               // Profile angle from back side of module [radians] (see Ref 1.)
@@ -83,31 +84,32 @@ namespace CASSYS
             itsCollTilt = CollectorTilt;
             itsCollAzimuth = CollectorAzimuth;
 
+            GetShadingLimitAngles(CollectorTilt);
+
+            // Calculates the shading fraction applied to each component of irradiance on the front side
             switch (itsShadModel)
             {
                 case ShadModel.UR:
-                    GetBeamShadingFraction(SunZenith, SunAzimuth, CollectorTilt);
-                    GetDiffuseShadingFraction();
-                    GetGroundReflectedShadingFraction();
+                    BeamSF = 1 - GetFrontShadedFraction(SunZenith, SunAzimuth, CollectorTilt) * itsRowBlockFactor;
+                    DiffuseSF = itsRowBlockFactor * (1 + Math.Cos(FrontSLA)) / 2;
+                    ReflectedSF = 1 - itsRowBlockFactor;        // All sheds but one (the first) experience shading for the ground reflected component
                     break;
 
                 case ShadModel.TE:
-                    GetBeamShadingFraction(SunZenith, SunAzimuth, CollectorTilt);
-                    GetDiffuseShadingFraction();
-                    GetGroundReflectedShadingFraction();
+                    BeamSF = 1 - GetFrontShadedFraction(SunZenith, SunAzimuth, CollectorTilt) * itsRowBlockFactor;
+                    DiffuseSF = itsRowBlockFactor * (1 + Math.Cos(FrontSLA)) / 2;
+                    ReflectedSF = 1 - itsRowBlockFactor;        // All sheds but one (the first) experience shading for the ground reflected component
                     break;
 
                 case ShadModel.TS:
-                    GetBeamShadingFraction(SunZenith, SunAzimuth, CollectorTilt);
-                    GetDiffuseShadingFraction();
-                    GetGroundReflectedShadingFraction();
-                    break;
-
-                case ShadModel.FT:
-                    // Calculating the shading fractions that apply to the beam irradiance (Diffuse and ground reflected component remain constant - calculated in Config)
-                    BeamSF = 1;
+                    BeamSF = 1 - GetFrontShadedFraction(SunZenith, SunAzimuth, CollectorTilt) * itsRowBlockFactor;
+                    DiffuseSF = itsRowBlockFactor * (1 + Math.Cos(FrontSLA)) / 2;
+                    ReflectedSF = 1 - itsRowBlockFactor;        // All sheds but one (the first) experience shading for the ground reflected component
                     break;
             }
+
+            // Calculates the shading fraction applied to the beam irradiance component on the back side
+            BackBeamSF = 1 - GetBackShadedFraction(SunZenith, SunAzimuth, CollectorTilt);
 
             // Shading each component of the Tilted irradiance
             ShadTDir = TDir * BeamSF;
@@ -116,14 +118,6 @@ namespace CASSYS
 
             // Combining for an effective Irradiance after shading value is applied
             ShadTGlo = ShadTDif + ShadTDir + ShadTRef;
-        }
-
-        // Returns the shading fraction that must be applied to the diffuse component of POA irradiance
-        public void GetDiffuseShadingFraction
-            (
-            )
-        {
-            DiffuseSF = itsRowBlockFactor*(1 + Math.Cos(FrontSLA)) / 2;
         }
 
         // Returns the shading limit angle which is needed to calculate beam and diffuse shading fractions
@@ -150,36 +144,7 @@ namespace CASSYS
             {
                 FrontSLA = Math.Atan2(itsCollBW * Math.Sin(CollectorTilt), itsPitch - itsCollBW * Math.Cos(CollectorTilt));
                 BackSLA = Math.Atan2(itsCollBW * Math.Sin(CollectorTilt), itsPitch + itsCollBW * Math.Cos(CollectorTilt));
-
-                // EC: remove once known to be unnecessary
-                if (FrontSLA < 0 || BackSLA < 0)
-                {
-                    Console.WriteLine("Front SLA: " + (FrontSLA * Util.RTOD) + ", BackSLA: " + (BackSLA * Util.RTOD));
-                    ErrorLogger.Log("Negative shading limit angle(s) encountered.", ErrLevel.FATAL);
-                }
             }
-        }
-
-        // Returns the shading fraction that must be applied to the albedo or ground-reflected component of POA irradiance
-        public void GetGroundReflectedShadingFraction
-            (
-            )
-        {
-            // The ground reflected component is assumed to be seen only by the first shed; the following value will return the shading factor for all sheds, except 1
-            ReflectedSF = 1 - itsRowBlockFactor;
-        }
-
-
-        // Returns the shading fraction that must be applied to the beam component of the POA irradiance
-        public void GetBeamShadingFraction
-            (
-              double SunZenith              // Zenith angle of sun [radians] 
-            , double SunAzimuth             // Azimuth angle of sun [radians]
-            , double CollectorTilt          // Tilt of the module [radians]
-            )
-        {
-            // Returns the shading factor for Beam using the GetShadedRow method
-            BeamSF = 1 - GetFrontShadedFraction(SunZenith, SunAzimuth, CollectorTilt)*itsRowBlockFactor;
         }
 
         // Computes the fraction of collectors arranged in rows that will be shaded on the front side at a particular sun position.
@@ -191,8 +156,6 @@ namespace CASSYS
             , double CollectorTilt          // Tilt of the module [radians]
             )
         {
-            GetShadingLimitAngles(CollectorTilt);
-
             if (SunZenith > Math.PI / 2)
             {
                 FrontProfileAng = 0;
@@ -255,8 +218,6 @@ namespace CASSYS
             , double CollectorTilt          // Tilt of the module [radians]
             )
         {
-            GetShadingLimitAngles(CollectorTilt);
-
             if (SunZenith > Math.PI / 2)
             {
                 BackProfileAng = 0;
@@ -453,10 +414,11 @@ namespace CASSYS
                     // Defining the parameters for the shading for a fixed tilt configuration 
                     FrontSLA = 0;
                     BackSLA = 0;
-                    
+
                     // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant and 1.
                     DiffuseSF = 1;
                     ReflectedSF = 1;
+                    BeamSF = 1;
                     break;
             
                 case ShadModel.None:
