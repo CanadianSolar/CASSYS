@@ -23,6 +23,9 @@ using System.IO;
 
 namespace CASSYS
 {
+    // This enumeration is used to define the type of row to calculate
+    public enum RowType { INTERIOR = 0, FIRST = 1, LAST = 2, SINGLE = 3 };
+
     class GridConnectedSystem
     {
         // Creating Array of PV Array and Inverter Objects
@@ -31,9 +34,8 @@ namespace CASSYS
         ACWiring[] SimACWiring;                                 // Array of Wires used in calculating AC wiring loss
         Transformer SimTransformer = new Transformer();         // Transformer instance used in calculations
 
-        SpectralEffects SimSpectral = new SpectralEffects();    // Used to calculate spectral correction relative to a given model
-
         BackTilter SimBackTilter = new BackTilter();            // Used to calculate back side irradiance
+        SpectralEffects SimSpectral = new SpectralEffects();    // Used to calculate spectral correction relative to a given model
 
         // Shading Related variables
         GroundShading SimGround = new GroundShading();          // Used to calculate ground shading
@@ -98,7 +100,7 @@ namespace CASSYS
             {
                 // Calculating shading of ground beneath solar panels
                 SimGround.Calculate(RadProc.SimSun.Zenith, RadProc.SimSun.Azimuth, RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfAzimuth, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDir,
-                    RadProc.SimSplitter.HDif, SimShading, RadProc.TimeStampAnalyzed);
+                    RadProc.SimSplitter.HDif, RadProc.TimeStampAnalyzed);
 
                 // Get front reflected diffuse irradiance, since it contributes to the back
                 SimPVA[0].CalcEffectiveIrradiance(SimShading.ShadTDir, SimShading.ShadTDif, SimShading.ShadTRef, SimBackTilter.BGlo, RadProc.SimTilter.IncidenceAngle, SimMet.MonthOfYear, SimSpectral.clearnessCorrection);
@@ -107,8 +109,8 @@ namespace CASSYS
                 SimPVA[0].CalcIAM(out SimBackTilter.IAMDir, out SimBackTilter.IAMDif, out SimBackTilter.IAMRef, RadProc.SimTilterOpposite.IncidenceAngle);
 
                 // Calculate back side global irradiance
-                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimGround.midGroundGHI, SimShading.BackBeamSF,
-                    SimMet.MonthOfYear, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
+                SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimMet.HGlo, SimGround.frontGroundGHI, SimGround.rearGroundGHI, SimGround.aveGroundGHI,
+                    SimMet.MonthOfYear, SimShading.BackBeamSF, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
 
                 //File.AppendAllText("modShad.csv", Environment.NewLine + RadProc.TimeStampAnalyzed + "," + SimShading.BackBeamSF + "," + SimShading.BeamSF);
             }
@@ -256,9 +258,10 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["IAM_Factor_on__Diffuse"] = SimPVA[0].IAMDif;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Ground_Reflected"] = SimPVA[0].IAMRef;
             ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"] = SimPVA[0].TGloEff;
+            ReadFarmSettings.Outputlist["Interrow_Albedo"] = SimBackTilter.Albedo;
+            ReadFarmSettings.Outputlist["Average_Ground_GHI"] = SimGround.aveGroundGHI;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Beam_Back"] = SimBackTilter.IAMDir;
             ReadFarmSettings.Outputlist["IAM_Factor_on_Diffuse_Back"] = SimBackTilter.IAMDif;
-            ReadFarmSettings.Outputlist["Interrow_Albedo"] = SimBackTilter.Albedo;
             ReadFarmSettings.Outputlist["Effective_Back_Diffuse_Irradiance"] = SimBackTilter.BDif;
             ReadFarmSettings.Outputlist["Effective_Back_Front_Reflected_Irradiance"] = SimBackTilter.BFroRef;
             ReadFarmSettings.Outputlist["Effective_Back_Ground_Reflected_Irradiance"] = SimBackTilter.BGroRef;

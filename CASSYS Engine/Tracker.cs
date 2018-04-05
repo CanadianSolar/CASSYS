@@ -73,7 +73,6 @@ namespace CASSYS
         public TrackMode itsTrackMode;
         public double itsTrackerSlope;
         public double itsTrackerAzimuth;
-        
 
         // Operational Limits (as they apply to the surface, typically)
         double itsMinTilt;					// Min. slope of tracker surface with respect to horizontal [radians]
@@ -116,7 +115,13 @@ namespace CASSYS
 
 
         // Calculate the tracker slope, azimuth and incidence angle using
-        public void Calculate(double SunZenith, double SunAzimuth, int Year, int DayOfYear)
+        public void Calculate
+            (
+              double SunZenith
+            , double SunAzimuth
+            , int Year
+            , int DayOfYear
+            )
         {
             switch (itsTrackMode)
             {

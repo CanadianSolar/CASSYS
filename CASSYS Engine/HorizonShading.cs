@@ -88,7 +88,7 @@ namespace CASSYS
                 // If user inputs horizon azimuth/elevation data of two different lengths
                 if (HorizonAzim.Length != HorizonElev.Length)
                 {
-                    ErrorLogger.Log("The number of horizon azimuth values was not equal to the number of horizon elevation values.", ErrLevel.FATAL);
+                    ErrorLogger.Log("The number of horizon azimuth values is not equal to the number of horizon elevation values.", ErrLevel.FATAL);
                 }
 
                 // Extends the Horizon Profile by duplicating the first and last values and transposing them 360 degrees forward and backwards, respectively

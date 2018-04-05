@@ -66,7 +66,7 @@ namespace CASSYS
                 // If user inputs spectral index/correction data of two different lengths
                 if (ClearnessIndexArr.Length != ClearnessCorrectionArr.Length)
                 {
-                    ErrorLogger.Log("The number of clearness correction values was not equal to the number of clearness index values.", ErrLevel.FATAL);
+                    ErrorLogger.Log("The number of clearness correction values is not equal to the number of clearness index values.", ErrLevel.FATAL);
                 }
             }
             else

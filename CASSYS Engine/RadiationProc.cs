@@ -344,6 +344,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Horizontal_beam_irradiance"] = SimSplitter.HDir;
             ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Plane"] = SimTilter.TGlo;
             ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimTilter.TDir;
+            ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Back"] = SimTilterOpposite.TDir;
             ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimTilter.TDif;
             ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimTilter.TRef;
             ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;

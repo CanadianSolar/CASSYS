@@ -105,6 +105,11 @@ namespace CASSYS
         public double IAMDir;                 // IAM Factor applied to Beam [#]
         public double IAMDif;                 // IAM Factor applied to Diffuse [#]
         public double IAMRef;                 // IAM factor applied to ground reflected component of tilted irradiance [#]
+        public double RadSoilingLoss;         // Losses due to soiling of the PV array [W/m^2]
+        public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
+        public double BifacialGain;           // Back side effective irradiance, weighted by the bifaciality factor [W/m^2]
+        public double TGloEff;                // Irradiance adjusted for incidence angle, soiling, bifacial, and spectral effects [W/m^2]
+        public double TDifRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double VOut;                   // PV array voltage at maximum power [V] 
         public double IOut;                   // PV array current at maximum power [A] 
         public double POut;                   // PV array power produced [W]  
@@ -112,15 +117,10 @@ namespace CASSYS
         public double Voc;                    // PV array Voc [V]
         public double TModule;                // Temperature of module [C]
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
-        public double RadSoilingLoss;         // Losses due to soiling of PV array [W/m^2]
-        public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
         public double Efficiency;             // PV array efficiency [%]
-        public double BifacialGain;           // Back side effective irradiance, weighted by the bifaciality factor [W/m^2]
-        public double TGloEff;                // Irradiance (front and back, for bifacial) adjusted for incidence angle, soiling, and spectral effects [W/m^2]
-        public double TDifRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
         public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
@@ -234,7 +234,7 @@ namespace CASSYS
             }
         }
 
-        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred, plus Spectral Model corrections
+        // Calculates the effective irradiance available for electricity conversion, adjusted for incidence angle, soiling, bifacial, and spectral effects
         public void CalcEffectiveIrradiance
             (
               double TDir                            // Tilted Beam Irradiance [W/m^2]
@@ -536,7 +536,6 @@ namespace CASSYS
             itsSubArrayNum = ArrayNum;
             itsNSeries = int.Parse(ReadFarmSettings.GetInnerText("PV", "ModulesInString", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsNParallel = int.Parse(ReadFarmSettings.GetInnerText("PV", "NumStrings", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
-            biFactor = 0.75; // double.Parse(ReadFarmSettings.GetInnerText("PV", "BifacialityFactor", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsArea = double.Parse(ReadFarmSettings.GetInnerText("PV", "AreaM", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsPNom = double.Parse(ReadFarmSettings.GetInnerText("PV", "Pnom", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsVmppref = double.Parse(ReadFarmSettings.GetInnerText("PV", "Vmpp", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
