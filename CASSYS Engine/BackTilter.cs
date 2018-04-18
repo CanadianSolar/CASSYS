@@ -35,14 +35,14 @@ namespace CASSYS
         double itsClearance;                        // Array ground clearance [panel slope lengths]
         double itsPitch;                            // The distance between the rows [panel slope lengths]
         double itsPanelTilt;                        // The angle between the surface tilt of the module and the ground [radians]
-        int numCellRows;                            // Number of cell rows on back of array [#]
+        public int numCellRows;                     // Number of cell rows on back of array [#]
         int numRows;                                // Number of rows in the system [#]
         RowType itsRowType;                         // Used to differentiate row type (interior or single)
+        public bool useBifacial;                    // Boolean used to determine if bifacial option is selected
 
         // Back tilter local variables/arrays and intermediate calculation variables and arrays
         double structLossFactor;                    // Percentage loss attributed to shading from back obstructions [#]
         double[] itsMonthlyAlbedo;                  // Array to store monthly albedo values [#]
-        double[] backGlo;                           // Tilted global irradiance for each cell row on back of array [W/m2]
         double[] backDir;                           // Tilted beam irradiance for each cell row on back of array [W/m2]
         double[] backDif;                           // Tilted diffuse irradiance for each cell row on back of array [W/m2]
         double[] backFroRef;                        // Tilted front-panel-reflected irradiance for each cell row on back of array [W/m2]
@@ -55,6 +55,7 @@ namespace CASSYS
         public double IrrInhomogeneity;             // The inhomogeneity of global irradiance across back of array [%]
         public double Albedo;                       // Monthly albedo value [#]
         public double BGlo;                         // Effective back tilted global irradiance [W/m2]
+        public double[] backGlo;                    // Effective tilted global irradiance for each cell row on back of array [W/m2]
         public double BDir;                         // Effective back tilted beam irradiance [W/m2]
         public double BDif;                         // Effective back tilted diffuse irradiance [W/m2]
         public double BFroRef;                      // Effective back tilted front-reflected irradiance [W/m2]
@@ -69,13 +70,30 @@ namespace CASSYS
         // Config manages calculations and initializations that need only to be run once
         public void Config()
         {
-            bool useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
+            useBifacial = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL));
 
             if (useBifacial)
             {
                 switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
                 {
                     // In all cases, pitch must be normalized to panel slope lengths
+                    case "Fixed Tilted Plane":
+                        if (String.Compare(ReadFarmSettings.CASSYSCSYXVersion, "0.9.3") >= 0)
+                        {
+                            itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
+                        }
+                        else
+                        {
+                            itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                        }
+                        // itsPitch will be assigned in the below (numRows == 1) conditional
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidthFix", ErrLevel.FATAL));
+                        itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL)) / itsArrayBW;
+
+                        // Find number of cell rows on back of array [#]
+                        numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWid", ErrLevel.WARNING, _default: "1"));
+                        numRows = 1;
+                        break;
                     case "Unlimited Rows":
                         itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
                         itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidth", ErrLevel.FATAL));
@@ -111,10 +129,9 @@ namespace CASSYS
 
                 if (numRows == 1)
                 {
+                    // Pitch is needed for a single row because of ground patch calculations and geometry. Take value 100x greater than array bandwidth.
+                    itsPitch = 100;
                     itsRowType = RowType.SINGLE;
-
-                    // Pitch is needed for a single row because of ground patch calculations and geometry. Multiply array bandwidth by 50 to get relatively large value.
-                    itsPitch = itsArrayBW * 50;
                 }
                 else
                 {
@@ -130,13 +147,19 @@ namespace CASSYS
 
                 ConfigAlbedo();
             }
+            else
+            {
+                // Allows back irradiance profile output even when bifacial is disabled
+                numCellRows = Util.NUM_CELLS_PANEL;
+                backGlo = new double[numCellRows];
+            }
         }
 
         // Calculate manages calculations that need to be run for each time step
         public void Calculate
             (
               double PanelTilt                      // The angle between the surface tilt of the module and the ground [radians]
-            , double Clearance                      // Array ground clearance [panel slope lengths]
+            , double Clearance                      // Array ground clearance [m]
             , double HDif                           // Diffuse horizontal irradiance [W/m2]
             , double TDifRef                        // Front reflected diffuse irradiance [W/m2]
             , double HGlo                           // Horizontal global irradiance [W/m2]
@@ -308,7 +331,6 @@ namespace CASSYS
                     }
                     backGroRef[i] += RadiationProc.GetViewFactor(j * Util.DTOR, (j + 1) * Util.DTOR) * actualGroundGHI * Albedo;
                 }
-                //viewFactorLoss += RadiationProc.GetViewFactor((startGround * Util.DTOR), Math.PI) / numCellRows;
 
                 double cellShade = 0.0;
                 if (itsRowType == RowType.INTERIOR)

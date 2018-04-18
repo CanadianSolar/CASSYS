@@ -55,8 +55,8 @@ Sub LoadButton()
     
     ' If the file could not be found then do not continue loading
     If loadStatus = filePathNotFound Then
-        Call PostModify(IntroSht, introShtStatus)
         Call PostModify(ErrorSht, errorShtStatus)
+        Call PostModify(IntroSht, introShtStatus)
         IntroSht.Activate
         Exit Sub
     End If

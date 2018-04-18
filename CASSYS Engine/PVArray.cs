@@ -63,7 +63,7 @@ namespace CASSYS
         double biFactor;                      // The bifaciality factor [#]
 
         // Module Temperature and Irradiance Coefficients
-        public double itsBo;                                // ASHRAE Parameter used for IAM calculation (see Ref 5)
+        double itsBo;                                       // ASHRAE Parameter used for IAM calculation (see Ref 5)
         bool userIAMModel;                                  // If a userIAM profile is defined or the ASHRAE model is used.
         bool panIAMModel;                                   // If a panIAM profile is defined
         bool panAOIModel;
@@ -108,7 +108,8 @@ namespace CASSYS
         public double RadSoilingLoss;         // Losses due to soiling of the PV array [W/m^2]
         public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
         public double BifacialGain;           // Back side effective irradiance, weighted by the bifaciality factor [W/m^2]
-        public double TGloEff;                // Irradiance adjusted for incidence angle, soiling, bifacial, and spectral effects [W/m^2]
+        public double TGloEff;                // Front side effective irradiance, adjusted for incidence angle and soiling effects [W/m^2]
+        public double RadEff;                 // Front and back side combined effective irradiance, adjusted for spectral effects [W/m^2]
         public double TDifRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double VOut;                   // PV array voltage at maximum power [V] 
         public double IOut;                   // PV array current at maximum power [A] 
@@ -173,11 +174,11 @@ namespace CASSYS
             // Assigning the Tilted Global value to a local holder (used for efficiency calculation)
             lossLessTGlo = TGlo;
 
-            // Calculation of effective irradiance reaching the cell (Soiling, IAM, and spectral effects accounted for)
+            // Calculation of effective irradiance reaching the cell (soiling, IAM, bifacial, and spectral effects accounted for)
             CalcEffectiveIrradiance(TDir, TDif, TRef, BGlo, InciAng, MonthNumber, ClearnessCorr);
 
             // Calculation of temperature GetTemperature Method used (see below)
-            CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
+            CalcTemperature(TAmbient, RadEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
 
             // Calculation of the Gamma value for given temperature (Ref 2 - Page 5) 
             itsGamma = itsGammaRef + itsGammaCoeff * (TModule - itsTref);
@@ -189,10 +190,10 @@ namespace CASSYS
 
             // Calculation of the variable Rshunt based on the PVSyst model (Ref 2 - Page 6) 
             double itsRshBase = (itsRpRef - itsRshZero * Math.Exp(-itsRshExp)) / (1 - Math.Exp(-itsRshExp));     // Parametrization value introduced by PVSyst
-            itsRsh = itsRshBase + (itsRshZero - itsRshBase) * Math.Exp(-itsRshExp * (TGloEff / itsHref));        // Determining the effective Rshunt based on irradiance change and a fitting parameter [ohms]
+            itsRsh = itsRshBase + (itsRshZero - itsRshBase) * Math.Exp(-itsRshExp * (RadEff / itsHref));      // Determining the effective Rshunt based on irradiance change and a fitting parameter [ohms]
 
             // Module Isc calculation based on irradiance and temperature (Ref 1 - Eq 2) 
-            mIPhi = TGloEff / itsHref * (itsIPhiRef + itsTCoefIsc * (TModule - itsTref));
+            mIPhi = RadEff / itsHref * (itsIPhiRef + itsTCoefIsc * (TModule - itsTref));
 
             // Adjust Voc based on temperature (similar to current adjustment above)
             CalcAtOpenCircuit();
@@ -267,8 +268,8 @@ namespace CASSYS
             // Calculate bifacial gain
             BifacialGain = biFactor * BGlo;
 
-            // Modified TGloEff based on bifacial gain
-            TGloEff += BifacialGain;
+            // Calculate RadEff by front effective irradiance plus bifacial gain
+            RadEff = TGloEff + BifacialGain;
 
             // Reflectance of diffuse irradiance at average angle of 60 degrees, assuming front surface material is glass
             double reflectionFactor = GetDiffuseReflectionFactor(Util.GlassRefractionIndex, Util.DiffInciAng);
@@ -277,10 +278,10 @@ namespace CASSYS
             TDifRef = TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC);
 
             // Determine spectral loss based on clearness correction value
-            RadSpectralLoss = TGloEff * ClearCorr;
+            RadSpectralLoss = RadEff * ClearCorr;
 
-            // Modified TGloEff based on spectral losses
-            TGloEff = TGloEff * (1 - ClearCorr);
+            // Modified RadEff based on spectral losses
+            RadEff = RadEff * (1 - ClearCorr);
         }
 
         // Calculates the reflection factor for a given refraction index and angle of incidence (Duffie and Beckman, pp.216-218)
@@ -351,10 +352,10 @@ namespace CASSYS
             PMPP = mPMPP * itsNumModules;
 
             // Calculate Temperature Losses
-            tempLoss = -(itsTCoefP / 100) * (TModule - 25) * (itsPNomDCArray) * (TGloEff / 1000);
+            tempLoss = -(itsTCoefP / 100) * (TModule - 25) * (itsPNomDCArray) * (RadEff / 1000);
 
             // Calculate Energy loss due to irradiance
-            radLoss = (itsPNomDCArray * TGloEff / 1000) - tempLoss - PMPP;
+            radLoss = (itsPNomDCArray * RadEff / 1000) - tempLoss - PMPP;
             
             // Output variables are assigned their values, module voltages add in series, module currents add when parallel, powers add in both cases
             VOut = mVout * itsNSeries;

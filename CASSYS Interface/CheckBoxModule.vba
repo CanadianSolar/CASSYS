@@ -91,6 +91,11 @@ Sub IncidentEnergyChkBox_Click()
     Call checkBoxActions("IncidentEnergy CheckBox", "Incident")
 End Sub
 
+Sub BifacialChkBox_Click()
+    ' Controls the Bifacial section
+    Call checkBoxActions("BifacialChkBox", "Bifacial")
+End Sub
+
 Sub PVArrayChkBox_Click()
     ' Controls the PV Array section
     Call checkBoxActions("PVArrayChkBox", "Pv")
@@ -133,14 +138,15 @@ Sub ControlAllChkBox_Click()
     If IntroSht.Range("ModeSelect") = "Grid-Connected System" Then
         ' Change all checkboxes
         Call MeteorologicalChkBox_Click
+        Call TrackerChkBox_Click
         Call IrradianceCollectorPlane_Click
         Call ShadingCheckBox_Click
         Call IncidentEnergyChkBox_Click
+        Call BifacialChkBox_Click
         Call PVArrayChkBox_Click
         Call InverterChkBox_Click
         Call SystemLossesPerfChkBox_Click
         Call EfficienciesChkBox_Click
-        Call TrackerChkBox_Click
     
     ' If in RadOnlyMode
     ElseIf IntroSht.Range("ModeSelect") = "Radiation Mode" Then

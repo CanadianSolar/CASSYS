@@ -16,6 +16,7 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     Dim Eaf As IXMLDOMElement ' Element used for Eaf element in XML file
     Dim infoElement As IXMLDOMElement ' Element Used for site information for the XML file
     Dim orientElement As IXMLDOMElement ' Element used for orientation and shading info
+    Dim bifacialElement As IXMLDOMElement  ' Element used for bifacial info
     Dim subElement As IXMLDOMElement ' Element used for the sub arrays in the system
     Dim systemDCElement As IXMLDOMElement ' Element used for the DC Power of the System
     Dim systemACElement As IXMLDOMElement ' Element used for the AC Power of the System
@@ -43,6 +44,8 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
 
     Dim FSave As Variant ' Holds the file path to be saved to
     Dim FoundPath As Boolean ' Specifies if save path was found successfully
+    Dim MonthName() As String  ' Names of the 12 months of the year (Jan, Feb, etc.)
+    Dim EAFRngName() As String ' Range names for EAFs for the 12 months of the year
     
     'Create document
     Set newdoc = New DOMDocument60
@@ -83,7 +86,11 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
                 coeff.Value = 1
             End If
         Next
-        Call Add_Element(newdoc, Eaf, element, AstmSht.Range("AstmMonthList"))
+        MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
+        EAFRngName = Split("EAFJan,EAFFeb,EAFMar,EAFApr,EAFMay,EAFJun,EAFJul,EAFAug,EAFSep,EAFOct,EAFNov,EAFDec", ",")
+        For i = 0 To 11
+            Call AddArray_Element(newdoc, Eaf, element, MonthName(i), AstmSht.Range(EAFRngName(i)).Value)
+        Next i
         
        
     Else
@@ -108,6 +115,12 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
         
         
         Call Add_Orientation_Shading_Info(newdoc, orientElement, element)
+        
+        ' Add Bifacial Info
+        Set bifacialElement = newdoc.createElement("Bifacial")
+        rootElement.appendChild bifacialElement
+        
+        Call Add_Bifacial_Info(newdoc, bifacialElement, element)
        
         'Add System Info
         Set infoElement = newdoc.createElement("System")
@@ -256,7 +269,7 @@ End Sub
 ' Arguments:
 ' newDoc - The XML Document
 ' rootElement - The root element of the XML file
-' infoElement - Element Used for site information for XML
+' infoElement - Element used for site information for XML
 '
 ' The purpose of this function is to add the site information
 ' to the XML document
@@ -267,7 +280,7 @@ Sub Add_Site_Info(ByRef newdoc As DOMDocument60, ByRef rootElement As IXMLDOMEle
     Dim attr As IXMLDOMAttribute
     Dim text As IXMLDOMText ' Text values for each element
     
-    ' Add Version Element And Valye
+    ' Add Version Element And Value
     Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("Version"))
     Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("ModeSelect"))
     Call Add_Element(newdoc, rootElement, infoElement, _
@@ -299,8 +312,8 @@ End Sub
 Sub Add_Orientation_Shading_Info(ByRef newdoc As DOMDocument60, ByRef orientElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
 
     If Orientation_and_ShadingSht.Range("OrientType").Value = "Fixed Tilted Plane" Then
-        ' Add Plane tilt and Azimuth
-        Call Add_Element(newdoc, orientElement, element, Orientation_and_ShadingSht.Range("PlaneTiltFix,AzimuthFix"))
+        ' Add Plane Tilt, Azimuth, and Band Width
+        Call Add_Element(newdoc, orientElement, element, Orientation_and_ShadingSht.Range("PlaneTiltFix,AzimuthFix,CollBandWidthFix"))
     
     ElseIf Orientation_and_ShadingSht.Range("OrientType").Value = "Fixed Tilted Plane Seasonal Adjustment" Then
         Call Add_Element(newdoc, orientElement, element, Orientation_and_ShadingSht.Range("SeasonalAdjustmentParams,AzimuthSeasonal"))
@@ -416,6 +429,40 @@ Sub Add_Orientation_Shading_Info(ByRef newdoc As DOMDocument60, ByRef orientElem
     
     
     
+    
+End Sub
+
+' Add_Bifacial_Info Function
+'
+' Arguments:
+' newDoc - The XML Document
+' bifacialElement - Element used for the bifacial data
+' element - Element used to add data to other elements
+'
+' The purpose of this function is to add the bifacial information
+' to the XML document
+Sub Add_Bifacial_Info(ByRef newdoc As DOMDocument60, ByRef bifacialElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
+
+    Call Add_Element(newdoc, bifacialElement, element, BifacialSht.Range("UseBifacialModel"))
+    If Range("UseBifacialModel").Value = "Yes" Then
+        Call Add_Element(newdoc, bifacialElement, element, BifacialSht.Range("GroundClearance"))
+        Call Add_Element(newdoc, bifacialElement, element, BifacialSht.Range("StructBlockingFactor"))
+        Call Add_Element(newdoc, bifacialElement, element, BifacialSht.Range("PanelTransFactor"))
+        Call Add_Element(newdoc, bifacialElement, element, BifacialSht.Range("BifacialityFactor"))
+        
+        Dim albedoElement As IXMLDOMElement
+        Dim attr As IXMLDOMAttribute
+        
+        Set albedoElement = newdoc.createElement("BifAlbedo")
+        Set attr = newdoc.createAttribute("Frequency")
+        attr.NodeValue = (BifacialSht.Range("BifAlbFreqVal").Value)
+        albedoElement.setAttributeNode attr
+    
+        bifacialElement.appendChild albedoElement
+        
+        Call Add_BifAlbedo_Info(newdoc, albedoElement, element)
+        
+    End If
     
 End Sub
 
@@ -678,6 +725,11 @@ Sub Add_Loss_Info(ByRef newdoc As DOMDocument60, ByRef lossElement As IXMLDOMEle
     Dim IAMCell As Range
     Dim AOICell As Range
     Dim text As IXMLDOMText ' Text values for each element
+    Dim MonthName() As String            ' Names of the 12 months of the year (Jan, Feb, etc.)
+    Dim SoilingRngName() As String       ' Names of the ranges used for soiling values
+    MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
+    SoilingRngName = Split("SoilingJan,SoilingFeb,SoilingMar,SoilingApr,SoilingMay,SoilingJun,SoilingJul,SoilingAug,SoilingSep,SoilingOct,SoilingNov,SoilingDec", ",")
+    Dim i As Integer
     
     ' Add Thermal losses info
     Set losstypeElement = newdoc.createElement("ThermalLosses")
@@ -750,7 +802,7 @@ Sub Add_Loss_Info(ByRef newdoc As DOMDocument60, ByRef lossElement As IXMLDOMEle
         losstypeElement.setAttributeNode attr
     
         ' Add the yearly percent loss
-        Call Add_Element(newdoc, losstypeElement, element, SoilingSht.Range("Yearly"))
+        Call AddArray_Element(newdoc, losstypeElement, element, "Yearly", SoilingSht.Range("SoilingYearly"))
     ElseIf SoilingSht.Range("SIndex") = "2" Then
         'If the selected frequency is monthly
         
@@ -760,7 +812,9 @@ Sub Add_Loss_Info(ByRef newdoc As DOMDocument60, ByRef lossElement As IXMLDOMEle
         losstypeElement.setAttributeNode attr
         
         'Add the percent loss for each month (in order of course)
-        Call Add_Element(newdoc, losstypeElement, element, SoilingSht.Range("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec"))
+        For i = 0 To 11
+            Call AddArray_Element(newdoc, losstypeElement, element, MonthName(i), SoilingSht.Range(SoilingRngName(i)).Value)
+        Next i
     End If
     
 End Sub
@@ -819,21 +873,42 @@ Sub Add_Output_Info(ByRef newdoc As DOMDocument60, ByRef outputElement As IXMLDO
     Call Add_Element(newdoc, outputElement, element, OutputFileSht.Range("OutputParam"), True)
 End Sub
 
-' Save albedo information
 Sub Add_Albedo_Info(ByRef newdoc As DOMDocument60, ByRef albedoElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
 
-    Dim monthlyMin As Integer
-    monthlyMin = 5                   ' First column of albedo values
+    Dim MonthName() As String  ' Names of the 12 months of the year (Jan, Feb, etc.)
     Dim AlbRngName() As String       ' Names of the ranges used for albedo values
+    MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
     AlbRngName = Split("AlbJan,AlbFeb,AlbMar,AlbApr,AlbMay,AlbJun,AlbJul,AlbAug,AlbSep,AlbOct,AlbNov,AlbDec", ",")
     Dim i As Integer
     If (SiteSht.Range("AlbFreqVal").Value = "Yearly") Then
-        ' If albedo is set to yearly add yearly albedo values
         Call AddArray_Element(newdoc, albedoElement, element, SiteSht.Range("AlbFreqVal"), SiteSht.Range("AlbYearly"))
     ElseIf (SiteSht.Range("AlbFreqVal").Value = "Monthly") Then
         ' If albedo is set to monthly add monthly albedo values
         For i = 0 To 11
-            Call AddArray_Element(newdoc, albedoElement, element, SiteSht.Cells(29, monthlyMin + i).Value, SiteSht.Range(AlbRngName(i)).Value)
+            Call AddArray_Element(newdoc, albedoElement, element, MonthName(i), SiteSht.Range(AlbRngName(i)).Value)
+        Next i
+    End If
+    
+End Sub
+
+Sub Add_BifAlbedo_Info(ByRef newdoc As DOMDocument60, ByRef albedoElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
+
+    Dim MonthName() As String  ' Names of the 12 months of the year (Jan, Feb, etc.)
+    Dim BifAlbRngName() As String       ' Names of the ranges used for albedo values
+    MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
+    BifAlbRngName = Split("BifAlbJan,BifAlbFeb,BifAlbMar,BifAlbApr,BifAlbMay,BifAlbJun,BifAlbJul,BifAlbAug,BifAlbSep,BifAlbOct,BifAlbNov,BifAlbDec", ",")
+    Dim i As Integer
+    If (BifacialSht.Range("BifAlbFreqVal").Value = "Site") Then
+        Call AddArray_Element(newdoc, albedoElement, element, "UseBifAlb", "False")
+    ElseIf (BifacialSht.Range("BifAlbFreqVal").Value = "Yearly") Then
+        Call AddArray_Element(newdoc, albedoElement, element, "UseBifAlb", "True")
+        ' If albedo is set to yearly, add yearly albedo values
+        Call AddArray_Element(newdoc, albedoElement, element, BifacialSht.Range("BifAlbFreqVal"), BifacialSht.Range("BifAlbYearly"))
+    ElseIf (BifacialSht.Range("BifAlbFreqVal").Value = "Monthly") Then
+        Call AddArray_Element(newdoc, albedoElement, element, "UseBifAlb", "True")
+        ' If albedo is set to monthly, add monthly albedo values
+        For i = 0 To 11
+            Call AddArray_Element(newdoc, albedoElement, element, MonthName(i), BifacialSht.Range(BifAlbRngName(i)).Value)
         Next i
     End If
     

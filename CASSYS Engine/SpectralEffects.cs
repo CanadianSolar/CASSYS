@@ -51,9 +51,7 @@ namespace CASSYS
             )
         {
             // Loads the spectral model from the .csyx document
-            bool spectralModelUsed = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Spectral", "UseSpectralModel", ErrLevel.WARNING, _default: "false"));
-
-            if (spectralModelUsed)
+            if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("Spectral", "UseSpectralModel", ErrLevel.WARNING, _default: "false")))
             {
                 // Getting the spectral model information from the .csyx file
                 SpectralClearnessIndexStr = ReadFarmSettings.GetInnerText("Spectral", "ClearnessIndex/kt", ErrLevel.WARNING, "0.9", _default: "1");

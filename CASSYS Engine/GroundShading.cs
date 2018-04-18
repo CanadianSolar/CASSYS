@@ -71,6 +71,21 @@ namespace CASSYS
                 switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
                 {
                     // In all cases, pitch and clearance must be normalized to panel slope lengths
+                    case "Fixed Tilted Plane":
+                        itsTrackMode = TrackMode.NOAT;
+                        if (String.Compare(ReadFarmSettings.CASSYSCSYXVersion, "0.9.3") >= 0)
+                        {
+                            itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTiltFix", ErrLevel.FATAL));
+                        }
+                        else
+                        {
+                            itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
+                        }
+                        // itsPitch will be assigned in the below (numRows == 1) conditional
+                        itsArrayBW = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CollBandWidthFix", ErrLevel.FATAL));
+                        itsClearance = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "GroundClearance", ErrLevel.FATAL)) / itsArrayBW;
+                        numRows = 1;
+                        break;
                     case "Unlimited Rows":
                         itsTrackMode = TrackMode.NOAT;
                         itsPanelTilt = Util.DTOR * Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt", ErrLevel.FATAL));
@@ -100,10 +115,9 @@ namespace CASSYS
 
                 if (numRows == 1)
                 {
+                    // Pitch is needed for a single row because of ground patch calculations and geometry. Take value 100x greater than array bandwidth.
+                    itsPitch = 100;
                     itsRowType = RowType.SINGLE;
-
-                    // Pitch is needed for a single row because of ground patch calculations and geometry. Multiply array bandwidth by 50 to get large relative value.
-                    itsPitch = itsArrayBW * 50;
                 }
                 else
                 {

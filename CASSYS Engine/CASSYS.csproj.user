@@ -2,7 +2,7 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <StartWorkingDirectory>H:\CASSYS\CASSYS Engine\bin\debug\</StartWorkingDirectory>
-    <StartArguments>"H:\Sample Site - Toronto.csyx" "H:\Toronto_ClimateFile_0706.csv" "out.csv"</StartArguments>
+    <StartArguments>"H:\Bifacial\Sample Site - Toronto.csyx" "H:\Bifacial\Toronto_Clearsky_June.csv" "out.csv"</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <StartWorkingDirectory>U:\CASS\Engineering\Monitoring\Simulation\Far Shading\CASSYS Horizon Shading\</StartWorkingDirectory>

@@ -19,7 +19,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
-using System.IO;
 
 namespace CASSYS
 {
@@ -111,8 +110,6 @@ namespace CASSYS
                 // Calculate back side global irradiance
                 SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimMet.HGlo, SimGround.frontGroundGHI, SimGround.rearGroundGHI, SimGround.aveGroundGHI,
                     SimMet.MonthOfYear, SimShading.BackBeamSF, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
-
-                //File.AppendAllText("modShad.csv", Environment.NewLine + RadProc.TimeStampAnalyzed + "," + SimShading.BackBeamSF + "," + SimShading.BeamSF);
             }
             else
             {
@@ -209,7 +206,7 @@ namespace CASSYS
                     farmACClippingPower += SimInv[i].LossClipping;
                     farmACMaxVoltageLoss += SimInv[i].LossHighVoltage;
                     farmACMinVoltageLoss += SimInv[i].LossLowVoltage;
-                    farmPnom += (SimPVA[i].itsPNom * SimPVA[i].itsNumModules) * SimPVA[i].TGloEff / 1000;
+                    farmPnom += (SimPVA[i].itsPNom * SimPVA[i].itsNumModules) * SimPVA[i].RadEff / 1000;
                     farmTempLoss += SimPVA[i].tempLoss;
                     farmRadLoss += SimPVA[i].radLoss;
                 }
@@ -269,6 +266,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Effective_Back_Global_Irradiance"] = SimBackTilter.BGlo;
             ReadFarmSettings.Outputlist["Back_Global_Irradiance_Inhomogeneity"] = SimBackTilter.IrrInhomogeneity;
             ReadFarmSettings.Outputlist["Bifacial_Gain"] = SimPVA[0].BifacialGain;
+            ReadFarmSettings.Outputlist["Radiation_Available_for_Power_Conversion"] = SimPVA[0].RadEff;
             ReadFarmSettings.Outputlist["Array_Nominal_Power"] = farmPnom / 1000;
             ReadFarmSettings.Outputlist["Array_Soiling_Loss"] = farmDCSoilingLoss / 1000;
             ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;
@@ -303,6 +301,13 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Power_Loss_Due_to_Temperature"] = farmTempLoss / 1000;
             ReadFarmSettings.Outputlist["Energy_Loss_Due_to_Irradiance"] = farmRadLoss / 1000;
             ReadFarmSettings.Outputlist["NightTime_Energizing_Loss"] = (SimTransformer.POut < 0) ? SimTransformer.itsPIronLoss / 1000 : 0;
+
+            ReadFarmSettings.Outputlist["ShowBackIrradianceProfile"] = "";
+
+            for (int rowNum = 1; rowNum < SimBackTilter.numCellRows + 1; rowNum++)
+            {
+                ReadFarmSettings.Outputlist["ShowBackIrradianceProfile"] += SimBackTilter.backGlo[rowNum - 1].ToString() + (rowNum != SimBackTilter.numCellRows ? "," : "");
+            }
 
             // Get the power for individual Sub-Arrays
             ReadFarmSettings.Outputlist["Sub_Array_Performance"] = "";
@@ -408,7 +413,7 @@ namespace CASSYS
             if (SimInv[j].VInDC == SimInv[j].itsMppWindowMin)
             {
                 // Calculate energy loss due to voltage too low
-                SimInv[j].LossLowVoltage = arrayPMPP;
+                SimInv[j].LossLowVoltage = arrayPMPP - SimPVA[j].POutNoLoss;
             }
 
             if (SimInv[j].VInDC == SimInv[j].itsMppWindowMax)

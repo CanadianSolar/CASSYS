@@ -404,7 +404,6 @@ namespace CASSYS
                     // Running one-time only methods - the shading factors applied to diffuse and ground reflected component are constant and 1.
                     DiffuseSF = 1;
                     ReflectedSF = 1;
-                    BeamSF = 1;
                     break;
             
                 case ShadModel.None:

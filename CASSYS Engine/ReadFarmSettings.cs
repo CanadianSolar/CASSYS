@@ -48,6 +48,7 @@ namespace CASSYS
         public static bool batchMode = false;                       // Determines if the program is being run in batch mode (CMD prompt arguments for IO files) or not
         public static string outputMode = "csv";                    // Determines if output should be a comma seperated string (str), a csv file (csv), or a csv file with multiple runs with varying parameter (var)
         public static string currentYear = DateTime.Now.Year.ToString();   // Gets the current year that the program is run for copywrite message
+        public static int numCellRows;                              // Number of cell rows on the back side of array, default: 6
 
         // Gathering Input and Output Configurations for the ReadFarmSettings Class
         public static String SimInputFile;                          // Input file path
@@ -110,6 +111,40 @@ namespace CASSYS
             {
                 // Getting the Number of Sub-Arrays for this file
                 SubArrayCount = int.Parse(GetAttribute("System", "TotalArrays", _Error: ErrLevel.FATAL));
+            }
+        }
+
+        // Finding and assigning the number of CellRows
+        public static void AssignCellRowsNum()
+        {
+            if (string.Compare(SystemMode, "GridConnected") == 0)
+            {
+                // Getting the number of back cell rows for this file
+                if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL)))
+                {
+                    switch (ReadFarmSettings.GetAttribute("O&S", "ArrayType", ErrLevel.FATAL))
+                    {
+                        case "Fixed Tilted Plane":
+                            numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWid", ErrLevel.WARNING, _default: "1"));
+                            break;
+                        case "Unlimited Rows":
+                            numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWid", ErrLevel.WARNING, _default: "1"));
+                            break;
+                        case "Single Axis Elevation Tracking (E-W)":
+                            numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAET", ErrLevel.WARNING, _default: "1"));
+                            break;
+                        case "Single Axis Horizontal Tracking (N-S)":
+                            numCellRows = Util.NUM_CELLS_PANEL * int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAST", ErrLevel.WARNING, _default: "1"));
+                            break;
+                        default:
+                            ErrorLogger.Log("Bifacial is not supported for the selected orientation and shading.", ErrLevel.FATAL);
+                            break;
+                    }
+                }
+                else
+                {
+                    numCellRows = Util.NUM_CELLS_PANEL;
+                }
             }
         }
 
@@ -277,6 +312,17 @@ namespace CASSYS
                         }
 
                         OutputHeader += SubArrayTitle;
+                    }
+                    else if (outNode.Name == "ShowBackIrradianceProfile")
+                    {
+                        String BackCellRowTitle = null;
+
+                        for (int cellRow = 0; cellRow < numCellRows; cellRow++)
+                        {
+                            BackCellRowTitle += "Effective Global Irradiance on Back Cell Row " + (cellRow + 1) + " (W/m2),";
+                        }
+
+                        OutputHeader += BackCellRowTitle;
                     }
                     // In variable parameter mode, the timestamps are only written for the first simulation
                     else if (!((outNode.Name == "Input_Timestamp" || outNode.Name == "Timestamp_Used_for_Simulation") && ReadFarmSettings.outputMode == "var" && ReadFarmSettings.runNumber != 1))
@@ -497,7 +543,7 @@ namespace CASSYS
             Console.WriteLine("CASSYS - Canadian Solar System Simulation Program for Grid-Connected PV Systems");
             Console.WriteLine("Copyright 2015 - " + currentYear + " CanadianSolar, All rights reserved.");
             Console.WriteLine("CASSYS Engine Version: " + EngineVersion);
-            Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/LICENSE");
+            Console.WriteLine("Full License: https://github.com/CanadianSolar/CASSYS/blob/master/LICENSE");
             Console.WriteLine("-------------------------------------------------------------------------------");
         }
 
