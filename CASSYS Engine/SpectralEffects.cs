@@ -32,13 +32,10 @@ namespace CASSYS
         string SpectralClearnessIndexStr;                           // String containing the Clearness Index points from the .csyx file [unitless]
         string SpectralClearnessCorrectionStr;                      // String containing the Clearness Correction points from the .csyx file [unitless]
 
-        // Spectral Effects local variables/arrays and intermediate calculation variables and arrays
+        // Spectral effects local variables/arrays and intermediate calculation variables and arrays
         double[] ClearnessIndexArr;                                 // Array containing the comma-separated index values from SpectralClearnessIndexStr [unitless]
         double[] ClearnessCorrectionArr;                            // Array containing the comma-separated correction values from SpectralClearnessCorrectionStr [unitless]
         double clearnessIndex;                                      // Clearness index
-
-        // Settings used in the class
-        bool spectralModelUsed;                                     // Used to determine whether or not the user has provided a spectral effects model
 
         // Output variables
         public double clearnessCorrection;                          // Clearness correction
@@ -54,8 +51,7 @@ namespace CASSYS
             )
         {
             // Loads the spectral model from the .csyx document
-            spectralModelUsed = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Spectral", "UseSpectralModel", ErrLevel.WARNING, _default: "false"));
-            if (spectralModelUsed == true)
+            if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("Spectral", "UseSpectralModel", ErrLevel.WARNING, _default: "false")))
             {
                 // Getting the spectral model information from the .csyx file
                 SpectralClearnessIndexStr = ReadFarmSettings.GetInnerText("Spectral", "ClearnessIndex/kt", ErrLevel.WARNING, "0.9", _default: "1");
@@ -68,7 +64,7 @@ namespace CASSYS
                 // If user inputs spectral index/correction data of two different lengths
                 if (ClearnessIndexArr.Length != ClearnessCorrectionArr.Length)
                 {
-                    ErrorLogger.Log("The number of clearness correction values was not equal to the number of clearness index values.", ErrLevel.FATAL);
+                    ErrorLogger.Log("The number of clearness correction values is not equal to the number of clearness index values.", ErrLevel.FATAL);
                 }
             }
             else

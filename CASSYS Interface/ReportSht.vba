@@ -39,7 +39,7 @@ Sub ExportReportToPDF(ByVal fileName As String)
     ReportSht.ResetAllPageBreaks
 
     ' Speed up code running
-     Call PreModify(ReportSht, currentShtStatus)
+    Call PreModify(ReportSht, currentShtStatus)
     
     ' Delete pictures in the sheet, charts copied to this page are considered pictures
     For Each graph In ReportSht.Shapes
@@ -53,6 +53,7 @@ Sub ExportReportToPDF(ByVal fileName As String)
     SetPrintFormatSite
     If IntroSht.Range("ModeSelect").Value = "Grid-Connected System" Then
         SetPrintFormatOrient_and_Shading
+        SetPrintFormatBifacial
         SetPrintFormatHorizon
         SetPrintFormatSystem
         SetPrintFormatLosses
@@ -119,9 +120,9 @@ normalEnd:
     Application.ScreenUpdating = True
     Application.EnableEvents = True
     Application.Calculation = xlCalculationAutomatic
-'    Call PostModify(ReportSht, currentShtStatus)
+    Call PostModify(ReportSht, currentShtStatus)
     
-    OutputFileSht.Activate
+    SummarySht.Activate
 End Sub
 '
 ' This function is called to copy and paste the desired
@@ -171,6 +172,51 @@ Private Sub SetPrintFormatOrient_and_Shading()
     Call CopyPaste(Orientation_and_ShadingSht.Range("PrintOS_Vals").SpecialCells(xlCellTypeVisible), ReportSht.Range("B" & initialPasteRow).Offset(2, 3))
     
     Call PostModify(Orientation_and_ShadingSht, currentShtStatus)
+    
+    ' update current document length and set page break if needed
+    GetLastShapeRow
+    currentDocLength = Application.Max(ReportSht.Range("B" & Rows.count).End(xlUp).row, lastShapeRow)
+    Call PageBreak(initialPasteRow, currentDocLength)
+End Sub
+'
+' This function is called to copy and paste the desired
+' contents from the Bifacial sheet into the report sheet
+'
+Private Sub SetPrintFormatBifacial()
+    Dim currentShtStatus As sheetStatus
+    Dim initialPasteRow As Integer ' The first row in which the data is pasted. Ranges are specified in offsets; changes only have to be made to the initialPasteRow to paste in a different place.
+    
+    initialPasteRow = currentDocLength + 2 ' +1 to leave a space between sections
+    
+    Call PreModify(BifacialSht, currentShtStatus)
+    
+    Call PasteHeader(BifacialSht, initialPasteRow)
+    
+    Call CopyPaste(BifacialSht.Range("PrintBifacial1"), ReportSht.Range("B" & initialPasteRow).Offset(2, 0))
+    
+    If BifacialSht.Range("UseBifacialModel").Value = "Yes" Then
+        Call CopyPaste(BifacialSht.Range("PrintBifacial2"), ReportSht.Range("B" & initialPasteRow).Offset(4, 0))
+    
+        If BifacialSht.Range("BifAlbFreqVal").Value = "Yearly" Then
+            Call CopyPaste(BifacialSht.Range("BifAlbYearly"), ReportSht.Range("F" & initialPasteRow).Offset(14, 0))
+        ElseIf BifacialSht.Range("BifAlbFreqVal").Value = "Monthly" Then
+            Call CopyPaste(BifacialSht.Range("PrintBifAlbMonthly"), ReportSht.Range("B" & initialPasteRow).Offset(14, 0))
+        End If
+    
+        If BifacialSht.Range("BifAlbFreqVal").Value <> "Site" Then
+            Call CopyPasteChart(BifacialSht, "BifAlbedoChart", Sheets("Bifacial").ChartObjects("BifAlbedoChart"), ReportSht.Range("B" & initialPasteRow).Offset(17, 1))
+        End If
+    End If
+        
+    ' update number of charts on page
+    GetLastShapeRow
+    If BifacialSht.Range("UseBifacialModel").Value = "Yes" And BifacialSht.Range("BifAlbFreqVal").Value <> "Site" Then
+        ReportSht.Shapes(shapeNum).Width = 725
+        ReportSht.Shapes(shapeNum).Cut
+        ReportSht.Range("A" & initialPasteRow).Offset(17, 1).PasteSpecial (xlPasteAll)
+    End If
+    
+    Call PostModify(BifacialSht, currentShtStatus)
     
     ' update current document length and set page break if needed
     GetLastShapeRow
@@ -358,7 +404,7 @@ Private Sub SetPrintFormatSoiling()
     Call CopyPaste(SoilingSht.Range("PrintSoiling1"), ReportSht.Range("B" & initialPasteRow).Offset(2, 0))
     
     If SoilingSht.Range("SfreqVal").Value = "Yearly" Then
-        Call CopyPaste(SoilingSht.Range("PrintSoilingYearly"), ReportSht.Range("D" & initialPasteRow).Offset(3, 0))
+        Call CopyPaste(SoilingSht.Range("SoilingYearly"), ReportSht.Range("D" & initialPasteRow).Offset(3, 0))
     Else
         Call CopyPaste(SoilingSht.Range("PrintSoilingMonthly"), ReportSht.Range("B" & initialPasteRow).Offset(4, 0))
     End If

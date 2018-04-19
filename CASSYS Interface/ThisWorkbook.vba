@@ -99,6 +99,7 @@ Private Sub Workbook_Open()
     EnableMacrosSht.Visible = xlSheetVeryHidden
     SiteSht.Visible = xlSheetVisible
     Orientation_and_ShadingSht.Visible = xlSheetVisible
+    BifacialSht.Visible = xlSheetVisible
     Horizon_ShadingSht.Visible = xlSheetVisible
     SystemSht.Visible = xlSheetVisible
     LossesSht.Visible = xlSheetVisible
@@ -129,7 +130,7 @@ Private Sub Workbook_Open()
     ' Version number for current development of CASSYS (this is for extra protection, in case it gets overwritten)
     IntroSht.Unprotect
     'NB: increased version number
-    IntroSht.Range("Version").Value = "1.4.0"
+    IntroSht.Range("Version").Value = "1.5.0"
     IntroSht.Protect
     IntroSht.Activate
     Application.ScreenUpdating = True

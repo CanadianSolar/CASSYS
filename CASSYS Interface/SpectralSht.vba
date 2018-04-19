@@ -34,6 +34,7 @@ Private Sub Worksheet_FollowHyperlink(ByVal Target As Hyperlink)
         Call SaveXML
         Call PostModify(SpectralSht, currentShtStatus)
     End If
+    
 End Sub
 
 ' Update the sheet in response to the selection of 'Use Spectral Model' dropdown

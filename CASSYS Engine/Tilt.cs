@@ -18,9 +18,11 @@
 // References and Supporting Documentation or Links
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Duffie JA and Beckman WA (1991) Solar Engineering of Thermal
+// Ref 1: Duffie JA and Beckman WA (1991) Solar Engineering of Thermal
 //     Processes, Second Edition. John Wiley & Sons.
 // 
+// Ref 2: (Website, Accessed 2014-10) PV Modelling Collaborative: 
+//     http://pvpmc.org/modeling-steps/shading-soiling-and-reflection-losses/incident-angle-reflection-losses/ashre-model/
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -54,14 +56,12 @@ namespace CASSYS
             {
                 throw new System.ArgumentException("GetCosIncidenceAngle: Invalid sun azimuth.");
             }
-            if (SurfaceSlope * Util.DTOR < 0 || SurfaceSlope * Util.DTOR > Math.PI)
+            //if (SurfaceSlope * Util.DTOR < 0 || SurfaceSlope * Util.DTOR > Math.PI)
+            if (SurfaceSlope < 0 || SurfaceSlope > Math.PI)
             {
                 throw new System.ArgumentException("GetCosIncidenceAngle: Invalid surface slope.");
             }
-            if (SurfaceAzimuth * Util.DTOR < -Math.PI || SurfaceAzimuth * Util.DTOR > Math.PI)
-            {
-                throw new System.ArgumentException("GetCosIncidenceAngle: Invalid surface Azimuth.");
-            }
+            // Allow SurfaceAzimuth < -Math.PI and SurfaceAzimuth > Math.PI for bifacial modelling
 
             // To prevent Incidence angle from being returned if sun is below horizon
             if (SunZenith > Math.PI / 2)
@@ -90,6 +90,16 @@ namespace CASSYS
                 SurfaceSlope, SurfaceAzimuth));
         }
 
+        // Calculates the Incidence Angle Modifier using ASHRAE Parameter, see Ref. 2
+        public static double GetASHRAEIAM
+            (
+              double Bo                                     // ASHRAE Parameter [#]
+            , double InciAng                                // Incidence Angle [radians]
+            )
+        {
+            return Math.Cos(InciAng) > Bo / (1 + Bo) ? Math.Max((1 - Bo * (1 / Math.Cos(InciAng) - 1)), 0) : 0;
+        }
+
         // Compute profile angle.
         // Duffie and Beckman (1991) eqn 1.6.12
         public static double GetProfileAngle          // (o) profile angle for a surface [radians] 
@@ -99,16 +109,12 @@ namespace CASSYS
             )
         {
             // Catching any errors
+            // Allow SurfaceAzimuth < -Math.PI and SurfaceAzimuth > Math.PI for bifacial modelling
             if (SunAzimuth < -Math.PI || SunAzimuth > Math.PI)
             {
                 throw new CASSYSException("GetProfileAngle: Invalid sun azimuth.");
             }
-            if (SurfaceAzimuth < -Math.PI || SurfaceAzimuth > Math.PI)
-            {
-                throw new CASSYSException("GetProfileAngle: Invalid surface Azimuth.");
-            }
 
-            // Calculations
             if (SunZenith == 0)
             {
                 return Math.PI / 2;

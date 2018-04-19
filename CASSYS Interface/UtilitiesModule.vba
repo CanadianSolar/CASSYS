@@ -220,10 +220,10 @@ Sub ClearAll()
      
      ' Clear soiling losses
      ' Clear yearly losses
-     SoilingSht.Range("Yearly").Value = 0
+     SoilingSht.Range("SoilingYearly").Value = 0
      
      ' Clear monthly losses
-     SoilingSht.Range("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec").Value = 0
+     SoilingSht.Range("SoilingJan,SoilingFeb,SoilingMar,SoilingApr,SoilingMay,SoilingJun,SoilingJul,SoilingAug,SoilingSep,SoilingOct,SoilingNov,SoilingDec").Value = 0
      
      Call PostModify(SoilingSht, currentShtStatus)
      
@@ -239,34 +239,10 @@ Sub ClearAll()
      
      Call PostModify(SpectralSht, currentShtStatus)
      
-     ' Clear InputFilePath and Output file
+     ' Clear input (climate) file sheet
+     Call InputFileSht.Clear
      
-     Call PreModify(InputFileSht, currentShtStatus)
-     
-     ' Hide shapes that block input when TMY file is loaded
-     Dim i As Integer
-     For i = 1 To 4
-         InputFileSht.Shapes("InputHide" & i).Visible = msoFalse
-     Next
-     
-     InputFileSht.Range("lastInputColumn").Value = 0
-     InputFileSht.Range("InputFilePath").Value = vbNullString
-     InputFileSht.Range("Interval").Value = 60
-     InputFileSht.Range("FullInputPath").Value = vbNullString
-     InputFileSht.Range("IncorrectClimateRowsAllowed").Value = 0
-     
-     ' Clear column headers, column selections and reset colours
-     InputFileSht.Range("TimeStamp,GlobalRad,TempAmbient,TempPanel,WindSpeed,HorIrradiance,Hor_Diffuse,FirstDate,LastDate,previewInputs,MeterTilt,MeterAzimuth").ClearContents
-     InputFileSht.Range("MeterTilt").Interior.ColorIndex = 0
-     InputFileSht.Range("MeterAzimuth").Interior.ColorIndex = 0
-     InputFileSht.Range("InputFilePath").Interior.Color = ColourWhite
-     
-     ' Clears colour formatting on input file sheet of brown 'rows to skip lines'
-     InputFileSht.Range("RowsToSkip").Value = 1
-     InputFileSht.Range("TMYType").Value = 0
-     Call InputFileSht.SplitToColumns(",")
-     Call PostModify(InputFileSht, currentShtStatus)
-     
+     ' Clear output file sheet
      Call PreModify(OutputFileSht, currentShtStatus)
     
      OutputFileSht.Range("OutputFilePath").Value = vbNullString
@@ -374,152 +350,6 @@ Sub SaveAsPDF()
     End If
 End Sub
 
-
-' This sub prepares the workbook for release
-Public Sub PrepareForRelease()
-
-    Dim Sheet As Worksheet
-    
-    'Hide PVSyst equivalents on transformer sheet
-    TransformerSht.Range("PVSystVals").EntireRow.Hidden = True
-    TransformerSht.Range("ShowHidePV").Value = "Show PVSyst Equivalents"
-    
-    'Remove any user additions to PV module data base
-    RemoveUserAddsToPVModuleDB
-    
-    ' Protect all worksheets
-    EnableMacrosSht.Protect
-    IntroSht.Protect
-    IntroSht.Range("ModeSelect") = "Grid-Connected System" 'Change to a grid connected system
-    SiteSht.Protect
-    Orientation_and_ShadingSht.Protect
-    Horizon_ShadingSht.Protect
-    SystemSht.Protect
-    LossesSht.Protect
-    SoilingSht.Protect
-    SpectralSht.Protect
-    TransformerSht.Protect
-    InputFileSht.Protect
-    OutputFileSht.Unprotect
-    ChartConfigSht.Protect
-    ErrorSht.Protect
-    AstmSht.Protect
-    IterativeSht.Protect
-    LossDiagramSht.Protect
-    LossDiagramValueSht.Protect
-    
-    ' Hide gridlines and headings
-    Application.ScreenUpdating = False
-    For Each Sheet In ThisWorkbook.Worksheets
-        Sheet.Activate
-        ActiveWindow.DisplayGridlines = False
-        ActiveWindow.DisplayHeadings = False
-    Next Sheet
-    Application.ScreenUpdating = True
-    
-    ' Hide worksheets
-    EnableMacrosSht.Visible = xlSheetVisible
-    IntroSht.Visible = xlSheetHidden
-    SiteSht.Visible = xlSheetHidden
-    Orientation_and_ShadingSht.Visible = xlSheetHidden
-    Horizon_ShadingSht.Visible = xlSheetHidden
-    SystemSht.Visible = xlSheetHidden
-    LossesSht.Visible = xlSheetHidden
-    SoilingSht.Visible = xlSheetHidden
-    SpectralSht.Visible = xlSheetHidden
-    TransformerSht.Visible = xlSheetHidden
-    InputFileSht.Visible = xlSheetHidden
-    OutputFileSht.Visible = xlSheetHidden
-    ResultSht.Visible = xlSheetHidden
-    SummarySht.Visible = xlSheetHidden
-    ReportSht.Visible = xlSheetHidden
-    ChartConfigSht.Visible = xlSheetHidden
-    CompChart1.Visible = xlSheetHidden
-    CompChart2.Visible = xlSheetHidden
-    CompChart3.Visible = xlSheetHidden
-    ErrorSht.Visible = xlSheetHidden
-    Inverter_DatabaseSht.Visible = xlSheetHidden
-    PV_DatabaseSht.Visible = xlSheetHidden
-    MessageSht.Visible = xlSheetHidden
-    AstmSht.Visible = xlSheetHidden
-    IterativeSht.Visible = xlSheetHidden
-    LossDiagramSht.Visible = xlSheetHidden
-    LossDiagramValueSht.Visible = xlSheetHidden
-    
-    ' Run the New function
-    Call ClearAll
-    
-    ' Put focus on intro sheet
-    EnableMacrosSht.Activate
-    
-End Sub
-
-' This sub prepares the workbook for work
-Public Sub PrepareForWork()
-
-    Dim Sheet As Worksheet
-    
-    ' Unprotect all worksheets
-    EnableMacrosSht.Unprotect
-    IntroSht.Unprotect
-    SiteSht.Unprotect
-    Orientation_and_ShadingSht.Unprotect
-    Horizon_ShadingSht.Unprotect
-    SystemSht.Unprotect
-    LossesSht.Unprotect
-    SoilingSht.Unprotect
-    SpectralSht.Unprotect
-    TransformerSht.Unprotect
-    InputFileSht.Unprotect
-    OutputFileSht.Unprotect
-    ResultSht.Unprotect
-    ReportSht.Unprotect
-    ChartConfigSht.Unprotect
-    ErrorSht.Unprotect
-    AstmSht.Unprotect
-    IterativeSht.Unprotect
-    LossDiagramSht.Unprotect
-    LossDiagramValueSht.Unprotect
-    
-    ' Unhide gridlines and headings
-    Application.ScreenUpdating = False
-    For Each Sheet In ThisWorkbook.Worksheets
-        Sheet.Activate
-        ActiveWindow.DisplayGridlines = True
-        ActiveWindow.DisplayHeadings = True
-    Next Sheet
-    Application.ScreenUpdating = True
-    
-    ' Show hidden sheets
-    EnableMacrosSht.Visible = xlSheetVisible
-    IntroSht.Visible = xlSheetVisible
-    SiteSht.Visible = xlSheetVisible
-    Orientation_and_ShadingSht.Visible = xlSheetVisible
-    SystemSht.Visible = xlSheetVisible
-    LossesSht.Visible = xlSheetVisible
-    SoilingSht.Visible = xlSheetVisible
-    SpectralSht.Visible = xlSheetVisible
-    TransformerSht.Visible = xlSheetVisible
-    InputFileSht.Visible = xlSheetVisible
-    OutputFileSht.Visible = xlSheetVisible
-    ResultSht.Visible = xlSheetVisible
-    ReportSht.Visible = xlSheetVisible
-    ChartConfigSht.Visible = xlSheetVisible
-    CompChart1.Visible = xlSheetVisible
-    CompChart2.Visible = xlSheetVisible
-    CompChart3.Visible = xlSheetVisible
-    ErrorSht.Visible = xlSheetVisible
-    Inverter_DatabaseSht.Visible = xlSheetVisible
-    PV_DatabaseSht.Visible = xlSheetVisible
-    AstmSht.Visible = xlSheetVisible
-    IterativeSht.Visible = xlSheetVisible
-    LossDiagramSht.Visible = xlSheetVisible
-    LossDiagramValueSht.Visible = xlSheetVisible
-    
-    ' Put focus on enable macros sheet
-    EnableMacrosSht.Activate
-  
-End Sub
 
 ' Print a message to the Message sheet
 Public Sub PrintMessage(Msg As String, Optional ByVal printLocation As Range)

@@ -110,6 +110,10 @@ Sub Load()
         Call loadOSSht(newdoc)
         Call PostModify(Orientation_and_ShadingSht, currentShtStatus)
         
+        Call PreModify(BifacialSht, currentShtStatus)
+        Call loadBifacialSht(newdoc)
+        Call PostModify(BifacialSht, currentShtStatus)
+        
         Call PreModify(Horizon_ShadingSht, currentShtStatus)
         Call loadHorizon_ShadingSht(newdoc)
         Call PostModify(Horizon_ShadingSht, currentShtStatus)
@@ -235,7 +239,12 @@ Private Sub loadOSSht(ByRef newdoc As DOMDocument60)
     
     If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "0.9.3") >= 0) Then
         If Orientation_and_ShadingSht.Range("OrientType").Value = "Fixed Tilted Plane" Then
-            Call InsertValue(newdoc, "//Site/Orientation_and_Shading/*", Orientation_and_ShadingSht.Range("PlaneTiltFix,AzimuthFix"))
+            If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.0") >= 0) Then    ' This is only present for version starting 1.5.0
+                Call InsertValue(newdoc, "//Site/Orientation_and_Shading/*", Orientation_and_ShadingSht.Range("PlaneTiltFix,AzimuthFix,CollBandWidthFix"))
+            Else
+                Call InsertValue(newdoc, "//Site/Orientation_and_Shading/*", Orientation_and_ShadingSht.Range("PlaneTiltFix,AzimuthFix"))
+                Orientation_and_ShadingSht.Range("CollBandWidthFix") = 1                       ' Assume default width
+            End If
         
         ElseIf Orientation_and_ShadingSht.Range("OrientType").Value = "Fixed Tilted Plane Seasonal Adjustment" Then
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/*", Orientation_and_ShadingSht.Range("SeasonalAdjustmentParams,AzimuthSeasonal"))
@@ -252,6 +261,7 @@ Private Sub loadOSSht(ByRef newdoc As DOMDocument60)
             Call InsertValue_BoolToYesNo(newdoc, "//Site/Orientation_and_Shading/UseCellVal", Orientation_and_ShadingSht.Range("UseCellVal"))
         
         ' Adds values required when 'Use Cell Shading' is set to 'Yes'
+            Call Orientation_and_ShadingSht.UpdateCellShading
             If Orientation_and_ShadingSht.Range("UseCellVal").Value = "Yes" Then
                 Call InsertValue(newdoc, "//Site/Orientation_and_Shading/StrInWid", Orientation_and_ShadingSht.Range("StrInWid"))
                 Call InsertValue(newdoc, "//Site/Orientation_and_Shading/CellSize", Orientation_and_ShadingSht.Range("CellSize"))
@@ -264,11 +274,13 @@ Private Sub loadOSSht(ByRef newdoc As DOMDocument60)
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/MinTiltSAET", Orientation_and_ShadingSht.Range("MinTiltSAET"))
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/MaxTiltSAET", Orientation_and_ShadingSht.Range("MaxTiltSAET"))
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/RowsBlockSAET", Orientation_and_ShadingSht.Range("RowsBlockSAET"))
+            Call Orientation_and_ShadingSht.UpdateNumberOfRowsSAET
             If Range("RowsBlockSAET").Value > 1 Then
                 Call InsertValue(newdoc, "//Site/Orientation_and_Shading/PitchSAET", Orientation_and_ShadingSht.Range("PitchSAET"))
                 Call InsertValue(newdoc, "//Site/Orientation_and_Shading/WActiveSAET", Orientation_and_ShadingSht.Range("WActiveSAET"))
                 Call InsertValue_BoolToYesNo(newdoc, "//Site/Orientation_and_Shading/BacktrackOptSAET", Orientation_and_ShadingSht.Range("BacktrackOptSAET"))
                 Call InsertValue_BoolToYesNo(newdoc, "//Site/Orientation_and_Shading/UseCellValSAET", Orientation_and_ShadingSht.Range("UseCellValSAET"))
+                Call Orientation_and_ShadingSht.UpdateCellShadingSAET
                 If Range("UseCellValSAET").Value = "Yes" Then
                     Call InsertValue(newdoc, "//Site/Orientation_and_Shading/StrInWidSAET", Orientation_and_ShadingSht.Range("StrInWidSAET"))
                     Call InsertValue(newdoc, "//Site/Orientation_and_Shading/CellSizeSAET", Orientation_and_ShadingSht.Range("CellSizeSAET"))
@@ -280,17 +292,19 @@ Private Sub loadOSSht(ByRef newdoc As DOMDocument60)
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/AxisAzimuthSAST", Orientation_and_ShadingSht.Range("AxisAzimuthSAST"))
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/RotationMaxSAST", Orientation_and_ShadingSht.Range("RotationMaxSAST"))
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/RowsBlockSAST", Orientation_and_ShadingSht.Range("RowsBlockSAST"))
+            Call Orientation_and_ShadingSht.UpdateNumberOfRowsSAST
             If Range("RowsBlockSAST").Value > 1 Then
                 Call InsertValue(newdoc, "//Site/Orientation_and_Shading/PitchSAST", Orientation_and_ShadingSht.Range("PitchSAST"))
                 Call InsertValue(newdoc, "//Site/Orientation_and_Shading/WActiveSAST", Orientation_and_ShadingSht.Range("WActiveSAST"))
                 Call InsertValue_BoolToYesNo(newdoc, "//Site/Orientation_and_Shading/BacktrackOptSAST", Orientation_and_ShadingSht.Range("BacktrackOptSAST"))
                 Call InsertValue_BoolToYesNo(newdoc, "//Site/Orientation_and_Shading/UseCellValSAST", Orientation_and_ShadingSht.Range("UseCellValSAST"))
+                Call Orientation_and_ShadingSht.UpdateCellShadingSAST
                 If Range("UseCellValSAST").Value = "Yes" Then
                     Call InsertValue(newdoc, "//Site/Orientation_and_Shading/StrInWidSAST", Orientation_and_ShadingSht.Range("StrInWidSAST"))
                     Call InsertValue(newdoc, "//Site/Orientation_and_Shading/CellSizeSAST", Orientation_and_ShadingSht.Range("CellSizeSAST"))
                 End If
             End If
-        
+            
          ElseIf Orientation_and_ShadingSht.Range("OrientType").Value = "Tilt and Roll Tracking" Then
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/AxisTiltTART", Orientation_and_ShadingSht.Range("AxisTiltTART"))
             Call InsertValue(newdoc, "//Site/Orientation_and_Shading/AxisAzimuthTART", Orientation_and_ShadingSht.Range("AxisAzimuthTART"))
@@ -337,6 +351,63 @@ Private Sub loadOSSht(ByRef newdoc As DOMDocument60)
     
    
    
+End Sub
+
+' Loads the Bifacial sheet
+Private Sub loadBifacialSht(ByRef newdoc As DOMDocument60)
+    
+    Dim EventsEnabled As Boolean
+    EventsEnabled = Application.EnableEvents
+    
+    Application.EnableEvents = True              ' Required to update the Bifacial sheet depending upon the value of UseBifacialModel
+    
+    ' No bifacial information in files prior to version 1.5.0
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.0") < 0) Then
+        BifacialSht.Range("UseBifacialModel") = "No"
+    
+    ' Bifacial information present
+    Else
+        ' Check if spectral model is used
+        Call InsertValue_BoolToYesNo(newdoc, "//Site/Bifacial/UseBifacialModel", BifacialSht.Range("UseBifacialModel"))
+    
+        If BifacialSht.Range("UseBifacialModel").Value = "Yes" Then
+            
+            Call InsertValue(newdoc, "//Site/Bifacial/GroundClearance", BifacialSht.Range("GroundClearance"))
+            Call InsertValue(newdoc, "//Site/Bifacial/StructBlockingFactor", BifacialSht.Range("StructBlockingFactor"))
+            Call InsertValue(newdoc, "//Site/Bifacial/PanelTransFactor", BifacialSht.Range("PanelTransFactor"))
+            Call InsertValue(newdoc, "//Site/Bifacial/BifacialityFactor", BifacialSht.Range("BifacialityFactor"))
+            
+            ' add albedo type
+            Call InsertAttribute(newdoc, "//Site/Bifacial/BifAlbedo", "Frequency", BifacialSht.Range("BifAlbFreqVal"))
+        
+            ' add monthly or yearly albedo
+            If BifacialSht.Range("BifAlbFreqVal").Value = "Site" Then
+                Call BifacialSht.BifSwitchFreq(BifacialSht.Range("BifAlbFreqVal"))
+            ElseIf BifacialSht.Range("BifAlbFreqVal").Value = "Yearly" Then
+                BifacialSht.Range("BifAlbYearly").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Yearly").text
+                Call BifacialSht.BifSwitchFreq(BifacialSht.Range("BifAlbFreqVal"))
+            ElseIf BifacialSht.Range("BifAlbFreqVal").Value = "Monthly" Then
+                BifacialSht.Range("BifAlbJan").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Jan").text
+                BifacialSht.Range("BifAlbFeb").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Feb").text
+                BifacialSht.Range("BifAlbMar").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Mar").text
+                BifacialSht.Range("BifAlbApr").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Apr").text
+                BifacialSht.Range("BifAlbMay").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/May").text
+                BifacialSht.Range("BifAlbJun").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Jun").text
+                BifacialSht.Range("BifAlbJul").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Jul").text
+                BifacialSht.Range("BifAlbAug").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Aug").text
+                BifacialSht.Range("BifAlbSep").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Sep").text
+                BifacialSht.Range("BifAlbOct").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Oct").text
+                BifacialSht.Range("BifAlbNov").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Nov").text
+                BifacialSht.Range("BifAlbDec").Value = newdoc.SelectSingleNode("//Site/Bifacial/BifAlbedo/Dec").text
+                Call BifacialSht.BifSwitchFreq(BifacialSht.Range("BifAlbFreqVal"))
+            End If
+    
+        End If
+    End If
+    
+    Application.EnableEvents = EventsEnabled
+    
+
 End Sub
 
 'Loads the Horizon Shading Sheet
@@ -431,9 +502,29 @@ Private Sub loadSoilingSht(ByRef newdoc As DOMDocument60)
     
     ' Add monthly or yearly soiling
     If SoilingSht.Range("SfreqVal").Value = "Yearly" Then
-        Call InsertValue(newdoc, "//Site/System/Losses/SoilingLosses/Yearly", SoilingSht.Range("Yearly"))
+        ' Fix bug from versions < 1.5.0: SoilingYearly may actually be stored in PrintSoilingYearly
+        Dim xmlNodelist As IXMLDOMNodeList
+        Dim tmpPath As String
+        tmpPath = "//Site/System/Losses/SoilingLosses/PrintSoilingYearly"
+        Set xmlNodelist = newdoc.SelectNodes(tmpPath)
+        If xmlNodelist.Item(0) Is Nothing Then
+            tmpPath = "//Site/System/Losses/SoilingLosses/Yearly"
+        End If
+        ' End bug fix
+        SoilingSht.Range("SoilingYearly").Value = newdoc.SelectSingleNode(tmpPath).text
     ElseIf SoilingSht.Range("SfreqVal").Value = "Monthly" Then
-        Call InsertValue(newdoc, "//Site/System/Losses/SoilingLosses/*", SoilingSht.Range("D15:O15"))
+        SoilingSht.Range("SoilingJan").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Jan").text
+        SoilingSht.Range("SoilingFeb").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Feb").text
+        SoilingSht.Range("SoilingMar").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Mar").text
+        SoilingSht.Range("SoilingApr").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Apr").text
+        SoilingSht.Range("SoilingMay").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/May").text
+        SoilingSht.Range("SoilingJun").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Jun").text
+        SoilingSht.Range("SoilingJul").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Jul").text
+        SoilingSht.Range("SoilingAug").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Aug").text
+        SoilingSht.Range("SoilingSep").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Sep").text
+        SoilingSht.Range("SoilingOct").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Oct").text
+        SoilingSht.Range("SoilingNov").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Nov").text
+        SoilingSht.Range("SoilingDec").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Dec").text
     End If
 
 End Sub
@@ -485,7 +576,7 @@ End Sub
 ' Loads the Input File sheet
 Private Sub loadInputSht(ByRef newdoc As DOMDocument60)
     Dim validFilePath As Boolean
-    Dim InputFilePath As String
+    Dim inputFilePath As String
     Dim relativeFilePath As String
     ' For displaying only a relative file path
     Dim InputFileName As String
@@ -501,56 +592,56 @@ Private Sub loadInputSht(ByRef newdoc As DOMDocument60)
     
         
     ' Check if input file path is defined. If not, then make it red and notify user with a message on the error sheet
-    InputFilePath = newdoc.SelectSingleNode("//Site/InputFilePath").text ' InputFileSht.Range("InputFilePath").Value
-    InputFilePath = Replace(InputFilePath, "/", "\")
+    inputFilePath = newdoc.SelectSingleNode("//Site/InputFilePath").text ' InputFileSht.Range("InputFilePath").Value
+    inputFilePath = Replace(inputFilePath, "/", "\")
     ' Defines input file name
-    FilePathLeft = Left(InputFilePath, Len(ThisWorkbook.path))
+    FilePathLeft = Left(inputFilePath, Len(ThisWorkbook.path))
     FilePathLeft = Replace(FilePathLeft, "/", "\")
-    FilePathLeft_csyx = Left(InputFilePath, Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
+    FilePathLeft_csyx = Left(inputFilePath, Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
     FilePathLeft_csyx = Replace(FilePathLeft_csyx, "/", "\")
     
     ' If the file path is in the same directory as csyx or CASSYS or is in a folder further down, the file path is given as a relative file path
     If ThisWorkbook.path = FilePathLeft Then
-        InputFileName = Right(InputFilePath, Len(InputFilePath) - Len(ThisWorkbook.path) - 1)
+        InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(ThisWorkbook.path) - 1)
     ElseIf Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) = FilePathLeft_csyx Then
-        InputFileName = Right(InputFilePath, Len(InputFilePath) - Len(FilePathLeft_csyx))
+        InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(FilePathLeft_csyx))
     ' If the file is stored somewhere else entirely, the whole file path is stored
     Else
-        InputFileName = InputFilePath
+        InputFileName = inputFilePath
     End If
 
     ' Displays input file name
     InputFileSht.Range("InputFilePath").Value = InputFileName
-    validFilePath = checkValidFilePath(InputFileSht, "Input", InputFilePath)
+    validFilePath = checkValidFilePath(InputFileSht, "Input", inputFilePath)
     ' If the file path is not correct then check the relative path (check the directory as CASSYS.xlsm is contained in)
     If validFilePath = False Then
-        relativeFilePath = Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) & Right(InputFilePath, Len(FilePathLeft_csyx))
+        relativeFilePath = Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) & Right(inputFilePath, Len(FilePathLeft_csyx))
         validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
         If validFilePath = True Then
-            InputFilePath = relativeFilePath
-            InputFileName = Right(InputFilePath, Len(InputFilePath) - Len(FilePathLeft_csyx))
+            inputFilePath = relativeFilePath
+            InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(FilePathLeft_csyx))
             InputFileSht.Range("InputFilePath").Value = InputFileName
         Else:
-            relativeFilePath = ThisWorkbook.path & "\" & Right(InputFilePath, Len(FilePathLeft))
+            relativeFilePath = ThisWorkbook.path & "\" & Right(inputFilePath, Len(FilePathLeft))
             validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
             If validFilePath = True Then
-                InputFilePath = relativeFilePath
-                InputFileName = Right(InputFilePath, Len(InputFilePath) - Len(ThisWorkbook.path) - 1)
+                inputFilePath = relativeFilePath
+                InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(ThisWorkbook.path) - 1)
                 InputFileSht.Range("InputFilePath").Value = InputFileName
             ' Looks for file in location of .csyx file as well as in location of CASSYS itself
             Else:
-                relativeFilePath = Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) & Right(InputFilePath, Len(InputFilePath) - InStrRev(InputFilePath, "\"))
+                relativeFilePath = Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) & Right(inputFilePath, Len(inputFilePath) - InStrRev(inputFilePath, "\"))
                 validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
                 If validFilePath = True Then
-                    InputFilePath = relativeFilePath
-                    InputFileName = Right(InputFilePath, Len(InputFilePath) - Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
+                    inputFilePath = relativeFilePath
+                    InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
                     InputFileSht.Range("InputFilePath").Value = InputFileName
                 Else:
-                    relativeFilePath = ThisWorkbook.path & "\" & Right(InputFilePath, Len(InputFilePath) - InStrRev(InputFilePath, "\"))
+                    relativeFilePath = ThisWorkbook.path & "\" & Right(inputFilePath, Len(inputFilePath) - InStrRev(inputFilePath, "\"))
                     validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
                     If validFilePath = True Then
-                        InputFilePath = relativeFilePath
-                        InputFileName = Right(InputFilePath, Len(InputFilePath) - Len(ThisWorkbook.path) - 1)
+                        inputFilePath = relativeFilePath
+                        InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(ThisWorkbook.path) - 1)
                         InputFileSht.Range("InputFilePath").Value = InputFileName
                     End If
                 End If
@@ -559,10 +650,10 @@ Private Sub loadInputSht(ByRef newdoc As DOMDocument60)
     Else
         ' Change browse path color back to white if the input file exists
         InputFileSht.Range("InputFilePath").Interior.Color = ColourWhite
-        If checkValidFilePath(InputFileSht, "Input", CurDir() & "\" & InputFilePath) = False Then
-            Range("FullInputPath").Value = InputFilePath
+        If checkValidFilePath(InputFileSht, "Input", CurDir() & "\" & inputFilePath) = False Then
+            Range("FullInputPath").Value = inputFilePath
         Else
-            Range("FullInputPath").Value = CurDir() & "\" & InputFilePath
+            Range("FullInputPath").Value = CurDir() & "\" & inputFilePath
         End If
     End If
     
@@ -581,8 +672,9 @@ Private Sub loadInputSht(ByRef newdoc As DOMDocument60)
     End If
     
     ' Not version specific.
-    Call InputFileSht.PreviewInput
-    InputFileSht.GetDates (InputFilePath)
+    Call InputFileSht.ChangeClimateFile
+    'Call InputFileSht.PreviewInput
+    'InputFileSht.GetDates (inputFilePath)
     
     ' Version Control for 0.9.2 and 0.9.3, it is possible to load Tilt and Meter Azimuth
     If (newdoc.SelectSingleNode("//Version").text = "0.9.2" Or newdoc.SelectSingleNode("//Version").text = "0.9.3") Then
@@ -1079,7 +1171,20 @@ End Sub
 Private Sub loadASTMSht(ByRef newdoc As DOMDocument60)
         Call InsertValue(newdoc, "//Site/ASTMRegress/SystemPmax", AstmSht.Range("SystemPmax"))
         Call InsertValue(newdoc, "//Site/ASTMRegress/ASTMCoeffs/*", AstmSht.Range("ASTMCoeffs"))
-        Call InsertValue(newdoc, "//Site/ASTMRegress/EAF/*", AstmSht.Range("AstmMonthList"))
+        'Call InsertValue(newdoc, "//Site/ASTMRegress/EAF/*", AstmSht.Range("AstmMonthList"))
+        AstmSht.Range("EAFJan").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Jan").text
+        AstmSht.Range("EAFFeb").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Feb").text
+        AstmSht.Range("EAFMar").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Mar").text
+        AstmSht.Range("EAFApr").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Apr").text
+        AstmSht.Range("EAFMay").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/May").text
+        AstmSht.Range("EAFJun").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Jun").text
+        AstmSht.Range("EAFJul").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Jul").text
+        AstmSht.Range("EAFAug").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Aug").text
+        AstmSht.Range("EAFSep").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Sep").text
+        AstmSht.Range("EAFOct").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Oct").text
+        AstmSht.Range("EAFNov").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Nov").text
+        AstmSht.Range("EAFDec").Value = newdoc.SelectSingleNode("//Site/ASTMRegress/EAF/Dec").text
+       
 End Sub
 
 ' Loads parameters of iterative mode sheet if iterative mode node is present in csyx file

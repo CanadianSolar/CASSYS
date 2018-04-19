@@ -1,7 +1,7 @@
 # CASSYS - Canadian Solar System Simulator #
 *A Simulation Tool for Grid-Connected Photovoltaic Systems*
 
-*Current Version: 1.4.0*
+*Current Version: 1.5.0*
 
 <p align="center">
 <img src =https://github.com/CanadianSolar/CASSYS/blob/gh-pages/images/CASSYS-logo.png alt="CASSYS Logo"></img>
@@ -14,7 +14,7 @@ CASSYS is a computer program used to simulate the performance of photovoltaic gr
 
 The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  
 
-CASSYS is developed and maintained by [Canadian Solar O&M Inc. (Ontario)](http://www.canadiansolar.com/ "Canadian Solar O&M Inc. (Ontario)"). 
+CASSYS is developed and maintained by [Canadian Solar O&M Inc. (Ontario)](https://www.canadiansolar.com/energy-solutions/om-services.html "Canadian Solar O&M Inc. (Ontario)").
 
 ### Software components and languages ##
 ----------------------------------------

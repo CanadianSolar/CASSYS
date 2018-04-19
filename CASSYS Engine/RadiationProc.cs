@@ -14,8 +14,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 // References and Supporting Documentation or Links
 ///////////////////////////////////////////////////////////////////////////////
-//
-//
+// Ref 1: Marion, B. et al. "A Practical Irradiance Model for Bifacial PV Modules"
+//     National Renewable Energy Laboratory, 2017
+//     https://www.nrel.gov/docs/fy17osti/67847.pdf
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -28,11 +29,12 @@ namespace CASSYS
         public Sun SimSun = new Sun();                                  // Instance used for Radiation calculations
         public Tracker SimTracker = new Tracker();                      // Instance used for use in systems with tracking
         public HorizonShading SimHorizonShading = new HorizonShading(); // Instance used for Horizon shading calculations
-        public Tilter SimTilter = new Tilter();                         // instance used for titler calculations
-        DateTime TimeStampAnalyzed;                                     // The time-stamp that used for Sun position calculations [yyyy-mm-dd hh:mm:ss]
+        public Tilter SimTilter = new Tilter();                         // Instance used for tilter calculations
+        public Tilter SimTilterOpposite = new Tilter();                 // Instance used for opposite tilter calculations
+        public Splitter SimSplitter = new Splitter();                   // Instance used for splitter calculations
+        public DateTime TimeStampAnalyzed;                              // The time-stamp that used for Sun position calculations [yyyy-mm-dd hh:mm:ss]
         double HourOfDay;                                               // Hour of day specific to radiation calculations
 
-        Splitter SimSplitter = new Splitter();
         Tilter pyranoTilter = new Tilter(TiltAlgorithm.HAY);
         bool negativeIrradFlag = false;                                 // Negative Irradiance Warning Flag
 
@@ -42,10 +44,9 @@ namespace CASSYS
 
         }
 
-        public void Calculate(
-            
-            SimMeteo SimMet                                             // Meteological data from inputfile
-
+        public void Calculate
+            (
+              SimMeteo SimMet                                             // Meteological data from inputfile
             )
         {
             // Calculating Sun position
@@ -165,6 +166,8 @@ namespace CASSYS
             SimTracker.Calculate(SimSun.Zenith, SimSun.Azimuth, SimMet.Year, SimMet.DayOfYear);
             SimTilter.itsSurfaceSlope = SimTracker.SurfSlope;
             SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
+            SimTilterOpposite.itsSurfaceSlope = Math.PI - SimTracker.SurfSlope;
+            SimTilterOpposite.itsSurfaceAzimuth = Math.PI + SimTracker.SurfAzimuth;
 
             if (double.IsNaN(SimMet.HDiff))
             {
@@ -179,7 +182,7 @@ namespace CASSYS
 
             // Calculate tilted irradiance
             SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
-
+            SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
         }
 
         // De-transposition of the titled irradiance values to the global horizontal values
@@ -197,6 +200,10 @@ namespace CASSYS
             SimTilter.itsSurfaceAzimuth = SimTracker.SurfAzimuth;
             SimTilter.IncidenceAngle = SimTracker.IncidenceAngle;
 
+            SimTilterOpposite.itsSurfaceSlope = Math.PI - SimTracker.SurfSlope;
+            SimTilterOpposite.itsSurfaceAzimuth = Math.PI + SimTracker.SurfAzimuth;
+            SimTilterOpposite.IncidenceAngle = Math.PI - SimTracker.IncidenceAngle;
+
             // Calculating the Incidence Angle for the current setup
             double cosInc = Tilt.GetCosIncidenceAngle(SimSun.Zenith, SimSun.Azimuth, SimTilter.itsSurfaceSlope, SimTilter.itsSurfaceAzimuth);
 
@@ -205,6 +212,7 @@ namespace CASSYS
             {
                 SimSplitter.Calculate(SimSun.Zenith, 0, NExtra: SimSun.NExtra);
                 SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
             }
             else if ((SimSun.Zenith > 87.5 * Util.DTOR) || (cosInc <= Math.Cos(87.5 * Util.DTOR)))
             {
@@ -217,6 +225,7 @@ namespace CASSYS
                 SimSplitter.HDir = 0;
 
                 SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
             }
             // Otherwise, bisection loop
             else
@@ -228,6 +237,7 @@ namespace CASSYS
                     double HGloAv = (HGloLo + HGloHi) / 2;
                     SimSplitter.Calculate(SimSun.Zenith, _HGlo: HGloAv, NExtra: SimSun.NExtra);
                     SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                    SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
                     double TGloAv = SimTilter.TGlo;
 
                     // Compare the TGloAv calculated from the Horizontal guess to the acutal TGlo and change the bounds for analysis
@@ -334,6 +344,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Horizontal_beam_irradiance"] = SimSplitter.HDir;
             ReadFarmSettings.Outputlist["Global_Irradiance_in_Array_Plane"] = SimTilter.TGlo;
             ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Plane"] = SimTilter.TDir;
+            ReadFarmSettings.Outputlist["Beam_Irradiance_in_Array_Back"] = SimTilterOpposite.TDir;
             ReadFarmSettings.Outputlist["Diffuse_Irradiance_in_Array_Plane"] = SimTilter.TDif;
             ReadFarmSettings.Outputlist["Ground_Reflected_Irradiance_in_Array_Plane"] = SimTilter.TRef;
             ReadFarmSettings.Outputlist["Tracker_Slope"] = SimTracker.itsTrackerSlope * Util.RTOD;
@@ -362,6 +373,17 @@ namespace CASSYS
             }
 
             SimTilter.Config();
+            SimTilterOpposite.Config();
+        }
+
+        // Calculates the view factor according to Ref. 1
+        public static double GetViewFactor
+            (
+              double beta1                              // First angle of the field of view
+            , double beta2                              // Last angle of the field of view
+            )
+        {
+            return 0.5 * (Math.Cos(beta1) - Math.Cos(beta2));
         }
     }
 }

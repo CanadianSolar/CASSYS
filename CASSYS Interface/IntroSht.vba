@@ -82,6 +82,7 @@ Sub SwitchMode(ByVal Selection As String)
         
         Call PreModify(IntroSht, currentShtStatus)
         SystemSht.Visible = xlSheetHidden
+        BifacialSht.Visible = xlSheetHidden
         LossesSht.Visible = xlSheetHidden
         SoilingSht.Visible = xlSheetHidden
         SpectralSht.Visible = xlSheetHidden
@@ -157,6 +158,7 @@ Sub SwitchMode(ByVal Selection As String)
         Orientation_and_ShadingSht.Visible = xlSheetHidden
         Horizon_ShadingSht.Visible = xlSheetHidden
         SystemSht.Visible = xlSheetHidden
+        BifacialSht.Visible = xlSheetHidden
         LossesSht.Visible = xlSheetHidden
         SoilingSht.Visible = xlSheetHidden
         SpectralSht.Visible = xlSheetHidden
@@ -202,6 +204,7 @@ Sub SwitchMode(ByVal Selection As String)
     Else
         Call PreModify(IntroSht, currentShtStatus)
         SystemSht.Visible = xlSheetVisible
+        BifacialSht.Visible = xlSheetVisible
         LossesSht.Visible = xlSheetVisible
         SoilingSht.Visible = xlSheetVisible
         SpectralSht.Visible = xlSheetVisible

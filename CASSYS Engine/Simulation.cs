@@ -100,6 +100,8 @@ namespace CASSYS
                     case "GridConnected":
                         // Assign the Sub-Array Count for grid connected systems.
                         ReadFarmSettings.AssignSubArrayCount();
+                        // Assign the back cell rows number for grid connected systems.
+                        ReadFarmSettings.AssignCellRowsNum();
                         SimGridSys = new GridConnectedSystem();
                         SimGridSys.Config();
                         goto case "Radiation";

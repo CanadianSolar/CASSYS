@@ -37,8 +37,9 @@ namespace CASSYS
         double nearShadeLosses = 0;         // Sum of radiation loss due to row to row shading fatctors 
         double soilingLoss = 0;             // Sum of radiation loss due to panel soiling
         double incidenceAngleLoss = 0;      // Sum of radiation loss due to incidence angle
+        double bifacialGain = 0;            // Sum of radiation gain due to bifacial panels
         double spectralLoss = 0;            // Sum of radiation loss due to spectral effects
-        double effectivePOARad = 0;         // Sum of effective radiation available for power conversion
+        double effectiveRad = 0;            // Sum of effective radiation available for power conversion
 
         // PV array level values [kWh]
         double arrayNomEnergy = 0;          // Nominal power of the farm
@@ -80,8 +81,9 @@ namespace CASSYS
             nearShadeLosses += ReadFarmSettings.Outputlist["Near_Shading_Loss_for_Global"];
             soilingLoss += ReadFarmSettings.Outputlist["Radiation_Soiling_Loss"];
             incidenceAngleLoss += ReadFarmSettings.Outputlist["Incidence_Loss_for_Global"];
+            bifacialGain += ReadFarmSettings.Outputlist["Bifacial_Gain"];
             spectralLoss += ReadFarmSettings.Outputlist["Radiation_Spectral_Loss"];
-            effectivePOARad += ReadFarmSettings.Outputlist["Effective_Irradiance_in_POA"];
+            effectiveRad += ReadFarmSettings.Outputlist["Radiation_Available_for_Power_Conversion"];
 
             // PV array level values [kWh]
             arrayNomEnergy += ReadFarmSettings.Outputlist["Array_Nominal_Power"];
@@ -125,8 +127,9 @@ namespace CASSYS
             LossOutputs["Near_Shading_Losses"] = nearShadeLosses * Util.timeStep / 60;
             LossOutputs["Soiling_Losses"] = soilingLoss * Util.timeStep / 60;
             LossOutputs["Incidence_Angle_Losses"] = incidenceAngleLoss * Util.timeStep / 60;
+            LossOutputs["Bifacial_Gain"] = -1 * bifacialGain * Util.timeStep / 60;                  // Multiply by -1 to translate gains to losses
             LossOutputs["Spectral_Losses"] = spectralLoss * Util.timeStep / 60;
-            LossOutputs["Effective_POA_Radiation"] = effectivePOARad * Util.timeStep / 60;
+            LossOutputs["Effective_POA_Radiation"] = effectiveRad * Util.timeStep / 60;
             // PV CONVERSION takes place here
             // Losses at PV modules
             LossOutputs["PV_Array_Nominal_Energy"] = arrayNomEnergy * Util.timeStep / 60;

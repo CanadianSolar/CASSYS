@@ -20,7 +20,8 @@ Attribute VB_Exposed = True
 Option Explicit
 Private Const PreviewInputLine = 26 ' The row where the input file preview begins
 Private Const OriginalFormatLine = 39 ' The row where the raw input (delimited) data begins
-Private Const NumInputHiders = 4 ' The number of shapes that appear when a TMY file is selected to hide user input fields
+Private Const NumInputHiders = 3 ' The number of shapes that appear when a TMY file is selected to hide user input fields
+                                 ' Note: there is a fourth one that used to be used to hide the 'Original Format' section. It is not used anymore.
 
 Private Sub Worksheet_Activate()
 
@@ -67,6 +68,9 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Dim validFilePath As Boolean
     Dim currentShtStatus As sheetStatus
     Dim colcell As Range
+    Dim inputFilePath As String
+    Dim fileType As Integer
+    Dim oldLastInputColumn As Integer, newLastInputColumn As Integer
     
     Dim i As Integer
     
@@ -74,37 +78,9 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Application.EnableEvents = False
     Call PreModify(InputFileSht, currentShtStatus)
 
-    'If the delimeter cell, input file path is changed run the preview input function
+    'If the delimiter cell, input file path is changed run the preview input function
     If Not Intersect(Target, Range("Delimeter")) Is Nothing Or Not Intersect(Target, Range("InputFilePath")) Is Nothing Then
-        validFilePath = checkValidFilePath(InputFileSht, "Input", InputFileSht.Range("FullInputPath").Value)
-        If validFilePath = True Then
-            ' Check if the file being loaded is a tm2 file by checking the file extension (last 4 letters of the file path)
-            For Each colcell In Range("InputColumnNums")
-                If colcell.Value <> vbNullString Then
-                    Call MsgBox("Warning. The column number inputs may not match with the new input file.", vbExclamation, "CASSYS: Check Column Numbers")
-                    Exit For
-                End If
-            Next
-            If Right(InputFileSht.Range("InputFilePath").Value, 4) = ".tm2" Then
-                Call configureInputTMY(2)
-            ElseIf Right(InputFileSht.Range("InputFilePath").Value, 4) = ".tm3" Then
-                Call configureInputTMY(3)
-            ElseIf Right(InputFileSht.Range("InputFilePath").Value, 4) = ".epw" Then
-                Call configureInputEPW(1)
-            Else
-                For i = 1 To NumInputHiders
-                    InputFileSht.Shapes("InputHide" & i).Visible = msoFalse
-                Next
-                InputFileSht.Range("TMYType").Value = 0
-                Range("RowsToSkip").Value = 1 ' set back to a default
-                PreviewInput
-            End If
-        Else
-            For i = 1 To NumInputHiders
-                InputFileSht.Shapes("InputHide" & i).Visible = msoFalse
-            Next
-            GoTo change_end
-        End If
+        Call ChangeClimateFile
     End If
     
     If Not Intersect(Target, Range("InputColumnNums")) Is Nothing Or Not Intersect(Target, Range("TimeFormat")) Is Nothing Or Not Intersect(Target, Range("RowsToSkip")) Is Nothing Then
@@ -221,6 +197,100 @@ Private Sub Worksheet_FollowHyperlink(ByVal Target As Hyperlink)
     
 End Sub
 
+' Clear the input file sheet, for example when a new simulation is created
+Sub Clear()
+    
+    Dim currentShtStatus As sheetStatus
+     
+    Call PreModify(InputFileSht, currentShtStatus)
+     
+    ' Hide shapes that block input when TMY file is loaded
+    Dim i As Integer
+    For i = 1 To 4
+        InputFileSht.Shapes("InputHide" & i).Visible = msoFalse
+    Next
+     
+    InputFileSht.Range("lastInputColumn").Value = 0
+    InputFileSht.Range("InputFilePath").Value = vbNullString
+    InputFileSht.Range("Interval").Value = 60
+    InputFileSht.Range("FullInputPath").Value = vbNullString
+    InputFileSht.Range("IncorrectClimateRowsAllowed").Value = 0
+     
+    ' Clear column headers, column selections and reset colours
+    InputFileSht.Range("TimeStamp,GlobalRad,TempAmbient,TempPanel,WindSpeed,HorIrradiance,Hor_Diffuse,FirstDate,LastDate,previewInputs,MeterTilt,MeterAzimuth").ClearContents
+    InputFileSht.Range("MeterTilt").Interior.ColorIndex = 0
+    InputFileSht.Range("MeterAzimuth").Interior.ColorIndex = 0
+    InputFileSht.Range("InputFilePath").Interior.Color = ColourWhite
+    
+    ' Clears colour formatting on input file sheet of brown 'rows to skip lines'
+    InputFileSht.Range("RowsToSkip").Value = 1
+    InputFileSht.Range("TMYType").Value = 0
+    Call InputFileSht.SplitToColumns(",")
+     
+    Call PostModify(InputFileSht, currentShtStatus)
+
+End Sub
+' Respond to a change in climate file name
+Sub ChangeClimateFile()
+
+    Dim i As Integer
+    Dim validFilePath As Boolean
+    Dim enableEventsStatus As Boolean
+    Dim currentShtStatus As sheetStatus
+    Dim inputFilePath As String
+    Dim fileType As Integer
+    Dim oldLastInputColumn As Integer, newLastInputColumn As Integer
+    
+    ' Disable events to prevent an infinite loop when changing the worksheet
+    enableEventsStatus = Application.EnableEvents
+    Application.EnableEvents = False
+    Call PreModify(InputFileSht, currentShtStatus)
+
+    ' Check that file actually exists
+    validFilePath = checkValidFilePath(InputFileSht, "Input", InputFileSht.Range("FullInputPath").Value)
+    
+    ' File does not exist. Skip all other steps
+    If validFilePath = False Then
+        For i = 1 To NumInputHiders
+            InputFileSht.Shapes("InputHide" & i).Visible = msoFalse
+            InputFileSht.Shapes("InputHide3").TextFrame.Characters.text = "File cannot be found - no details available at this time."
+        Next
+        GoTo change_end
+    End If
+    
+    ' File is defined. Load first 10 lines
+    inputFilePath = Range("InputFilePath").Value
+    GetLine (inputFilePath)
+    
+    ' Check for type of file
+    fileType = detectInputFileType(inputFilePath)
+    
+    ' Configure readers
+    If (fileType = 1) Then
+        Call configureInputEPW(1)
+    ElseIf (fileType = 2 Or fileType = 3) Then
+        Call configureInputTMY(fileType)
+    Else
+        For i = 1 To NumInputHiders
+            InputFileSht.Shapes("InputHide" & i).Visible = msoFalse
+        Next
+        InputFileSht.Range("TMYType").Value = 0
+        Range("RowsToSkip").Value = 1 ' set back to a default
+        oldLastInputColumn = Range("LastInputColumn").Value
+        PreviewInput
+        ' Check if the number of columns has changed
+        newLastInputColumn = Range("LastInputColumn").Value
+        If (newLastInputColumn <> oldLastInputColumn And oldLastInputColumn <> 0) Then
+           Call MsgBox("Warning: this file has a different number of columns than the previously used file. If necessary, please adjust the column numbers in the Meteorological Data Position section.", vbExclamation, "CASSYS: Check Column Numbers")
+        End If
+    End If
+
+change_end:
+    Call PostModify(InputFileSht, currentShtStatus)
+    Application.EnableEvents = enableEventsStatus
+
+End Sub
+
 ' GetDates Function
 '
 ' Arguments Path - the file path
@@ -295,22 +365,23 @@ End Sub
 '
 ' Checks if the user defined nominal time step matches the time step read from the input file
 Private Sub CheckNomTimeStep()
-
+    
+    On Error GoTo skip
     If Not Round(((InputFileSht.Range("SecondDate").Value - InputFileSht.Range("FirstDate").Value) * 24 * 60), 2) = InputFileSht.Range("Interval").Value Then
         MsgBox ("CASSYS: The defined nominal time step value does not match the nominal time step determined from the file. Please check this value before proceeding in the Climate File Sheet.")
         InputFileSht.Range("Interval").Interior.Color = RGB(255, 0, 0)
     Else
         InputFileSht.Range("Interval").Interior.Color = RGB(176, 220, 231)
     End If
-
+skip:
+    On Error GoTo 0
 End Sub
 ' GetLine Function
 '
 ' Arguments Path - the file path
 '
 ' The purpose of this function is to open a file,
-' read the first 10 lines, and output them to the
-' user
+' read the first 10 lines, and output them to the input file sheet
 Private Sub GetLine(ByVal path As String)
 
     Dim fileNum As Integer ' the file pointer
@@ -354,7 +425,6 @@ Private Sub GetLine(ByVal path As String)
         If Not EOF(fileNum) Then
             Line Input #fileNum, ReadLine
             InputFileSht.Cells(i + OriginalFormatLine, 3).Value = ReadLine
-            If InStr(1, ReadLine, "Date (MM/DD/YYYY),Time (HH:MM),ETR (W/m^2),ETRN (W/m^2),") Then Call configureInputTMY(3)
         End If
     Next i
     
@@ -657,6 +727,43 @@ Sub AddColumnHeaders()
     
 End Sub
 
+' Check for type of input file
+' inputFilePath: (i) path of the input file
+' detectInputFileType: (o) type of the file: 0 for csv, 1 for EPW, 2 for TMY2, 3 for TMY3
+Private Function detectInputFileType(inputFilePath As String) As Integer
+    ' Declarations
+    Dim firstLine As String              ' first line as read from file
+    Dim secondLine As String             ' second line read from file
+    Dim fileType As Integer              ' 0 for csv, 1 for EPW, 2 for TMY2, 3 for TMY3
+    Dim extension As String              ' the extension of the file in the file path
+    
+    ' Read the first ten lines
+    GetLine (inputFilePath)
+    firstLine = InputFileSht.Cells(1 + OriginalFormatLine, 3).Value
+    secondLine = InputFileSht.Cells(2 + OriginalFormatLine, 3).Value
+    
+    ' Guess the file type based on extension
+    fileType = 0
+    extension = Right(inputFilePath, 4)
+    If extension = ".epw" Then
+        fileType = 1
+    ElseIf extension = ".tm2" Then
+        fileType = 2
+    ElseIf extension = ".tm3" Then
+        fileType = 3
+    End If
+    
+    ' In the case of csv file, try guessing the file type based on first and second lines
+    If (fileType = 0) Then
+        If (Left(firstLine, 8) = "LOCATION") Then
+            fileType = 1
+        ElseIf (InStr(1, secondLine, "Date (MM/DD/YYYY),Time (HH:MM),ETR (W/m^2),ETRN (W/m^2),")) Then
+            fileType = 3
+        End If
+    End If
+    
+    detectInputFileType = fileType
+End Function
 ' Hides user input fields on the input file sheet
 ' and manually sets the necessary fields for TMY reading
 ' TMYType 2 is passed for .tm2 files and TMYType 3 is passed
@@ -673,7 +780,7 @@ Private Sub configureInputTMY(TMYType As Integer)
         InputFileSht.Shapes("InputHide" & i).Visible = msoTrue
     Next
     
-    InputFileSht.Shapes("InputHide3").TextFrame.Characters.text = "TM" & TMYType & " file loaded. CASSYS will automatically read the file. No user input is required."
+    InputFileSht.Shapes("InputHide3").TextFrame.Characters.text = "TM" & TMYType & " file detected. CASSYS will automatically read the file. No user input is required."
 
     
     ' Logs the TMYType for use by the engine
@@ -725,7 +832,7 @@ Private Sub configureInputEPW(TMYType As Integer)
         InputFileSht.Shapes("InputHide" & i).Visible = msoTrue
     Next
     
-    InputFileSht.Shapes("InputHide3").TextFrame.Characters.text = "EPW file loaded. CASSYS will automatically read the file. No user input is required."
+    InputFileSht.Shapes("InputHide3").TextFrame.Characters.text = "EPW file detected. CASSYS will automatically read the file. No user input is required."
 
     ' Logs the TMYType for use by the engine
     InputFileSht.Range("TMYType").Value = TMYType
@@ -739,9 +846,8 @@ Private Sub configureInputEPW(TMYType As Integer)
     ' Set default rows to skip
     InputFileSht.Range("RowsToSkip").Value = 8
     
-    ' Clear preview as it is not needed
-    InputFileSht.Range("previewInputs").ClearContents
-    
 End Sub
+
+
 
 

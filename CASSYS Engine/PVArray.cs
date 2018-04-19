@@ -28,7 +28,6 @@
 // Ref 3: Quaschning & Hanitsch (1996): Numerical Simulation of I-V characteristics Solar Energy 
 //        Solar Energy 56, 513-520
 // Ref 4: (Website, Accessed 2014-09) PV Modelling Collaborative: http://pvpmc.sandia.gov/modeling-steps/2-dc-module-iv/cell-temperature/pvsyst-cell-temperature-model/
-// Ref 5: (Website, Accessed 2014-10) PV Modelling Collaborative: http://pvpmc.org/modeling-steps/shading-soiling-and-reflection-losses/incident-angle-reflection-losses/ashre-model/
 ///////////////////////////////////////////////////////////////////////////////
 
 using System;
@@ -61,9 +60,10 @@ namespace CASSYS
         double itsRpRef;                      // Shunt resistance [ohms];
         double itsRw;                         // Global wiring resistance as seen from Inverter for entire Sub-Array [ohms]
         double itsSubArrayNum;                // The sub-array number that the PVArray belongs to. [#]
+        double biFactor;                      // The bifaciality factor [#]
 
         // Module Temperature and Irradiance Coefficients
-        double itsBo;                                       // ASHARE Parameter used for IAM calculation (see Ref 5)
+        double itsBo;                                       // ASHRAE Parameter used for IAM calculation (see Ref 5)
         bool userIAMModel;                                  // If a userIAM profile is defined or the ASHRAE model is used.
         bool panIAMModel;                                   // If a panIAM profile is defined
         bool panAOIModel;
@@ -105,6 +105,12 @@ namespace CASSYS
         public double IAMDir;                 // IAM Factor applied to Beam [#]
         public double IAMDif;                 // IAM Factor applied to Diffuse [#]
         public double IAMRef;                 // IAM factor applied to ground reflected component of tilted irradiance [#]
+        public double RadSoilingLoss;         // Losses due to soiling of the PV array [W/m^2]
+        public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
+        public double BifacialGain;           // Back side effective irradiance, weighted by the bifaciality factor [W/m^2]
+        public double TGloEff;                // Front side effective irradiance, adjusted for incidence angle and soiling effects [W/m^2]
+        public double RadEff;                 // Front and back side combined effective irradiance, adjusted for spectral effects [W/m^2]
+        public double TDifRef;                // Diffuse irradiance that gets reflected from the front [W/m^2]
         public double VOut;                   // PV array voltage at maximum power [V] 
         public double IOut;                   // PV array current at maximum power [A] 
         public double POut;                   // PV array power produced [W]  
@@ -112,13 +118,10 @@ namespace CASSYS
         public double Voc;                    // PV array Voc [V]
         public double TModule;                // Temperature of module [C]
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
-        public double RadSoilingLoss;         // Losses due to soiling of PV array [W/m^2]
-        public double RadSpectralLoss;        // Losses due to spectral effects [W/m^2]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
-        public double Efficiency;             // PV array efficiency [%] 
-        public double TGloEff;                // Irradiance adjusted for incidence angle, soiling, and spectral effects [W/m^2]
+        public double Efficiency;             // PV array efficiency [%]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
         public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
@@ -140,7 +143,7 @@ namespace CASSYS
         {
 
             CalcAtMaximumPowerPoint(); // Calculate max power
-            
+
             if (!isMPPT)
             {
                 // If the Inverter is fixing/raising the Array to an MPPT Limit/Clipping Voltage, use the inverter voltage and calculate new power point 
@@ -159,6 +162,7 @@ namespace CASSYS
             , double TDir                            // Tilted Beam Irradiance - Post Shading, if Shading model is defined [W/m^2]
             , double TDif                            // Tilted Diffuse Irradiance - Post Shading, if Shading model is defined [W/m^2]
             , double TRef                            // Tilted Ground Reflected Irradiance - Post Shading, if Shading model is defined [W/m^2]
+            , double BGlo                            // Tilted Back Side Global Irradiance [W/m^2]
             , double InciAng                         // Incidence Angle [radians]
             , double TAmbient                        // Ambient temperature [C]    
             , double WindSpeed                       // Wind speed [m/s]
@@ -170,11 +174,11 @@ namespace CASSYS
             // Assigning the Tilted Global value to a local holder (used for efficiency calculation)
             lossLessTGlo = TGlo;
 
-            // Calculation of effective irradiance reaching the cell (Soiling, IAM, and spectral effects accounted for)
-            CalcEffectiveIrradiance(TDir, TDif, TRef, InciAng, MonthNumber, ClearnessCorr);
+            // Calculation of effective irradiance reaching the cell (soiling, IAM, bifacial, and spectral effects accounted for)
+            CalcEffectiveIrradiance(TDir, TDif, TRef, BGlo, InciAng, MonthNumber, ClearnessCorr);
 
             // Calculation of temperature GetTemperature Method used (see below)
-            CalcTemperature(TAmbient, TGloEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
+            CalcTemperature(TAmbient, RadEff, WindSpeed, TModMeasured);  // Using method to obtain the temperature [C]
 
             // Calculation of the Gamma value for given temperature (Ref 2 - Page 5) 
             itsGamma = itsGammaRef + itsGammaCoeff * (TModule - itsTref);
@@ -186,28 +190,25 @@ namespace CASSYS
 
             // Calculation of the variable Rshunt based on the PVSyst model (Ref 2 - Page 6) 
             double itsRshBase = (itsRpRef - itsRshZero * Math.Exp(-itsRshExp)) / (1 - Math.Exp(-itsRshExp));     // Parametrization value introduced by PVSyst
-            itsRsh = itsRshBase + (itsRshZero - itsRshBase) * Math.Exp(-itsRshExp * (TGloEff / itsHref));        // Determining the effective Rshunt based on irradiance change and a fitting parameter [ohms]
+            itsRsh = itsRshBase + (itsRshZero - itsRshBase) * Math.Exp(-itsRshExp * (RadEff / itsHref));      // Determining the effective Rshunt based on irradiance change and a fitting parameter [ohms]
 
             // Module Isc calculation based on irradiance and temperature (Ref 1 - Eq 2) 
-            mIPhi = TGloEff / itsHref * (itsIPhiRef + itsTCoefIsc * (TModule - itsTref));
+            mIPhi = RadEff / itsHref * (itsIPhiRef + itsTCoefIsc * (TModule - itsTref));
 
             // Adjust Voc based on temperature (similar to current adjustment above)
             CalcAtOpenCircuit();
             mVoc = Voc / itsNSeries;
         }
 
-        // Calculates the effective irradiance available for electricity conversion, based on IAM and Soiling Losses incurred, plus Spectral Model corrections
-        void CalcEffectiveIrradiance
+        // Computes the Incidence Angle Modifier for Beam, Diffuse and Albedo Component
+        public void CalcIAM
             (
-              double TDir                            // Tilted Beam Irradiance [W/m^2]
-            , double TDif                            // Tilted Diffuse Irradiance [W/m^2]
-            , double TRef                            // Tilted Ground Reflected Irradiance [W/m^2]
+              out double IAMDir                      // Incidence Angle Modifier for beam irradiance [#]
+            , out double IAMDif                      // Incidence Angle Modifier for diffuse irradiance [#]
+            , out double IAMRef                      // Incidence Angle Modifier for reflected irradiance [#]
             , double InciAng                         // Incidence Angle [radians]
-            , int MonthNumber                        // Month of the Year [#]
-            , double ClearCorr                       // Clearness correction [unitless]
             )
         {
-            // Computing the Incidence Angle Modifier for Beam, Diffuse and Albedo Component (Calculated using ASHRAE Parameter, see Ref 5 in PV Array Class)
             if (panModelExists)
             {
                 InciAng = Math.Max(0, InciAng);
@@ -228,13 +229,32 @@ namespace CASSYS
             }
             else
             {
-                IAMDir = Math.Cos(InciAng) > itsBo / (1 + itsBo) ? Math.Max((1 - itsBo * (1 / Math.Cos(InciAng) - 1)), 0) : 0;
-                IAMDif = (1 - itsBo * (1 / Math.Cos(Util.DiffInciAng) - 1));
+                IAMDir = Tilt.GetASHRAEIAM(itsBo, InciAng);
+                IAMDif = Tilt.GetASHRAEIAM(itsBo, Util.DiffInciAng);
                 IAMRef = IAMDif;
             }
+        }
 
-            // Calculating the IAM Modified Tilted Irradiance [W/m^2]
+        // Calculates the effective irradiance available for electricity conversion, adjusted for incidence angle, soiling, bifacial, and spectral effects
+        public void CalcEffectiveIrradiance
+            (
+              double TDir                            // Tilted Beam Irradiance [W/m^2]
+            , double TDif                            // Tilted Diffuse Irradiance [W/m^2]
+            , double TRef                            // Tilted Ground Reflected Irradiance [W/m^2]
+            , double BGlo                            // Tilted Back Side Global Irradiance [W/m^2]
+            , double InciAng                         // Incidence Angle [radians]
+            , int MonthNumber                        // Month of the Year [#]
+            , double ClearCorr                       // Clearness correction [unitless]
+            )
+        {
+            // Calculate the incidence angle modifier (IAM)
+            CalcIAM(out IAMDir, out IAMDif, out IAMRef, InciAng);
+
+            // Calculate the IAM Modified Tilted Irradiance [W/m^2]
             IAMTGlo = TDir * IAMDir + TDif * IAMDif + TRef * IAMRef;
+
+            // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
+            // and only for the first array
 
             // Determine soiling loss based on month number specified from Time Stamp [%]
             itsSoilingLossPC = itsMonthlySoilingPC[MonthNumber];
@@ -242,17 +262,39 @@ namespace CASSYS
             // Modified TGlo based on irradiance based on soiling and Incidence Angle modifier
             TGloEff = IAMTGlo * (1 - itsSoilingLossPC);
 
-            // Determine spectral correction based on clearness index
-            RadSpectralLoss = TGloEff * ClearCorr;
-
-            // Modified TGlo based on spectral losses
-            TGloEff = TGloEff * (1 - ClearCorr);
-
-            // PUT INCIDENCE ANGLE LOSSES HERE IN FUTURE - calculated on the fly in GridConnectedSystem
-            // and only for the first array
-
             // Calculate soiling losses in irradiance
             RadSoilingLoss = IAMTGlo * itsSoilingLossPC;
+
+            // Calculate bifacial gain
+            BifacialGain = biFactor * BGlo;
+
+            // Calculate RadEff by front effective irradiance plus bifacial gain
+            RadEff = TGloEff + BifacialGain;
+
+            // Reflectance of diffuse irradiance at average angle of 60 degrees, assuming front surface material is glass
+            double reflectionFactor = GetDiffuseReflectionFactor(Util.GlassRefractionIndex, Util.DiffInciAng);
+
+            // Calculate the amount of diffuse irradiance reflected off the front
+            TDifRef = TDif * (1 - IAMDif * (1 - reflectionFactor)) * (1 - itsSoilingLossPC);
+
+            // Determine spectral loss based on clearness correction value
+            RadSpectralLoss = RadEff * ClearCorr;
+
+            // Modified RadEff based on spectral losses
+            RadEff = RadEff * (1 - ClearCorr);
+        }
+
+        // Calculates the reflection factor for a given refraction index and angle of incidence (Duffie and Beckman, pp.216-218)
+        double GetDiffuseReflectionFactor
+            (
+              double refIndex
+            , double inciAngle
+            )
+        {
+            double refAngle = Math.Asin(Math.Sin(inciAngle) / refIndex);
+            double refFactor = ((Math.Pow(Math.Sin(refAngle - inciAngle),2) / Math.Pow(Math.Sin(refAngle + inciAngle),2)) +
+                                    (Math.Pow(Math.Tan(refAngle - inciAngle), 2) / Math.Pow(Math.Tan(refAngle + inciAngle), 2))) / 2.0;
+            return refFactor;
         }
 
         // Calculates the MPPT operating point of the module
@@ -310,10 +352,10 @@ namespace CASSYS
             PMPP = mPMPP * itsNumModules;
 
             // Calculate Temperature Losses
-            tempLoss = -(itsTCoefP / 100) * (TModule - 25) * (itsPNomDCArray) * (TGloEff / 1000);
+            tempLoss = -(itsTCoefP / 100) * (TModule - 25) * (itsPNomDCArray) * (RadEff / 1000);
 
             // Calculate Energy loss due to irradiance
-            radLoss = (itsPNomDCArray * TGloEff / 1000) - tempLoss - PMPP;
+            radLoss = (itsPNomDCArray * RadEff / 1000) - tempLoss - PMPP;
             
             // Output variables are assigned their values, module voltages add in series, module currents add when parallel, powers add in both cases
             VOut = mVout * itsNSeries;
@@ -641,6 +683,16 @@ namespace CASSYS
 
             // Gathering wiring losses from the CSYX File
             itsRw = double.Parse(ReadFarmSettings.GetInnerText("PV", "GlobWireResist", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "1")) / 1000;
+
+            // Defining the bifaciality factor
+            if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("Bifacial", "UseBifacialModel", ErrLevel.FATAL)))
+            {
+                biFactor = Convert.ToDouble(ReadFarmSettings.GetInnerText("Bifacial", "BifacialityFactor", ErrLevel.FATAL));
+            }
+            else
+            {
+                biFactor = 0;
+            }
         }
 
         // Calculate Gamma, IrsRef, IphiRef for the module provided using equations for Impp condition and Voc condition with N-R method to calculate Gamma

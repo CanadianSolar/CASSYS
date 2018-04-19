@@ -22,7 +22,9 @@ Private Sub Worksheet_Activate()
     ' Upon activating this sheet, the field for the project name is automatically selected
     Range("Name").Select
     ' Upon activating the sheet hide the respective fields
-    Call SwitchFreq(Range("AlbFreqVal").Value)
+    If (IntroSht.Range("ModeSelect") <> "ASTM E2848 Regression") Then
+         Call SwitchFreq(Range("AlbFreqVal").Value)
+    End If
     
 End Sub
 
