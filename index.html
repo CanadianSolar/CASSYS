@@ -21,25 +21,31 @@
  <h2 class="project-tagline">Canadian Solar Simulation Program for Grid-Connected PV Systems</h2>
 	
 <a href="https://github.com/CanadianSolar/CASSYS" class="btn">View on GitHub</a>
-      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.4.0</a>
+      <a href="https://github.com/CanadianSolar/CASSYS/blob/master/CASSYS%20Installer.exe?raw=true" class="btn">Download Installer v1.5.0</a>
 <h3>
 <a id="program-goals-and-description" class="anchor" href="#program-goals-and-description" aria-hidden="true"><span class="octicon octicon-link"></span></a>Program goals and description</h3>
 
 <hr>
 
 <p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
-<p><i>Current Version: 1.4.0</i></p>
+<p><i>Current Version: 1.5.0</i></p>
+<p>All the following changes were made to accommodate the bifacial model. The bifacial model implemented is adapted from the NREL model at <a href="https://github.com/NREL/bifacialvf" title="NREL/bifacialvf">https://github.com/NREL/bifacialvf</a>.</p>
 
 <p><i>New Additions:</i></p>
 <ol>
-<li>Spectral Effects class to calculate a very crude spectral correction value, which is applied to the effective irradiance reaching the PV cell</li>
-<li>Spectral sheet in interface to allow user to define a spectral correction curve, based on clearness index</li>
-<li>Loss Diagram and Output sheets to include spectral gains/losses</li>
+<li>GroundShading class added to calculate a profile of global (beam and diffuse) irradiance for ground between rows</li>
+<li>BackTilter class added to calculate components of back side irradiance (diffuse, rear front-panel-reflected, ground-reflected, and beam) using view factors. Implemented for fixed tilt and single axis tracking systems</li>
+<li>Transposition of global back side irradiance to front, weighted by the bifaciality factor</li>
+<li>Bifacial sheet in interface to allow user to detail bifacial parameters: ground clearance, structural blocking factor, transmission factor, bifaciality factor, and inter-row albedo</li>
+<li>Loss Diagram and Output sheets to include bifacial gains and outputs</li>
+<li>Significant changes to handle TMY3 and EPW files better in interface</li>
+<li>ToolsModule in VBA code to hold development tools, including new ShowRangeNames and HideRangeNames macros</li>
 </ol>
 <p><i>Bug Fixes:</i></p>
 <ol>
-<li>Issue where monthly albedo values were not saved correctly to .csyx</li>
-<li>Issue with PDF report generation</li>
+<li>Small calculation error in energy loss due to voltage too low</li>
+<li>Resolved problems with the saving of monthly information for albedo, bifacial albedo, and soiling</li>
+<li>Addressed issues with locking and shading of cells for tracking configurations</li>
 </ol>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
