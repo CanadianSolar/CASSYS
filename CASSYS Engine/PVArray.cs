@@ -124,7 +124,7 @@ namespace CASSYS
         public double Efficiency;             // PV array efficiency [%]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
         public double itsRoughArea;           // The rough area of the DC Array [m^2]
-        public double cellArea;               // The Area occupied by Cells of the DC Array [m^2]
+        // public double cellArea;               // The Area occupied by Cells of the DC Array [m^2] - not used
         public double tempLoss;               // Energy loss due to temperature [W]
         public double radLoss;                // Energy loss due to irradiance level [W]
         public double PMPP;                   // Power of the array at moximum power point [W]
@@ -498,7 +498,7 @@ namespace CASSYS
                 else
                 {
                     // Use measured values if available.
-                    TModule = TModMeasured;
+                    TModule = Math.Max(-30, TModMeasured);                    // Limit module temperatures to -30 C to prevent unrealistic temperature values from percolating through the rest of the model
                 }
             }
             else
@@ -519,10 +519,11 @@ namespace CASSYS
                     // Forgives the fact that no Wind Speed was specified.
                     WindSpeed = 0;
                 }
-                
-                
+
+
                 // Calculate temperature based on values provided by the User
-                TModule = TAmbient + itsAdsorp * TGloAkt * (1 - itsEfficiencyRef) / (itsConstHTC + itsConvHTC * WindSpeed); // Faiman's module temperature model
+                // Ambient temperatures are limited to -30 C to prevent unrealistic temperature values from percolating through the rest of the model
+                TModule = Math.Max(-30, TAmbient) + itsAdsorp * TGloAkt * (1 - itsEfficiencyRef) / (itsConstHTC + itsConvHTC * WindSpeed); // Faiman's module temperature model
 
             }
         }
@@ -553,7 +554,7 @@ namespace CASSYS
             itsRshZero = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rsh0", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: (4*itsRpRef).ToString()));
             itsRshExp = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rshexp", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "5.5"));
             itsTCoefP = double.Parse(ReadFarmSettings.GetInnerText("PV", "mPmpp", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
-            cellArea = itsNParallel * itsNSeries * itsCellCount * double.Parse(ReadFarmSettings.GetInnerText("PV", "Cellarea", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.01")) / 10000;
+            // cellArea = itsNParallel * itsNSeries * itsCellCount * double.Parse(ReadFarmSettings.GetInnerText("PV", "Cellarea", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0.01")) / 10000;
 
             // Defining all thermal loss variables for the PV Array
             useMeasuredTemp = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Losses", "ThermalLosses/UseMeasuredValues", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));

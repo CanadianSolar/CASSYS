@@ -6,6 +6,7 @@
 // 
 // Revision History:
 // AP - 2014-10-14: Version 0.9
+// DT - 2018-06-26: Made itsMPPTracking public
 //
 // Description: 
 // The Inverter class uses one or three efficiency curve(s) to determine the output
@@ -32,7 +33,7 @@ namespace CASSYS
     class Inverter
     {
         // Inverter definition variables
-        bool itsMPPTracking;                                // MppTracking flag [TRUE, FALSE]
+        public bool itsMPPTracking;                         // MppTracking flag [TRUE, FALSE]
         public double itsMppWindowMin;                      // Minimum value for Mppt window [V]
         public double itsMppWindowMax;                      // Maximum value for Mppt window [V]
         public int itsNumInverters;                         // Number of same inverters supporting array [#]

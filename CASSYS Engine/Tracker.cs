@@ -8,6 +8,7 @@
 // AP - 2016-01-26: Version 0.9.3
 // NB - 2016-02-17: Updated equations for Tilt and Roll tracker
 // NB - 2016-02-24: Addition of backtracking options for horizontal axis cases
+// DT - 2018-06-26: Calculation of tracker angle for E-W and N-S trackers
 //
 // Description:
 // This class is reponsible for the simulation of trackers, specifically the 
@@ -207,8 +208,15 @@ namespace CASSYS
                             SurfSlope = Math.Min(itsMaxTilt, SurfSlope);
                         }
 
+                        // For all single axis trackers in E-W or N-S position, rotation of tracker is same as slope, except for sign
+                        RotAngle = SurfSlope;
+                        // N-S tracker
+                        if (itsTrackerAzimuth == 0)
+                            RotAngle *= Math.Sign(SurfAzimuth);                                          // Same convention as azimuth (negative for East-facing)
+                        // E-W tracker
+                        else if (itsTrackerAzimuth == Math.PI / 2 || itsTrackerAzimuth == -Math.PI / 2)
+                            if (SurfAzimuth > Math.PI / 2) RotAngle = -RotAngle;                         // Negative for North-facing
 
-                       
                     }
                     else
                     {

@@ -6,6 +6,7 @@
 // 
 // Revision History:
 // NA - 2017-06-09: First release - Modularized the simulation class
+// DT - 2018-06-26: Fixed issue with recalculation of array operating point once the voltage is determined
 //
 // Description 
 // This class is used to deal with GridConnected related processes within the simulation.
@@ -407,16 +408,22 @@ namespace CASSYS
             SimInv[j].GetMPPTStatus(arrayVMPP);
 
             // Recalculate array operating point now that the voltage has been determined
-            SimPVA[j].Calculate(false, SimInv[j].VInDC);
-            SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC); 
+            SimPVA[j].Calculate(SimInv[j].itsMPPTracking && SimInv[j].inMPPTWindow, SimInv[j].VInDC);
+            SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
 
-            if (SimInv[j].VInDC == SimInv[j].itsMppWindowMin)
+            double VInDC = SimInv[j].VInDC;
+            if (SimInv[j].isBipolar)
+            {
+                VInDC /= 2;
+            }
+
+            if (VInDC == SimInv[j].itsMppWindowMin)
             {
                 // Calculate energy loss due to voltage too low
                 SimInv[j].LossLowVoltage = arrayPMPP - SimPVA[j].POutNoLoss;
             }
 
-            if (SimInv[j].VInDC == SimInv[j].itsMppWindowMax)
+            if (VInDC == SimInv[j].itsMppWindowMax)
             {
                 // Calculate energy loss due to voltage too high
                 SimInv[j].LossHighVoltage = arrayPMPP - SimPVA[j].POutNoLoss; 
@@ -447,7 +454,7 @@ namespace CASSYS
                 SimInv[j].LossClipping = NoClippingPwr - SimPVA[j].POutNoLoss;
             }
             // Check that max voltage is not exceeded
-            if (SimInv[j].VInDC > SimInv[j].itsMaxVoltage) 
+            if (VInDC > SimInv[j].itsMaxVoltage) 
             {
                 SimInv[j].isON = false;
                 SimInv[j].ACPwrOut = 0;
