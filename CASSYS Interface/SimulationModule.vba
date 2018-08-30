@@ -20,7 +20,7 @@ Private resultLastRow As Long 'gets last row with data in the result sheet
 '
 ' The purpose of this function is to run a C# simulation
 ' program and update the result to the result sheet
-Sub Simulation()
+Function Simulation() As Boolean
 
     Dim wsh As Object                                ' Declare Shell Object
     Set wsh = VBA.CreateObject("WScript.Shell")      ' Set as Shell
@@ -65,15 +65,15 @@ Sub Simulation()
             errMessage = vbNullString
             Application.EnableEvents = True
             Application.ScreenUpdating = True
-            Exit Sub
+            Exit Function
         End If
     Else
         ' If the simulation program could not be found then inform the user
         Call MsgBox("Simulation program could not be found. " _
-        & "Please make sure CASSYS.exe is in the same directory as CASSYS.xlsm.", vbExclamation Or vbOKOnly)
+        & "Please make sure CASSYS Engine.exe is in the same directory as CASSYS.xlsm.", vbExclamation Or vbOKOnly)
         Application.EnableEvents = True
         Application.ScreenUpdating = True
-        Exit Sub
+        Exit Function
     End If
    
 ' Update error log and results page with simulation data
@@ -91,24 +91,27 @@ Sub Simulation()
         ErrorSht.Activate
         Application.EnableEvents = True
         Application.ScreenUpdating = True
-        Exit Sub
+        Exit Function
     End If
 
     ' If the simulation program ran properly then update the results sheet with simulation data
     Call Update(FOpen)
-    Call UpdateLossDiagram
+    If IntroSht.Range("ModeSelect").Value = "Grid-Connected System" Then
+        Call UpdateLossDiagram
+    End If
     Application.Calculate
     errMessage = vbNullString
     If ErrorSht.Range("A8").Value = vbNullString Then ErrorSht.Visible = xlSheetHidden
+    Application.EnableEvents = True
     Application.ScreenUpdating = True
  
-End Sub
+End Function
 
 ' LoadErrorLog Macro
 '
 ' Recorded macro that retrieves the error log from the same parent directory as CASSYS and inserts it into
 ' the ErrorSht
-Sub LoadErrorLog()
+Function LoadErrorLog() As Boolean
 
     Dim path As String
     Dim ErrLogQuery As QueryTable
@@ -134,7 +137,7 @@ Sub LoadErrorLog()
     
     Call PostModify(ErrorSht, currentShtStatus)
 
-End Sub
+End Function
 
 ' Update Function
 '
@@ -254,7 +257,7 @@ End Sub
 ' The purpose of this sub is to copy over the necessary
 ' loss values produced from the simulation
 '
-Sub UpdateLossDiagram()
+Function UpdateLossDiagram() As Boolean
     Dim currentSht As sheetStatus
     Dim xDoc As DOMDocument60
     Dim xNode As IXMLDOMNode
@@ -289,7 +292,7 @@ Sub UpdateLossDiagram()
     Else
         ' The Document didnt load
         MsgBox "Unable to Load Temporary File: LossDiagramOutputs.xml"
-        Exit Sub
+        Exit Function
     End If
     
     ' realease object reference to document
@@ -302,7 +305,7 @@ Sub UpdateLossDiagram()
     
     Application.EnableEvents = True
     SummarySht.Activate
-End Sub
+End Function
 
 ' requiredFieldsFound function
 '

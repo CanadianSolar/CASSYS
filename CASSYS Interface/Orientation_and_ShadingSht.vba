@@ -422,7 +422,8 @@ End Sub
 
 '--------Commenting out Iterative Functionality for this version--------'
 
-Sub OrientationOutputValidation()
+Function OrientationOutputValidation() As Boolean
+
 '    Dim i As Integer
 '
 '    ' Creating list of available parameters for iteration sheet
@@ -468,11 +469,11 @@ Sub OrientationOutputValidation()
 '    ' This ensures the output selected is available for the selected mode
 '    IterativeSht.Range("ParamName").Value = IterativeSht.Range("Z2").Value
 
-End Sub
+End Function
 
 ' Respond to a change in the Use Cell-Based Shading Effect selection
 ' Unlimited rows case
-Sub UpdateCellShading()
+Function UpdateCellShading() As Boolean
     If Range("UseCellVal").Value = "Yes" Then
         Range("CellBasedInput").EntireRow.Hidden = False
         Range("CellBasedBlank").EntireRow.Hidden = True
@@ -482,11 +483,11 @@ Sub UpdateCellShading()
         Range("CellBasedInput").EntireRow.Hidden = True
         Range("CellBasedBlank").EntireRow.Hidden = False
     End If
-End Sub
+End Function
 
 ' Respond to a change in the number of rows by updating the backtracking and cell-based shading effect options
 ' Single axis E-W case
-Sub UpdateNumberOfRowsSAET()
+Function UpdateNumberOfRowsSAET() As Boolean
     If Range("RowsBlockSAET") <= 1 Then
         Range("PitchSAET").Value = 0
         Range("BacktrackOptSAET").Value = "No"
@@ -509,11 +510,11 @@ Sub UpdateNumberOfRowsSAET()
         Range("BacktrackOptSAET").Interior.Color = RGB(255, 255, 255)
         Range("UseCellValSAET").Interior.Color = RGB(255, 255, 255)
     End If
-End Sub
+End Function
 
 ' Respond to a change in the Use Cell-Based Shading Effect selection
 ' Single axis E-W case
-Sub UpdateCellShadingSAET()
+Function UpdateCellShadingSAET() As Boolean
     If Range("UseCellValSAET").Value = "Yes" Then
         Range("CellBasedInputSAET").EntireRow.Hidden = False
         Range("CellBasedBlankSAET").EntireRow.Hidden = True
@@ -523,11 +524,11 @@ Sub UpdateCellShadingSAET()
         Range("CellBasedInputSAET").EntireRow.Hidden = True
         Range("CellBasedBlankSAET").EntireRow.Hidden = False
     End If
-End Sub
+End Function
 
 ' Respond to a change in the number of rows by updating the backtracking and cell-based shading effect options
 ' Single axis N-S case
-Sub UpdateNumberOfRowsSAST()
+Function UpdateNumberOfRowsSAST() As Boolean
     If Range("RowsBlockSAST") <= 1 Then
         Range("PitchSAST").Value = 0
         Range("BacktrackOptSAST").Value = "No"
@@ -550,11 +551,11 @@ Sub UpdateNumberOfRowsSAST()
         Range("BacktrackOptSAST").Interior.Color = RGB(255, 255, 255)
         Range("UseCellValSAST").Interior.Color = RGB(255, 255, 255)
     End If
-End Sub
+End Function
 
 ' Respond to a change in the Use Cell-Based Shading Effect selection
 ' Single axis N-S case
-Sub UpdateCellShadingSAST()
+Function UpdateCellShadingSAST() As Boolean
     If Range("UseCellValSAST").Value = "Yes" Then
         Range("CellBasedInputSAST").EntireRow.Hidden = False
         Range("CellBasedBlankSAST").EntireRow.Hidden = True
@@ -564,5 +565,5 @@ Sub UpdateCellShadingSAST()
         Range("CellBasedInputSAST").EntireRow.Hidden = True
         Range("CellBasedBlankSAST").EntireRow.Hidden = False
     End If
-End Sub
+End Function
 

@@ -13,6 +13,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
+
 Option Explicit
 
 ' Add_PVModule function
@@ -38,58 +39,83 @@ Sub Add_PVModule()
     PV_DatabaseSht.Range("H" & last).Value = Me.PNom.Value
     
     ' add module technology type
-    PV_DatabaseSht.Range("J" & last).Value = Me.Tech.Value
+    PV_DatabaseSht.Range("L" & last).Value = Me.Tech.Value
     
     ' add number of cells in series
-    PV_DatabaseSht.Range("K" & last).Value = Me.CellsinS.Value
+    PV_DatabaseSht.Range("M" & last).Value = Me.CellsinS.Value
     
     ' add number of cells in parallel
-    PV_DatabaseSht.Range("L" & last).Value = Me.CellsinP.Value
+    PV_DatabaseSht.Range("N" & last).Value = Me.CellsinP.Value
     
     ' add gref
-    PV_DatabaseSht.Range("M" & last).Value = Me.Gref.Value
+    PV_DatabaseSht.Range("O" & last).Value = Me.Gref.Value
     
     ' add tref
-    PV_DatabaseSht.Range("N" & last).Value = Me.Tref.Value
+    PV_DatabaseSht.Range("P" & last).Value = Me.Tref.Value
     
     ' add vmpp
-    PV_DatabaseSht.Range("O" & last).Value = Me.Vmpp.Value
+    PV_DatabaseSht.Range("Q" & last).Value = Me.Vmpp.Value
     
     ' add impp
-    PV_DatabaseSht.Range("P" & last).Value = Me.Impp.Value
+    PV_DatabaseSht.Range("R" & last).Value = Me.Impp.Value
     
     ' add voc
-    PV_DatabaseSht.Range("Q" & last).Value = Me.Voc.Value
+    PV_DatabaseSht.Range("S" & last).Value = Me.Voc.Value
     
     ' add isc
-    PV_DatabaseSht.Range("R" & last).Value = Me.Isc.Value
+    PV_DatabaseSht.Range("T" & last).Value = Me.Isc.Value
     
     ' add mIsc
-    PV_DatabaseSht.Range("S" & last).Value = Me.mIsc.Value
+    PV_DatabaseSht.Range("U" & last).Value = Me.mIsc.Value
     
     ' add mPmpp
-    PV_DatabaseSht.Range("U" & last).Value = Me.mPmpp.Value
+    PV_DatabaseSht.Range("W" & last).Value = Me.mPmpp.Value
     
     ' add mVco
-    PV_DatabaseSht.Range("T" & last).Value = Me.mVco.Value
+    PV_DatabaseSht.Range("V" & last).Value = Me.mVco.Value
     
     ' add Rsh0
-    PV_DatabaseSht.Range("V" & last).Value = Me.Rsh0.Value
+    PV_DatabaseSht.Range("X" & last).Value = Me.Rsh0.Value
     
     ' add Rshexp
-    PV_DatabaseSht.Range("W" & last).Value = Me.Rshexp.Value
+    PV_DatabaseSht.Range("Y" & last).Value = Me.Rshexp.Value
     
     ' add Rshunt
-    PV_DatabaseSht.Range("X" & last).Value = Me.Rshunt.Value
+    PV_DatabaseSht.Range("Z" & last).Value = Me.Rshunt.Value
     
     ' add Rseries
-    PV_DatabaseSht.Range("Y" & last).Value = Me.Rseries.Value
+    PV_DatabaseSht.Range("AA" & last).Value = Me.Rseries.Value
     
     ' add the numnber of bypass diodes
-    PV_DatabaseSht.Range("AB" & last).Value = Me.NumDiodes.Value
+    PV_DatabaseSht.Range("AJ" & last).Value = Me.NumDiodes.Value
     
     ' add bypass diode voltage
-    PV_DatabaseSht.Range("AC" & last).Value = Me.DiodeVolt.Value
+    PV_DatabaseSht.Range("AK" & last).Value = Me.DiodeVolt.Value
+    
+    
+    'add the PV module IAM values
+    If IAMActive.Value = True Then
+    
+        PV_DatabaseSht.Range("AU" & last).Value = UF_AddPVmoduleIAM.AOI1.Value
+        PV_DatabaseSht.Range("AV" & last).Value = UF_AddPVmoduleIAM.Mod1.Value
+        PV_DatabaseSht.Range("AW" & last).Value = UF_AddPVmoduleIAM.AOI2.Value
+        PV_DatabaseSht.Range("AX" & last).Value = UF_AddPVmoduleIAM.Mod2.Value
+        PV_DatabaseSht.Range("AY" & last).Value = UF_AddPVmoduleIAM.AOI3.Value
+        PV_DatabaseSht.Range("AZ" & last).Value = UF_AddPVmoduleIAM.Mod3.Value
+        PV_DatabaseSht.Range("BA" & last).Value = UF_AddPVmoduleIAM.AOI4.Value
+        PV_DatabaseSht.Range("BB" & last).Value = UF_AddPVmoduleIAM.Mod4.Value
+        PV_DatabaseSht.Range("BC" & last).Value = UF_AddPVmoduleIAM.AOI5.Value
+        PV_DatabaseSht.Range("BD" & last).Value = UF_AddPVmoduleIAM.Mod5.Value
+        PV_DatabaseSht.Range("BE" & last).Value = UF_AddPVmoduleIAM.AOI6.Value
+        PV_DatabaseSht.Range("BF" & last).Value = UF_AddPVmoduleIAM.Mod6.Value
+        PV_DatabaseSht.Range("BG" & last).Value = UF_AddPVmoduleIAM.AOI7.Value
+        PV_DatabaseSht.Range("BH" & last).Value = UF_AddPVmoduleIAM.Mod7.Value
+        PV_DatabaseSht.Range("BI" & last).Value = UF_AddPVmoduleIAM.AOI8.Value
+        PV_DatabaseSht.Range("BJ" & last).Value = UF_AddPVmoduleIAM.Mod8.Value
+        PV_DatabaseSht.Range("BK" & last).Value = UF_AddPVmoduleIAM.AOI9.Value
+        PV_DatabaseSht.Range("BL" & last).Value = UF_AddPVmoduleIAM.Mod9.Value
+    Else
+    End If
     
     PV_DatabaseSht.Rows(last).Interior.ColorIndex = 6
     
@@ -149,6 +175,14 @@ Private Sub Cancel_Click()
     Unload Me
 End Sub
 
+'if user choose to input IAM, this button will active and shows the IAM input form
+Public Sub IAMInput_Click()
+   
+    If IAMActive.Value = True Then 'Whether the user choose to input IAM values
+        UF_AddPVmoduleIAM.Show
+    End If
+    
+End Sub
 
 ' UserForm_Initialize
 ' This function is called when the UserForm is opened.
@@ -158,4 +192,5 @@ End Sub
 Private Sub UserForm_Initialize()
    Me.Model.SetFocus
 End Sub
+
 

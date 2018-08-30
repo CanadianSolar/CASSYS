@@ -152,21 +152,21 @@ End Sub
 ' and generate a chart on the sheet named Chart 1
 ' when the first 'Display' button is pressed
 
-Sub DispChart1()
+Function DispChart1() As Boolean
     Call DispChart(1)
-End Sub
+End Function
   
 ' DispChart2 Function
 '
-Sub DispChart2()
+Function DispChart2() As Boolean
     Call DispChart(2)
-End Sub
+End Function
 
 ' DispChart3 Function
 '
-Sub DispChart3()
+Function DispChart3() As Boolean
     Call DispChart(3)
-End Sub
+End Function
            
 ' WorkSheet_Change Function
 ' This function is called when a cell is changed

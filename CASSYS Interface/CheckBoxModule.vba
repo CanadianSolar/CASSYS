@@ -10,7 +10,7 @@ Attribute VB_Name = "CheckBoxModule"
 ' Uses relative ranges and offsets so that adding or removing columns from the output file sheet will not affect functionality of checkboxes
 ' OutputFormatModule is responsible for naming the ranges referred to in this function
 
-Sub checkBoxActions(ByVal checkBoxName As String, ByVal sectionName As String)
+Function checkBoxActions(ByVal checkBoxName As String, ByVal sectionName As String) As Boolean
 
     Dim shtStatus As sheetStatus 'Sheet status used for pre/post modify
     Dim Chkbox As CheckBox ' Represents a single checkbox object on the sheet
@@ -66,58 +66,58 @@ Sub checkBoxActions(ByVal checkBoxName As String, ByVal sectionName As String)
     Call OutputFileSht.ChangeCellColour(OutputFileSht.Range("OutputParam"))
     Call PostModify(OutputFileSht, currentShtStatus)
     
-End Sub
+End Function
 
-Sub MeteorologicalChkBox_Click()
+Function MeteorologicalChkBox_Click() As Boolean
     'Controls the Metereological and Sun Position Data section
     Call checkBoxActions("Meteorological CheckBox", "Meteorological")
-End Sub
-Sub TrackerChkBox_Click()
+End Function
+Function TrackerChkBox_Click() As Boolean
     'Controls the Tracker Or Collector Parameters section
     Call checkBoxActions("Tracker CheckBox", "Tracker")
-End Sub
-Sub IrradianceCollectorPlane_Click()
+End Function
+Function IrradianceCollectorPlane_Click() As Boolean
     'Controls the Incident Irradiance in Collector Plane section
     Call checkBoxActions("Irradiance Checkbox", "Irradiance")
-End Sub
+End Function
 
-Sub ShadingCheckBox_Click()
+Function ShadingCheckBox_Click() As Boolean
     'Controls the Shading Section
     Call checkBoxActions("ShadingChkBox", "Shading")
-End Sub
+End Function
 
-Sub IncidentEnergyChkBox_Click()
+Function IncidentEnergyChkBox_Click() As Boolean
     'Controls Incident Energy Factors Section
     Call checkBoxActions("IncidentEnergy CheckBox", "Incident")
-End Sub
+End Function
 
-Sub BifacialChkBox_Click()
+Function BifacialChkBox_Click() As Boolean
     ' Controls the Bifacial section
     Call checkBoxActions("BifacialChkBox", "Bifacial")
-End Sub
+End Function
 
-Sub PVArrayChkBox_Click()
+Function PVArrayChkBox_Click() As Boolean
     ' Controls the PV Array section
     Call checkBoxActions("PVArrayChkBox", "Pv")
-End Sub
+End Function
 
-Sub InverterChkBox_Click()
+Function InverterChkBox_Click() As Boolean
     ' Controls the Inverter Section
     Call checkBoxActions("InverterChkBox", "Inverter")
-End Sub
+End Function
 
-Sub SystemLossesPerfChkBox_Click()
+Function SystemLossesPerfChkBox_Click() As Boolean
     ' Controls the System Wide Losses and Performance section
     Call checkBoxActions("SystemLossesChkBox", "System")
-End Sub
+End Function
 
-Sub EfficienciesChkBox_Click()
+Function EfficienciesChkBox_Click() As Boolean
     ' Controls the Efficiencies section
     Call checkBoxActions("EfficienciesChkBox", "Efficiencies")
-End Sub
+End Function
 
 'NB: Adjusted so control all only controls visible checkboxes 29/01/2016
-Sub ControlAllChkBox_Click()
+Function ControlAllChkBox_Click() As Boolean
 
     ' Togggles all checkboxes when clicked to the next state
     Dim shtStatus As sheetStatus
@@ -180,6 +180,6 @@ Sub ControlAllChkBox_Click()
 
     Call PostModify(OutputFileSht, currentShtStatus)
 
-End Sub
+End Function
 
 

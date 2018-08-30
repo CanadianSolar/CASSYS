@@ -33,7 +33,7 @@ Function GetFileToLoad()
     If doNotSave = vbYes Then
         ' The browse box begins in the same directory as CASSYS.xlsm
         ChDir Application.ThisWorkbook.path
-        browsePath = Application.GetOpenFilename(title:=" CASSYS: Please choose a Site definition to load", FileFilter:="CASSYS Site file (*.csyx),*.csyx")
+        browsePath = Application.GetOpenFilename(Title:=" CASSYS: Please choose a Site definition to load", FileFilter:="CASSYS Site file (*.csyx),*.csyx")
             
         If (browsePath <> False) Then
             Call PreModify(IntroSht, currentShtStatus)
@@ -58,7 +58,7 @@ End Function
 ' the CSYX site file into their respective
 ' sheets
 
-Sub Load()
+Function Load() As Boolean
    
     
     Dim newdoc As DOMDocument60
@@ -181,50 +181,57 @@ Sub Load()
     
     Call PostModify(ErrorSht, errorShtStatus)
     
-End Sub
+End Function
 ' Loads the Site sheet
 Private Sub loadSiteSht(ByRef newdoc As DOMDocument60)
+    Dim Prefix As String
     ' Loaded required parameters for Grid-Connected System and Radiation Mode
+    ' Until version 1.5.2 this info is under Site, after it's under Site/SiteDef
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.2") < 0) Then
+      Prefix = "//Site"
+    Else
+      Prefix = "//Site/SiteDef"
+    End If
     If IntroSht.Range("ModeSelect") <> "ASTM E2848 Regression" Then
-        Call InsertValue(newdoc, "//Site/*", SiteSht.Range("Latitude,Longitude,Altitude,TimeZone"))
-        Call InsertValue_BoolToYesNo(newdoc, "//Site/UseLocTime", SiteSht.Range("UseLocTime"))
+        Call InsertValue(newdoc, Prefix + "/*", SiteSht.Range("Latitude,Longitude,Altitude,TimeZone"))
+        Call InsertValue_BoolToYesNo(newdoc, Prefix + "/UseLocTime", SiteSht.Range("UseLocTime"))
         
-        If Not newdoc.SelectSingleNode("//Site/TransEnum") Is Nothing Then
-            If newdoc.SelectSingleNode("//Site/TransEnum").HasChildNodes Then
-                If newdoc.SelectSingleNode("//Site/TransEnum").ChildNodes.NextNode.NodeValue = 0 Then
+        If Not newdoc.SelectSingleNode(Prefix + "/TransEnum") Is Nothing Then
+            If newdoc.SelectSingleNode(Prefix + "/TransEnum").HasChildNodes Then
+                If newdoc.SelectSingleNode(Prefix + "/TransEnum").ChildNodes.NextNode.NodeValue = 0 Then
                     SiteSht.Range("TransVal").Value = "Hay"
-                ElseIf newdoc.SelectSingleNode("//Site/TransEnum").ChildNodes.NextNode.NodeValue = 1 Then
+                ElseIf newdoc.SelectSingleNode(Prefix + "/TransEnum").ChildNodes.NextNode.NodeValue = 1 Then
                     SiteSht.Range("TransVal").Value = "Perez"
                 End If
             End If
         End If
         
         ' add albedo type
-        Call InsertAttribute(newdoc, "//Site/Albedo", "Frequency", SiteSht.Range("AlbFreqVal"))
+        Call InsertAttribute(newdoc, Prefix + "/Albedo", "Frequency", SiteSht.Range("AlbFreqVal"))
         
         ' add monthly or yearly albedo
         If SiteSht.Range("AlbFreqVal").Value = "Yearly" Then
-            SiteSht.Range("AlbYearly").Value = newdoc.SelectSingleNode("//Site/Albedo/Yearly").text
+            SiteSht.Range("AlbYearly").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Yearly").text
             Call SiteSht.SwitchFreq(SiteSht.Range("AlbFreqVal"))
         ElseIf SiteSht.Range("AlbFreqVal").Value = "Monthly" Then
-            SiteSht.Range("AlbJan").Value = newdoc.SelectSingleNode("//Site/Albedo/Jan").text
-            SiteSht.Range("AlbFeb").Value = newdoc.SelectSingleNode("//Site/Albedo/Feb").text
-            SiteSht.Range("AlbMar").Value = newdoc.SelectSingleNode("//Site/Albedo/Mar").text
-            SiteSht.Range("AlbApr").Value = newdoc.SelectSingleNode("//Site/Albedo/Apr").text
-            SiteSht.Range("AlbMay").Value = newdoc.SelectSingleNode("//Site/Albedo/May").text
-            SiteSht.Range("AlbJun").Value = newdoc.SelectSingleNode("//Site/Albedo/Jun").text
-            SiteSht.Range("AlbJul").Value = newdoc.SelectSingleNode("//Site/Albedo/Jul").text
-            SiteSht.Range("AlbAug").Value = newdoc.SelectSingleNode("//Site/Albedo/Aug").text
-            SiteSht.Range("AlbSep").Value = newdoc.SelectSingleNode("//Site/Albedo/Sep").text
-            SiteSht.Range("AlbOct").Value = newdoc.SelectSingleNode("//Site/Albedo/Oct").text
-            SiteSht.Range("AlbNov").Value = newdoc.SelectSingleNode("//Site/Albedo/Nov").text
-            SiteSht.Range("AlbDec").Value = newdoc.SelectSingleNode("//Site/Albedo/Dec").text
+            SiteSht.Range("AlbJan").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Jan").text
+            SiteSht.Range("AlbFeb").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Feb").text
+            SiteSht.Range("AlbMar").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Mar").text
+            SiteSht.Range("AlbApr").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Apr").text
+            SiteSht.Range("AlbMay").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/May").text
+            SiteSht.Range("AlbJun").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Jun").text
+            SiteSht.Range("AlbJul").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Jul").text
+            SiteSht.Range("AlbAug").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Aug").text
+            SiteSht.Range("AlbSep").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Sep").text
+            SiteSht.Range("AlbOct").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Oct").text
+            SiteSht.Range("AlbNov").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Nov").text
+            SiteSht.Range("AlbDec").Value = newdoc.SelectSingleNode(Prefix + "/Albedo/Dec").text
             Call SiteSht.SwitchFreq(SiteSht.Range("AlbFreqVal"))
         End If
     End If
     
     ' Occurs independent of system mode
-    Call InsertValue(newdoc, "//Site/*", SiteSht.Range("Name,Country,Region,City"))
+    Call InsertValue(newdoc, Prefix + "/*", SiteSht.Range("Name,Country,Region,City"))
     
 
 End Sub
@@ -453,18 +460,38 @@ Private Sub loadLossesSht(ByRef newdoc As DOMDocument60)
     Dim IAMNode As IXMLDOMNode
     Dim i As Integer
     Dim usePAN As Boolean
+    Dim SiteLosses As String
+    
+    ' Deal with change of format from 1.5.1 to 1.5.2:
+    ' In versions prior to 1.5.2, information is stored (erroneously) under //Site/System/Losses
+    ' Starting in version 1.5.2, information is stored under //Site/Losses
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.2") < 0) Then
+      SiteLosses = "//Site/System/Losses"
+    Else
+      SiteLosses = "//Site/Losses"
+    End If
     
     Application.EnableEvents = True
     LossesSht.Range("IAMRange").ClearContents
-    Call InsertValue(newdoc, "//Site/System/Losses/ThermalLosses/UseMeasuredValues", LossesSht.Range("UseMeasuredValues"))
+    Call InsertValue(newdoc, SiteLosses + "/ThermalLosses/UseMeasuredValues", LossesSht.Range("UseMeasuredValues"))
     
     If LossesSht.Range("UseMeasuredValues").Value = False Then
-        Call InsertValue(newdoc, "//Site/System/Losses/ThermalLosses/ConsHLF", LossesSht.Range("ConsHLF"))
-        Call InsertValue(newdoc, "//Site/System/Losses/ThermalLosses/ConvHLF", LossesSht.Range("ConvHLF"))
+        Call InsertValue(newdoc, SiteLosses + "/ThermalLosses/ConsHLF", LossesSht.Range("ConsHLF"))
+        Call InsertValue(newdoc, SiteLosses + "/ThermalLosses/ConvHLF", LossesSht.Range("ConvHLF"))
+    End If
+ 
+    Call InsertValue(newdoc, SiteLosses + "/ModuleQualityLosses/EfficiencyLoss", LossesSht.Range("EfficiencyLoss"))
+    
+    ' No Module LID and Ageing information in files prior to version 1.5.2
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.2") < 0) Then
+        LossesSht.Range("ModuleLID") = 0
+        LossesSht.Range("ModuleAgeing") = 0
+    Else
+        Call InsertValue(newdoc, SiteLosses + "/ModuleQualityLosses/ModuleLID", LossesSht.Range("ModuleLID"))
+        Call InsertValue(newdoc, SiteLosses + "/ModuleQualityLosses/ModuleAgeing", LossesSht.Range("ModuleAgeing"))
     End If
     
-    Call InsertValue(newdoc, "//Site/System/Losses/ModuleQualityLosses/EfficiencyLoss", LossesSht.Range("EfficiencyLoss"))
-    Call InsertValue(newdoc, "//Site/System/Losses/ModuleMismatchLosses/*", LossesSht.Range("PowerLoss,LossFixedVoltage"))
+    Call InsertValue(newdoc, SiteLosses + "/ModuleMismatchLosses/*", LossesSht.Range("PowerLoss,LossFixedVoltage"))
     
     ' For version control. files defined before version 0.9.1 do not have user defined IAM.
     If Not newdoc.SelectSingleNode("//Version").text = "0.9" Then
@@ -474,7 +501,7 @@ Private Sub loadLossesSht(ByRef newdoc As DOMDocument60)
         If LossesSht.Range("IAMSelection").Value = "User Defined" Then
             Call InsertValue(newdoc, "//IncidenceAngleModifier/*", LossesSht.Range("IAMRange"), False, True)
         ElseIf LossesSht.Range("IAMSelection").Value = "ASHRAE" Then
-            Call InsertValue(newdoc, "//Site/System/Losses/IncidenceAngleModifier/bNaught", LossesSht.Range("bNaught"))
+            Call InsertValue(newdoc, SiteLosses + "/IncidenceAngleModifier/bNaught", LossesSht.Range("bNaught"))
         End If
     Else
         ' Load an older site file
@@ -482,7 +509,7 @@ Private Sub loadLossesSht(ByRef newdoc As DOMDocument60)
         Call InsertValue(newdoc, "//bNaught", LossesSht.Range("bNaught"))
     End If
     For i = 0 To SystemSht.Range("NumSubArray").Value
-        If Not newdoc.SelectSingleNode("//Site/System/SubArray" & i & "/PVModule/IAMDefinition") Is Nothing Then
+        If Not newdoc.SelectSingleNode("//Site/SubArray" & i & "/PVModule/IAMDefinition") Is Nothing Then
             usePAN = True
             Exit For
         End If
@@ -498,33 +525,44 @@ End Sub
 ' Loads the Soiling Sheet
 Private Sub loadSoilingSht(ByRef newdoc As DOMDocument60)
     
-    Call InsertAttribute(newdoc, "//Site/System/Losses/SoilingLosses", "Frequency", SoilingSht.Range("SfreqVal"))
+    Dim SiteSoilingLosses As String
+    
+    ' Deal with change of format from 1.5.1 to 1.5.2:
+    ' In versions prior to 1.5.2, information is stored (erroneously) under //Site/System/Losses/SoilingLosses
+    ' Starting in version 1.5.2, information is stored under //Site/SoilingLosses
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.2") < 0) Then
+      SiteSoilingLosses = "//Site/System/Losses/SoilingLosses"
+    Else
+      SiteSoilingLosses = "//Site/SoilingLosses"
+    End If
+    
+    Call InsertAttribute(newdoc, SiteSoilingLosses, "Frequency", SoilingSht.Range("SfreqVal"))
     
     ' Add monthly or yearly soiling
     If SoilingSht.Range("SfreqVal").Value = "Yearly" Then
         ' Fix bug from versions < 1.5.0: SoilingYearly may actually be stored in PrintSoilingYearly
         Dim xmlNodelist As IXMLDOMNodeList
         Dim tmpPath As String
-        tmpPath = "//Site/System/Losses/SoilingLosses/PrintSoilingYearly"
+        tmpPath = SiteSoilingLosses + "/PrintSoilingYearly"
         Set xmlNodelist = newdoc.SelectNodes(tmpPath)
         If xmlNodelist.Item(0) Is Nothing Then
-            tmpPath = "//Site/System/Losses/SoilingLosses/Yearly"
+            tmpPath = SiteSoilingLosses + "/Yearly"
         End If
         ' End bug fix
         SoilingSht.Range("SoilingYearly").Value = newdoc.SelectSingleNode(tmpPath).text
     ElseIf SoilingSht.Range("SfreqVal").Value = "Monthly" Then
-        SoilingSht.Range("SoilingJan").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Jan").text
-        SoilingSht.Range("SoilingFeb").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Feb").text
-        SoilingSht.Range("SoilingMar").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Mar").text
-        SoilingSht.Range("SoilingApr").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Apr").text
-        SoilingSht.Range("SoilingMay").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/May").text
-        SoilingSht.Range("SoilingJun").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Jun").text
-        SoilingSht.Range("SoilingJul").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Jul").text
-        SoilingSht.Range("SoilingAug").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Aug").text
-        SoilingSht.Range("SoilingSep").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Sep").text
-        SoilingSht.Range("SoilingOct").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Oct").text
-        SoilingSht.Range("SoilingNov").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Nov").text
-        SoilingSht.Range("SoilingDec").Value = newdoc.SelectSingleNode("//Site/System/Losses/SoilingLosses/Dec").text
+        SoilingSht.Range("SoilingJan").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Jan").text
+        SoilingSht.Range("SoilingFeb").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Feb").text
+        SoilingSht.Range("SoilingMar").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Mar").text
+        SoilingSht.Range("SoilingApr").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Apr").text
+        SoilingSht.Range("SoilingMay").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/May").text
+        SoilingSht.Range("SoilingJun").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Jun").text
+        SoilingSht.Range("SoilingJul").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Jul").text
+        SoilingSht.Range("SoilingAug").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Aug").text
+        SoilingSht.Range("SoilingSep").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Sep").text
+        SoilingSht.Range("SoilingOct").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Oct").text
+        SoilingSht.Range("SoilingNov").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Nov").text
+        SoilingSht.Range("SoilingDec").Value = newdoc.SelectSingleNode(SiteSoilingLosses + "/Dec").text
     End If
 
 End Sub
@@ -558,17 +596,27 @@ End Sub
 ' Loads the Transformer Sheet
 Private Sub loadTransformerSht(ByRef newdoc As DOMDocument60)
 
+    Dim SiteTransformer As String
+    
+    ' Deal with change of format from 1.5.1 to 1.5.2:
+    ' In versions prior to 1.5.2, information is stored (erroneously) under //Site/System/Transformer
+    ' Starting in version 1.5.2, information is stored under //Site/Transformer
+    If (StrComp(newdoc.SelectSingleNode("//Site/Version").text, "1.5.2") < 0) Then
+      SiteTransformer = "//Site/System/Transformer"
+    Else
+      SiteTransformer = "//Site/Transformer"
+    End If
       
     Application.EnableEvents = False
-    Call InsertValue(newdoc, "//Site/System/Transformer/PNomTrf", TransformerSht.Range("PNomTrf"))
-    Call InsertValue(newdoc, "//Site/System/Transformer/PIronLossTrf", TransformerSht.Range("PIronLossTrf"))
-    Call InsertValue(newdoc, "//Site/System/Transformer/NightlyDisconnect", TransformerSht.Range("NightlyDisconnect"))
+    Call InsertValue(newdoc, SiteTransformer + "/PNomTrf", TransformerSht.Range("PNomTrf"))
+    Call InsertValue(newdoc, SiteTransformer + "/PIronLossTrf", TransformerSht.Range("PIronLossTrf"))
+    Call InsertValue(newdoc, SiteTransformer + "/NightlyDisconnect", TransformerSht.Range("NightlyDisconnect"))
     
     'Versions older than 1.2.0 have a PGlobLossTrf value saved for PFullLoadLss
     If (StrComp(newdoc.SelectSingleNode("//Version").text, "1.2.0") < 0) Then
-        Range("PFullLoadLss").Value = newdoc.SelectSingleNode("//Site/System/Transformer/PGlobLossTrf").text
+        Range("PFullLoadLss").Value = newdoc.SelectSingleNode(SiteTransformer + "/PGlobLossTrf").text
     Else
-         Call InsertValue(newdoc, "//Site/System/Transformer/PFullLoadLss", TransformerSht.Range("PFullLoadLss"))
+         Call InsertValue(newdoc, SiteTransformer + "/PFullLoadLss", TransformerSht.Range("PFullLoadLss"))
     End If
     Application.EnableEvents = True
 
@@ -801,29 +849,33 @@ Private Sub LoadSystemArrays(ByRef newdoc As DOMDocument60)
         Application.EnableEvents = True       ' DJT whether this line is necessary should be investigated
         auxOffset = (i - 1) * SubArrayHeight
         pvExists = True
+        
+        ' Prefix for PV module info
+        Dim fixPre As String
+        fixPre = "//Site/System/SubArray" & i & "/PVModule"
     
-        Set subarrNode = newdoc.SelectSingleNode("//Site/System/SubArray" & i & "/PVModule")
+        Set subarrNode = newdoc.SelectSingleNode(fixPre)
 
         If subarrNode.HasChildNodes Then
         
             ' Get model, manufacturer and source
             ' NB: and file name
         
-            Set sysNode = newdoc.SelectSingleNode("//Site/System/SubArray" & i & "/PVModule/Module")
+            Set sysNode = newdoc.SelectSingleNode(fixPre & "/Module")
             If sysNode.HasChildNodes Then
                 Model = sysNode.ChildNodes.NextNode.NodeValue
             Else
                 pvExists = False
             End If
         
-            Set sysNode = newdoc.SelectSingleNode("//Site/System/SubArray" & i & "/PVModule/Manufacturer")
+            Set sysNode = newdoc.SelectSingleNode(fixPre & "/Manufacturer")
             If sysNode.HasChildNodes Then
                 Manu = sysNode.ChildNodes.NextNode.NodeValue
             Else
                 pvExists = False
             End If
         
-            Set sysNode = newdoc.SelectSingleNode("//Site/System/SubArray" & i & "/PVModule/Origin")
+            Set sysNode = newdoc.SelectSingleNode(fixPre & "/Origin")
             If sysNode.HasChildNodes Then
                 Source = sysNode.ChildNodes.NextNode.NodeValue
             Else
@@ -831,7 +883,7 @@ Private Sub LoadSystemArrays(ByRef newdoc As DOMDocument60)
             End If
         
             ' NB: Gives value to file name, unless file name does not exist in csyx document
-            Set sysNode = newdoc.SelectSingleNode("//Site/System/SubArray" & i & "/PVModule/FileName")
+            Set sysNode = newdoc.SelectSingleNode(fixPre & "/FileName")
             If Not sysNode Is Nothing Then
                 If sysNode.HasChildNodes Then
                     fileName = sysNode.ChildNodes.NextNode.NodeValue
@@ -868,29 +920,82 @@ Private Sub LoadSystemArrays(ByRef newdoc As DOMDocument60)
                     Else:
                         PV_DatabaseSht.Cells(lastRow, 4).Value = fileName
                     End If
-                
-                    ' NB: determines which Node the parameters start on depending on whether or not fileName exists
-                    If fileName = "" Then
-                        ' NB: populates PV module parameters the same as before if fileName node does not exist
-                        For j = 3 To subarrNode.ChildNodes.length - 1 Step 1
-                            PV_DatabaseSht.Cells(lastRow, ColumnIndex).Value = subarrNode.ChildNodes(j).text
-                            ColumnIndex = ColumnIndex + 1
-                        Next
-                    Else:
-                        ' NB: if file name node exists, parameters taken from one row lower
-                        For j = 4 To subarrNode.ChildNodes.length - 1 Step 1
-                            PV_DatabaseSht.Cells(lastRow, ColumnIndex).Value = subarrNode.ChildNodes(j).text
-                            ColumnIndex = ColumnIndex + 1
-                        Next
-                    End If
+                    
+                    On Error Resume Next
+                                    
+                    PV_DatabaseSht.Cells(lastRow, 8).Value = newdoc.SelectSingleNode(fixPre + "/Pnom").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 9).Value = newdoc.SelectSingleNode(fixPre + "/PnomToLow").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 10).Value = newdoc.SelectSingleNode(fixPre + "/PnomToUp").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 10).Value = newdoc.SelectSingleNode(fixPre + "/Toleranz").ChildNodes.NextNode.NodeValue
+                                    
+                    PV_DatabaseSht.Cells(lastRow, 11).Value = newdoc.SelectSingleNode(fixPre + "/LIDloss").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 12).Value = newdoc.SelectSingleNode(fixPre + "/Technology").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 13).Value = newdoc.SelectSingleNode(fixPre + "/CellsinS").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 14).Value = newdoc.SelectSingleNode(fixPre + "/CellsinP").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 15).Value = newdoc.SelectSingleNode(fixPre + "/Gref").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 16).Value = newdoc.SelectSingleNode(fixPre + "/Tref").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 17).Value = newdoc.SelectSingleNode(fixPre + "/Vmpp").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 18).Value = newdoc.SelectSingleNode(fixPre + "/Impp").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 19).Value = newdoc.SelectSingleNode(fixPre + "/Voc").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 20).Value = newdoc.SelectSingleNode(fixPre + "/Isc").ChildNodes.NextNode.NodeValue
+
+                    PV_DatabaseSht.Cells(lastRow, 21).Value = newdoc.SelectSingleNode(fixPre + "/mIsc").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 22).Value = newdoc.SelectSingleNode(fixPre + "/mVco").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 23).Value = newdoc.SelectSingleNode(fixPre + "/mPmpp").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 24).Value = newdoc.SelectSingleNode(fixPre + "/Rsh0").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 25).Value = newdoc.SelectSingleNode(fixPre + "/Rshexp").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 26).Value = newdoc.SelectSingleNode(fixPre + "/Rshunt").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 27).Value = newdoc.SelectSingleNode(fixPre + "/Rserie").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 28).Value = newdoc.SelectSingleNode(fixPre + "/Gamma").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 29).Value = newdoc.SelectSingleNode(fixPre + "/muGamma").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 30).Value = newdoc.SelectSingleNode(fixPre + "/RelEffic800").ChildNodes.NextNode.NodeValue
+                    
+                    PV_DatabaseSht.Cells(lastRow, 31).Value = newdoc.SelectSingleNode(fixPre + "/RelEffic700").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 32).Value = newdoc.SelectSingleNode(fixPre + "/RelEffic600").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 33).Value = newdoc.SelectSingleNode(fixPre + "/RelEffic400").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 34).Value = newdoc.SelectSingleNode(fixPre + "/RelEffic200").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 35).Value = newdoc.SelectSingleNode(fixPre + "/Vmax").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 36).Value = newdoc.SelectSingleNode(fixPre + "/ByPassDiodes").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 37).Value = newdoc.SelectSingleNode(fixPre + "/ByPassDiodeVoltage").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 38).Value = newdoc.SelectSingleNode(fixPre + "/Brev").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 39).Value = newdoc.SelectSingleNode(fixPre + "/Length").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 40).Value = newdoc.SelectSingleNode(fixPre + "/Width").ChildNodes.NextNode.NodeValue
+                    
+                    PV_DatabaseSht.Cells(lastRow, 41).Value = newdoc.SelectSingleNode(fixPre + "/Depth").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 42).Value = newdoc.SelectSingleNode(fixPre + "/Weight").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 43).Value = newdoc.SelectSingleNode(fixPre + "/AreaM").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 44).Value = newdoc.SelectSingleNode(fixPre + "/Cellarea").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 45).Value = newdoc.SelectSingleNode(fixPre + "/Area").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 47).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI1").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 48).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod1").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 49).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI2").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 50).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod2").ChildNodes.NextNode.NodeValue
+                    
+                    PV_DatabaseSht.Cells(lastRow, 51).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI3").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 52).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod3").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 53).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI4").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 54).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod4").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 55).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI5").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 56).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod5").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 57).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI6").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 58).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod6").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 59).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI7").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 60).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod7").ChildNodes.NextNode.NodeValue
+                    
+                    PV_DatabaseSht.Cells(lastRow, 61).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI8").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 62).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod8").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 63).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/AOI9").ChildNodes.NextNode.NodeValue
+                    PV_DatabaseSht.Cells(lastRow, 64).Value = newdoc.SelectSingleNode(fixPre + "/IAMDefinition/Mod9").ChildNodes.NextNode.NodeValue
+                    
+                    On Error GoTo 0
                              
                     SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value = lastRow - 4
                 End If
             End If
            
-            Call InsertArrayValue(newdoc, "//Site/System/SubArray" & i & "/PVModule/ModulesInString", SystemSht.Range("ModStr").Offset(auxOffset, 0))
-            Call InsertArrayValue(newdoc, "//Site/System/SubArray" & i & "/PVModule/NumStrings", SystemSht.Range("NumStr").Offset(auxOffset, 0))
-            Call InsertArrayValue(newdoc, "//Site/System/SubArray" & i & "/PVModule/LossFraction", SystemSht.Range("PVLossFrac").Offset(auxOffset, 0))
+            Call InsertArrayValue(newdoc, fixPre & "/ModulesInString", SystemSht.Range("ModStr").Offset(auxOffset, 0))
+            Call InsertArrayValue(newdoc, fixPre & "/NumStrings", SystemSht.Range("NumStr").Offset(auxOffset, 0))
+            Call InsertArrayValue(newdoc, fixPre & "/LossFraction", SystemSht.Range("PVLossFrac").Offset(auxOffset, 0))
          
             If pvExists Then
                 ' go through each of the pv module's parameter nodes
@@ -1524,5 +1629,7 @@ Sub ErrorLogger(ByVal errorMessage As String)
     ErrorSht.Range("ErrorsEncountered").Value = "True"
     
 End Sub
+
+
 
 

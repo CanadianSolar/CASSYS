@@ -713,14 +713,14 @@ End Sub
 '
 ' This is important to determine what is actually the last row in the sheet
 '
-Sub GetLastShapeRow()
+Function GetLastShapeRow() As Boolean
     shapeNum = ReportSht.Shapes.count
     If shapeNum = 0 Then
         lastShapeRow = 0
-        Exit Sub
+        Exit Function
     End If
     lastShapeRow = ReportSht.Shapes(shapeNum).BottomRightCell.row
-End Sub
+End Function
 
 Private Sub PasteHeader(ByRef currentSheet As Worksheet, ByVal initialPasteRow As Integer)
     ' copy and paste title of sheet

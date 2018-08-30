@@ -44,7 +44,7 @@ Private Sub GetIterativeOutputFilePath()
     
     ' Get Open File Name using Dialog box for output file
     ChDir Application.ThisWorkbook.path
-    FOpen = Application.GetSaveAsFilename(title:="Please choose an output file path", FileFilter:="CSV file (*.csv),*.csv")
+    FOpen = Application.GetSaveAsFilename(Title:="Please choose an output file path", FileFilter:="CSV file (*.csv),*.csv")
     If FOpen <> False Then IterativeSht.Range("OutputFilePath").Value = FOpen
     
 End Sub

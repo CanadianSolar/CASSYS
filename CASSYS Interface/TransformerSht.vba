@@ -54,7 +54,7 @@ Private Sub Worksheet_FollowHyperlink(ByVal Target As Hyperlink)
 End Sub
 
 ' Hides or shows the PVSyst equivalent values on the transformer sheet
-Sub togglecols()
+Function togglecols() As Boolean
     
     Range("PVSystVals").EntireRow.Hidden = Not Range("PVSystVals").EntireRow.Hidden
     If Range("PVSystVals").EntireRow.Hidden = True Then
@@ -63,7 +63,7 @@ Sub togglecols()
         Range("ShowHidePV").Value = "Hide PVSyst Equivalents"
     End If
 
-End Sub
+End Function
 '
 'Called when a cell is changed.
 'More specifically this change function will allow

@@ -11,6 +11,7 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     Dim newdoc As DOMDocument60 ' The XML Document
  
     Dim rootElement As IXMLDOMElement ' The root element of the XML file
+    Dim siteDefElement As IXMLDOMElement ' Element used for site definition information in XML file
     Dim AstmRegress As IXMLDOMElement ' Element used for Astm information in XML file
     Dim AstmCoeffs As IXMLDOMElement ' Element used for Astm factors in XML file
     Dim Eaf As IXMLDOMElement ' Element used for Eaf element in XML file
@@ -27,7 +28,9 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     Dim voltElement As IXMLDOMElement ' Element used for voltage data
     Dim transElement As IXMLDOMElement ' Element used for transformer data
     Dim lossElement As IXMLDOMElement ' Element used for loss data
-    Dim losstypeElement As IXMLDOMElement ' Element used to hold soiling loss data
+    Dim lossTypeElement As IXMLDOMElement ' Element used to hold loss data
+    Dim soilingElement As IXMLDOMElement ' Element used for soiling data
+    Dim soilingTypeElement As IXMLDOMElement ' Element used to hold soiling loss data
     Dim spectralElement As IXMLDOMElement ' Element used to hold spectral data
     Dim inputElement As IXMLDOMElement ' Element used for defining input file style
     Dim outputElement As IXMLDOMElement ' Element used for defining output file style
@@ -49,23 +52,27 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     
     'Create document
     Set newdoc = New DOMDocument60
-    
+    'Add root element, version and mode
+    Set rootElement = newdoc.createElement("Site")
+    newdoc.appendChild rootElement
+    Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("Version"))
+    Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("ModeSelect"))
+
+    '---- ASTM 2848 regression model
     If IntroSht.Range("ModeSelect").Value = "ASTM E2848 Regression" Then
     
-        Set rootElement = newdoc.createElement("Site")
-        newdoc.appendChild rootElement
-        '-->Add Site Info
-        Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("Version"))
-        Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("ModeSelect"))
-        Call Add_Element(newdoc, rootElement, infoElement, _
-        Range("Name,Country,Region,City"))
+        ' Add SiteDef element
+        Set siteDefElement = newdoc.createElement("SiteDef")
+        rootElement.appendChild siteDefElement
         
-        '-->Add ASTM E2848 Regression Info
+        Call Add_Element(newdoc, siteDefElement, infoElement, Range("Name,Country,Region,City"))
+        
+        ' Add ASTM E2848 Regression Info
         Set AstmRegress = newdoc.createElement("ASTMRegress")
         rootElement.appendChild AstmRegress
         Call Add_Element(newdoc, AstmRegress, element, AstmSht.Range("SystemPmax"))
         
-        '-->ASTM E2848 Regression Factors
+        ' ASTM E2848 Regression Factors
         Set AstmCoeffs = newdoc.createElement("ASTMCoeffs")
         AstmRegress.appendChild AstmCoeffs
         ' Set all null regression factors to zero
@@ -77,7 +84,7 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
         Next
         Call Add_Element(newdoc, AstmCoeffs, element, AstmSht.Range("ASTMCoeffs"))
         
-        '-->Add Empirical Adjustment Factors (EAF)
+        ' Add Empirical Adjustment Factors (EAF)
         Set Eaf = newdoc.createElement("EAF")
         AstmRegress.appendChild Eaf
         ' Set all null EAF values to one
@@ -93,17 +100,18 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
         Next i
         
        
+    '---- Grid-connected or radiation model
     Else
+        ' Add Site Info
         If SiteSht.Range("UseLocTime").Value = "Yes" And SiteSht.Range("TimeZone").Value = 0 And saveTemp = False Then
             response = MsgBox("Your Timezone (hours GMT) value on the Site page is zero." & " If this value is correct, press 'Yes' to continue.", vbYesNo Or vbInformation, "Save Verification")
         If response = vbNo Then Exit Sub
         End If
-        'Create site root
-        Set rootElement = newdoc.createElement("Site")
-        newdoc.appendChild rootElement
        
-        Call Add_Site_Info(newdoc, rootElement, infoElement)
-        
+        ' Add SiteDef element
+        Set siteDefElement = newdoc.createElement("SiteDef")
+        rootElement.appendChild siteDefElement
+        Call Add_Site_Info(newdoc, siteDefElement, infoElement)
         
         ' Add Orientation and Shading Info
         Set orientElement = newdoc.createElement("Orientation_and_Shading")
@@ -168,18 +176,24 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
     
             '--> Add Transformer Elements
             Set transElement = newdoc.createElement("Transformer")
-            infoElement.appendChild transElement
+            rootElement.appendChild transElement
         
-            'Add Transformer Losses Info And Value
+            'Add Transformer Info And Value
             Call Add_Trans_Info(newdoc, transElement, element)
            
             '--> Add Losses Element
             Set lossElement = newdoc.createElement("Losses")
-            infoElement.appendChild lossElement
-        
+            rootElement.appendChild lossElement
     
             'Add Losses Info And Value
-            Call Add_Loss_Info(newdoc, lossElement, element, losstypeElement)
+            Call Add_Loss_Info(newdoc, lossElement, element, lossTypeElement)
+            
+            '--> Add Soiling Losses Element
+            'Set soilingElement = newdoc.createElement("SoilingLosses")
+            'rootElement.appendChild soilingElement
+    
+            'Add Soiling Losses Info And Value
+            Call Add_SoilingLosses_Info(newdoc, rootElement, element, soilingTypeElement)
             
             'Add spectral element, then info and value
             Set spectralElement = newdoc.createElement("Spectral")
@@ -228,7 +242,7 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
         End If
         
         If IntroSht.Range("ChooseSaveAs").Value = "True" Then ' If the user has selected Save As
-            FSave = Application.GetSaveAsFilename(title:="Save As", FileFilter:="CASSYS Site file (*.csyx),*.csyx", InitialFileName:=Worksheets("Site").Range("Name").Value)
+            FSave = Application.GetSaveAsFilename(Title:="Save As", FileFilter:="CASSYS Site file (*.csyx),*.csyx", InitialFileName:=Worksheets("Site").Range("Name").Value)
             If (FSave <> False) Then
                 FoundPath = True
             Else
@@ -236,7 +250,7 @@ Sub SaveXML(Optional ByVal saveTemp As Boolean)
             End If
         Else ' If the user has selected Save
             If IntroSht.Range("SaveFilePath").Value = vbNullString Then
-                FSave = Application.GetSaveAsFilename(title:="Save As", FileFilter:="CASSYS Site file (*.csyx),*.csyx", InitialFileName:=Worksheets("Site").Range("Name").Value)
+                FSave = Application.GetSaveAsFilename(Title:="Save As", FileFilter:="CASSYS Site file (*.csyx),*.csyx", InitialFileName:=Worksheets("Site").Range("Name").Value)
                 If (FSave <> False) Then
                     FoundPath = True
                 Else
@@ -280,11 +294,9 @@ Sub Add_Site_Info(ByRef newdoc As DOMDocument60, ByRef rootElement As IXMLDOMEle
     Dim attr As IXMLDOMAttribute
     Dim text As IXMLDOMText ' Text values for each element
     
-    ' Add Version Element And Value
-    Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("Version"))
-    Call Add_Element(newdoc, rootElement, infoElement, IntroSht.Range("ModeSelect"))
+    ' Add Elements And Values
     Call Add_Element(newdoc, rootElement, infoElement, _
-    Range("Name,Country,Region,City,Latitude,Longitude,Altitude,TimeZone,UseLocTime,RefMer,TransEnum"))
+        Range("Name,Country,Region,City,Latitude,Longitude,Altitude,TimeZone,UseLocTime,RefMer,TransEnum"))
 
     
     Set albedoElement = newdoc.createElement("Albedo")
@@ -423,7 +435,7 @@ Sub Add_Orientation_Shading_Info(ByRef newdoc As DOMDocument60, ByRef orientElem
         Call Add_Element(newdoc, orientElement, element, Horizon_ShadingSht.Range("HorizonAzi"))
         Call Add_Element(newdoc, orientElement, element, Horizon_ShadingSht.Range("HorizonElev"))
         If delCount > 0 Then
-            MsgBox Prompt:="There were duplicate horizon azimuth values or azimuth and horizon elevation values not associated with an elevation or azimuth, respectively. The unassociated values were deleted, and the first of the duplicates was taken by CASSYS", Buttons:=vbExclamation, title:="Duplicate and Unassociated Horizon Values"
+            MsgBox Prompt:="There were duplicate horizon azimuth values or azimuth and horizon elevation values not associated with an elevation or azimuth, respectively. The unassociated values were deleted, and the first of the duplicates was taken by CASSYS", Buttons:=vbExclamation, Title:="Duplicate and Unassociated Horizon Values"
         End If
     End If
     
@@ -498,21 +510,19 @@ Sub Add_PV_Info(ByRef newdoc As DOMDocument60, ByRef pvElement As IXMLDOMElement
     Call AddArray_Element(newdoc, pvElement, element, "FileName", PV_DatabaseSht.Cells(SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value + PVDataHeight, 4).Value)
     
     'Add PV Element Info and Value
-    For j = 8 To 39
+    For j = 8 To 45
         Call AddArray_Element(newdoc, pvElement, element, PV_DatabaseSht.Cells(PVDataHeight - 2, j).Value, PV_DatabaseSht.Cells(SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value + PVDataHeight, j).Value)
     Next j
     
-    If SystemSht.Range("DefnAvailable").Offset(auxOffset, 0).Value = "Yes" And LossesSht.Range("UsePAN").Value = "Yes" Then
-        Set iamElement = newdoc.createElement("IAMDefinition")
-        pvElement.appendChild iamElement
-        
-        For j = 64 To 81
-            If PV_DatabaseSht.Cells(SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value + PVDataHeight, j).Value <> vbNullString Then
-                Call AddArray_Element(newdoc, iamElement, element, PV_DatabaseSht.Cells(PVDataHeight - 2, j).Value, PV_DatabaseSht.Cells(SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value + PVDataHeight, j).Value)
-            End If
-        Next j
-    End If
+    Set iamElement = newdoc.createElement("IAMDefinition")
+    pvElement.appendChild iamElement
     
+
+    For j = 47 To 64
+        If PV_DatabaseSht.Cells(SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value + PVDataHeight, j).Value <> vbNullString Then
+            Call AddArray_Element(newdoc, iamElement, element, PV_DatabaseSht.Cells(PVDataHeight - 2, j).Value, PV_DatabaseSht.Cells(SystemSht.Range("PVDataIndex").Offset(auxOffset, 0).Value + PVDataHeight, j).Value)
+        End If
+    Next j
     
     'Set Number of Modules Info and Value
     Call AddArray_Element(newdoc, pvElement, element, "NumModules", SystemSht.Range("NumMod").Offset(auxOffset, 0).Value)
@@ -715,55 +725,51 @@ End Sub
 ' newDoc - The XML Document
 ' lossElement - Element used for loss data
 ' element - Element used to add data to other elements
-' losstypeElement - Element used to hold soiling loss data
+' soilingTypeElement - Element used to hold soiling loss data
 '
 ' The purpose of this function is to add the losses information
 ' to the XML file
 
-Sub Add_Loss_Info(ByRef newdoc As DOMDocument60, ByRef lossElement As IXMLDOMElement, ByRef element As IXMLDOMElement, ByRef losstypeElement As IXMLDOMElement)
+Sub Add_Loss_Info(ByRef newdoc As DOMDocument60, ByRef lossElement As IXMLDOMElement, ByRef element As IXMLDOMElement, ByRef lossTypeElement As IXMLDOMElement)
     Dim attr As IXMLDOMAttribute 'Attributes used for the elements
     Dim IAMCell As Range
     Dim AOICell As Range
     Dim text As IXMLDOMText ' Text values for each element
-    Dim MonthName() As String            ' Names of the 12 months of the year (Jan, Feb, etc.)
-    Dim SoilingRngName() As String       ' Names of the ranges used for soiling values
-    MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
-    SoilingRngName = Split("SoilingJan,SoilingFeb,SoilingMar,SoilingApr,SoilingMay,SoilingJun,SoilingJul,SoilingAug,SoilingSep,SoilingOct,SoilingNov,SoilingDec", ",")
-    Dim i As Integer
     
     ' Add Thermal losses info
-    Set losstypeElement = newdoc.createElement("ThermalLosses")
+    Set lossTypeElement = newdoc.createElement("ThermalLosses")
      
-    lossElement.appendChild losstypeElement
+    lossElement.appendChild lossTypeElement
     
     ' Add the info on whether or not to use measured values
-    Call Add_Element(newdoc, losstypeElement, element, LossesSht.Range("UseMeasuredValues"))
+    Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("UseMeasuredValues"))
     ' Add the Constant Heat Loss Factor
     
     If (LossesSht.Range("UseMeasuredValues").Value = False) Then
-        Call Add_Element(newdoc, losstypeElement, element, LossesSht.Range("ConsHLF,ConvHLF"))
+        Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("ConsHLF,ConvHLF"))
     End If
     
     ' Add module quality info
-    Set losstypeElement = newdoc.createElement("ModuleQualityLosses")
-    lossElement.appendChild losstypeElement
+    Set lossTypeElement = newdoc.createElement("ModuleQualityLosses")
+    lossElement.appendChild lossTypeElement
 
     ' Add Efficiency loss info
-    Call Add_Element(newdoc, losstypeElement, element, LossesSht.Range("EfficiencyLoss"))
-    
+    Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("EfficiencyLoss"))
+    Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("ModuleLID"))
+    Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("ModuleAgeing"))
     'Add the Module mismatch losses info
-    Set losstypeElement = newdoc.createElement("ModuleMismatchLosses")
+    Set lossTypeElement = newdoc.createElement("ModuleMismatchLosses")
 
-    lossElement.appendChild losstypeElement
+    lossElement.appendChild lossTypeElement
     
     ' Add the power loss
-    Call Add_Element(newdoc, losstypeElement, element, LossesSht.Range("PowerLoss"))
+    Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("PowerLoss"))
     
     ' Add the losses at a fixed voltage
-    Call Add_Element(newdoc, losstypeElement, element, LossesSht.Range("LossFixedVoltage"))
+    Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("LossFixedVoltage"))
     
     ' Add the Incidence Angle Modifier
-    Set losstypeElement = newdoc.createElement("IncidenceAngleModifier")
+    Set lossTypeElement = newdoc.createElement("IncidenceAngleModifier")
     
     ' Specify how the IAM is defined, using an attribute: ASHRAE or User Defined
     Set attr = newdoc.createAttribute("IAMSelection")
@@ -772,53 +778,74 @@ Sub Add_Loss_Info(ByRef newdoc As DOMDocument60, ByRef lossElement As IXMLDOMEle
     ElseIf LossesSht.Range("IAMSelection").Value = "User Defined" Then
         attr.NodeValue = "User Defined"
     End If
-    losstypeElement.setAttributeNode attr
+    lossTypeElement.setAttributeNode attr
     
     ' Append the IncidenceAngleModifier node to the losses node
-    lossElement.appendChild losstypeElement
+    lossElement.appendChild lossTypeElement
     
     If LossesSht.Range("IAMSelection").Value = "ASHRAE" Then
         'Add the bNaught value
-        Call Add_Element(newdoc, losstypeElement, element, LossesSht.Range("bNaught"))
+        Call Add_Element(newdoc, lossTypeElement, element, LossesSht.Range("bNaught"))
     Else
         ' Check if IAM 0 and IAM 90 are defined, if not then set them to default values
         If LossesSht.Range("IAM_0").Value = vbNullString Then LossesSht.Range("IAM_0").Value = 1
         If LossesSht.Range("IAM_90").Value = vbNullString Then LossesSht.Range("IAM_90").Value = 0
         ' Add the user defined values (blank values are ignored and not saved as nodes)
         For Each IAMCell In LossesSht.Range("IAMRange")
-            If IAMCell.Value <> vbNullString Then Call Add_Element(newdoc, losstypeElement, element, IAMCell)
+            If IAMCell.Value <> vbNullString Then Call Add_Element(newdoc, lossTypeElement, element, IAMCell)
         Next
     End If
     
+End Sub
+
+' Add_SoilingLosses_Info Function
+'
+' Arguments:
+' newDoc - The XML Document
+' lossElement - Element used for loss data
+' element - Element used to add data to other elements
+' losstypeElement - Element used to hold soiling loss data
+'
+' The purpose of this function is to add the losses information
+' to the XML file
+
+Sub Add_SoilingLosses_Info(ByRef newdoc As DOMDocument60, ByRef soilingElement As IXMLDOMElement, ByRef element As IXMLDOMElement, ByRef soilingTypeElement As IXMLDOMElement)
+    Dim attr As IXMLDOMAttribute 'Attributes used for the elements
+    Dim text As IXMLDOMText ' Text values for each element
+    Dim MonthName() As String            ' Names of the 12 months of the year (Jan, Feb, etc.)
+    Dim SoilingRngName() As String       ' Names of the ranges used for soiling values
+    MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
+    SoilingRngName = Split("SoilingJan,SoilingFeb,SoilingMar,SoilingApr,SoilingMay,SoilingJun,SoilingJul,SoilingAug,SoilingSep,SoilingOct,SoilingNov,SoilingDec", ",")
+    Dim i As Integer
+        
     ' Add the soiling losses info
-    Set losstypeElement = newdoc.createElement("SoilingLosses")
-    lossElement.appendChild losstypeElement
+    Set soilingTypeElement = newdoc.createElement("SoilingLosses")
+    soilingElement.appendChild soilingTypeElement
     
     'If the selected frequency is yearly
     If SoilingSht.Range("SIndex") = "1" Then
         ' Set the soiling losses frequency attribute to yearly
         Set attr = newdoc.createAttribute("Frequency")
         attr.NodeValue = "Yearly"
-        losstypeElement.setAttributeNode attr
+        soilingTypeElement.setAttributeNode attr
     
         ' Add the yearly percent loss
-        Call AddArray_Element(newdoc, losstypeElement, element, "Yearly", SoilingSht.Range("SoilingYearly"))
+        Call AddArray_Element(newdoc, soilingTypeElement, element, "Yearly", SoilingSht.Range("SoilingYearly"))
     ElseIf SoilingSht.Range("SIndex") = "2" Then
         'If the selected frequency is monthly
         
         ' Set the soiling losses frequency attribute to monthly
         Set attr = newdoc.createAttribute("Frequency")
         attr.NodeValue = "Monthly"
-        losstypeElement.setAttributeNode attr
+        soilingTypeElement.setAttributeNode attr
         
         'Add the percent loss for each month (in order of course)
         For i = 0 To 11
-            Call AddArray_Element(newdoc, losstypeElement, element, MonthName(i), SoilingSht.Range(SoilingRngName(i)).Value)
+            Call AddArray_Element(newdoc, soilingTypeElement, element, MonthName(i), SoilingSht.Range(SoilingRngName(i)).Value)
         Next i
     End If
     
 End Sub
-
 
 ' Add_Input_Info Function
 '
@@ -1141,6 +1168,8 @@ Sub AddArray_Element(ByRef newdoc As DOMDocument60, ByRef parent As IXMLDOMEleme
     End If
 
 End Sub
+
+
 
 
 

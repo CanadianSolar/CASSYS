@@ -18,7 +18,7 @@ Public Const ColourThemeGreen = 5296276 ' The green used for headers
 ' the cell values to their default values
 ' and activate site sheet to start a new
 ' site definition
-Sub ClearAll()
+Function ClearAll() As Boolean
 
     Dim chartNum As Integer
     Dim introShtStatus As sheetStatus
@@ -81,8 +81,8 @@ Sub ClearAll()
      SystemSht.Range("NumInv").Value = 1
           
      SystemSht.Range("PVLossFrac").Value = 0.015
-     SystemSht.Range("ACWiringLossAtSTC").Value = "at STC"
-     SystemSht.Range("InvLossFrac").Value = 0.015
+     SystemSht.Range("ACWiringLossAtSTC").Value = "at Pnom"
+     SystemSht.Range("InvLossFrac").Value = 0.007
      
      Call PostModify(SystemSht, currentShtStatus)
      
@@ -137,14 +137,14 @@ Sub ClearAll()
     ' Clear Tracker info
     Orientation_and_ShadingSht.Range("RowsBlockSAET").Value = 1
     Orientation_and_ShadingSht.Range("WActiveSAET").Value = 1
-    Orientation_and_ShadingSht.Range("MinTiltSAET").Value = -90
-    Orientation_and_ShadingSht.Range("MaxTiltSAET").Value = 90
+    Orientation_and_ShadingSht.Range("MinTiltSAET").Value = -60
+    Orientation_and_ShadingSht.Range("MaxTiltSAET").Value = 60
     Orientation_and_ShadingSht.Range("StrInWidSAET").Value = 4
     Orientation_and_ShadingSht.Range("CellSizeSAET").Value = 15.6
     
     Orientation_and_ShadingSht.Range("RowsBlockSAST").Value = 1
     Orientation_and_ShadingSht.Range("WActiveSAST").Value = 1
-    Orientation_and_ShadingSht.Range("RotationMaxSAST").Value = 90
+    Orientation_and_ShadingSht.Range("RotationMaxSAST").Value = 60
     Orientation_and_ShadingSht.Range("StrInWidSAST").Value = 4
     Orientation_and_ShadingSht.Range("CellSizeSAST").Value = 15.6
     
@@ -189,7 +189,9 @@ Sub ClearAll()
     LossesSht.Range("ConvHLF").Value = 0
     LossesSht.Range("UseMeasuredValues").Value = False
 
-    LossesSht.Range("EfficiencyLoss").Value = 0.009
+    LossesSht.Range("EfficiencyLoss").Value = -0.004
+    LossesSht.Range("ModuleLID").Value = 0.013
+    LossesSht.Range("ModuleAgeing").Value = 0.005
     LossesSht.Range("PowerLoss").Value = 0.02
     LossesSht.Range("LossFixedVoltage").Value = 0
     
@@ -335,20 +337,20 @@ Sub ClearAll()
      
     Application.EnableEvents = True
      
-End Sub
+End Function
 
 ' SaveAsPDF function
 '
 ' The purpose of this function is to save the
 ' report sheet as a PDF file
-Sub SaveAsPDF()
+Function SaveAsPDF() As Boolean
     Dim FSave As Variant ' Holds the file path to be saved to
-    FSave = Application.GetSaveAsFilename(title:="Save As", FileFilter:="PDF file (*.pdf),*.pdf", InitialFileName:="CASSYS-Report")
+    FSave = Application.GetSaveAsFilename(Title:="Save As", FileFilter:="PDF file (*.pdf),*.pdf", InitialFileName:="CASSYS-Report")
     'Save as XML file
     If Not FSave = False Then
         ReportSht.ExportAsFixedFormat xlTypePDF, FSave
     End If
-End Sub
+End Function
 
 
 ' Print a message to the Message sheet
@@ -494,7 +496,7 @@ skipdelete:    databaseSht.Cells.AutoFilter
 End Sub
 
 ' NB: causes next button to select next unhidden sheet regardless of mode
-Sub NextButton()
+Function NextButton() As Boolean
 
 Dim i As Integer
 Dim currSheet As String
@@ -515,10 +517,10 @@ Next i
     
 Sheets(nextSheet).Activate
     
-End Sub
+End Function
 
 ' NB: Back button selects previous unhidden sheet regardless of mode
-Sub PrevButton()
+Function PrevButton() As Boolean
 
 Dim i As Integer
 Dim currSheet As String
@@ -539,31 +541,7 @@ Next i
     
 Sheets(nextSheet).Activate
 
-End Sub
-
-' The SaveCodeModules sub is used to export all VBA modules to text files, for version control purposes
-' The files are stored in the ./VBA directory
-' Credits: code adapted from http://stackoverflow.com/questions/131605/best-way-to-do-version-control-for-ms-excel
-Sub SaveCodeModules()
-
-Dim i As Integer, sName As String
-
-On Error GoTo ErrHandler
-
-With ThisWorkbook.vbproject
-    For i% = 1 To .VBComponents.count
-        sName = .VBComponents(i%).CodeModule.Name
-        .VBComponents(i%).Export Application.ActiveWorkbook.path & "/VBA/" & sName & ".vba"
-    Next i
-End With
-
-On Error GoTo 0
-Exit Sub
-
-ErrHandler:
-Resume
-
-End Sub
+End Function
 
 'The purpose of this sub is to go through all PV module database inputs and remove any user additions
 

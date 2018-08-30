@@ -128,7 +128,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
 
 End Sub
 
-Public Sub ClearHorizon()
+Function ClearHorizon() As Boolean
     Dim currentShtStatus As sheetStatus
     Call PreModify(Horizon_ShadingSht, currentShtStatus)
     Range("HElev").ClearContents
@@ -137,5 +137,5 @@ Public Sub ClearHorizon()
     Range("HElevFirst").Value = 0
     Range("NumHorPts").Value = 1
     Call PostModify(Horizon_ShadingSht, currentShtStatus)
-End Sub
+End Function
 

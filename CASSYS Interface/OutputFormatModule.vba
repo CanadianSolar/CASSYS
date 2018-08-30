@@ -5,7 +5,7 @@ Attribute VB_Name = "OutputFormatModule"
 ' reformatting the output sheet and altering the code of various modules everytime the
 ' output sheet is changed (adding/reordering/removing sections or available outputs)
 '
-Sub FormatOutputSheet()
+Function FormatOutputSheet() As Boolean
 
     Dim FooterRow As Range
     Dim currentShtStatus As sheetStatus
@@ -38,7 +38,7 @@ Sub FormatOutputSheet()
     
     Application.EnableEvents = True
     
-End Sub
+End Function
 
 ' DeleteExistingNames function
 '
@@ -46,7 +46,7 @@ End Sub
 ' To ensure that name conflicts do not happen and to remove unnecessary past names
 ' in the case that an output is deleted
 
-Sub DeleteExistingNames()
+Function DeleteExistingNames() As Boolean
 
     Dim aName As Name
 
@@ -56,7 +56,7 @@ Sub DeleteExistingNames()
         End If
     Next aName
 
-End Sub
+End Function
 
 
 ' RenameKeyFeatures function
@@ -64,7 +64,7 @@ End Sub
 ' The purpose of this subroutine is to rename some important cells after the
 ' DeleteExistingNames function is called.
 
-Sub RenameKeyFeatures(ByRef FooterRow As Range)
+Function RenameKeyFeatures(ByRef FooterRow As Range) As Boolean
     
     Dim outParam As Range
     Dim firstOutParam As Range
@@ -152,7 +152,7 @@ Sub RenameKeyFeatures(ByRef FooterRow As Range)
     
     OutputFileSht.Range("V2").Name = "OutputConstColumn"
 
-End Sub
+End Function
 
 ' NameCellsUsingOutputs function
 '
@@ -160,7 +160,7 @@ End Sub
 ' corresponding output name. This is important for the InsertValue_BoolToYesNo
 ' function of the load module.
 
-Sub NameCellsUsingOutputs()
+Function NameCellsUsingOutputs() As Boolean
 
     Dim outParam As Range
     Dim paramName As String
@@ -190,7 +190,7 @@ Sub NameCellsUsingOutputs()
         End If
     Next
 
-End Sub
+End Function
 
 
 ' Resizes Rows to be correctly formatted; also names sections for use by CheckBox module and WorkSheet_Change subroutines

@@ -33,11 +33,16 @@ End Sub
 ' This translates into Geff/scale2 = Enom/scale1
 ' and max(Gmax/scale2, Emax/scale1) = 0.9
 ' which is solved for scale1 and scale2
-Public Sub AxesAlignment()
+Function AxesAlignment() As Boolean
     Dim chartObj As ChartObject
     Dim Gmax, Emax As Double
     Dim Scale1, Scale2 As Double
 
+    ' If there was an issue in the simulation, the data may not be there in which case this function will crash
+    ' If that's the case, recover gracefully
+    On Error GoTo EndAxesAlignment
+    
+    ' Adjust axes
     Gmax = WorksheetFunction.Max(Range("LossDiagramRadiations"))
     Emax = WorksheetFunction.Max(Range("LossDiagramEnergies"))
     Scale1 = WorksheetFunction.Max(Gmax * Range("ArrayNomEnergy").Value / Range("Effective_POA_Radiation").Value, Emax) / 0.9
@@ -48,7 +53,9 @@ Public Sub AxesAlignment()
         chartObj.Chart.Axes(xlValue, xlPrimary).MaximumScale = Scale1
         chartObj.Chart.Axes(xlValue, xlSecondary).MaximumScale = Scale2
     End With
-
-End Sub
+    
+EndAxesAlignment:
+    On Error GoTo 0
+End Function
 
 

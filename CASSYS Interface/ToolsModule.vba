@@ -2,16 +2,25 @@ Attribute VB_Name = "ToolsModule"
 ' The DevTools module contains functions to help with the development of the program:
 ' - subs to prepare the workbook for release or for work
 ' - subs to show range names
+Option Explicit
+
+' This variable is used in the closing method
+' It allows CASSYS to close without while bypassing
+' the BeforeSave sub
+Public BypassBeforeSave As Boolean
+
 
 
 ' This sub prepares the workbook for release
-Public Sub PrepareForRelease()
+Function PrepareForRelease() As Boolean
 
     Dim Sheet As Worksheet
     
     'Hide PVSyst equivalents on transformer sheet
-    TransformerSht.Range("PVSystVals").EntireRow.Hidden = True
-    TransformerSht.Range("ShowHidePV").Value = "Show PVSyst Equivalents"
+    If (TransformerSht.Range("PVSystVals").EntireRow.Hidden = False) Then
+        TransformerSht.Range("PVSystVals").EntireRow.Hidden = True
+        TransformerSht.Range("ShowHidePV").Value = "Show PVSyst Equivalents"
+    End If
     
     'Remove any user additions to PV module data base
     'RemoveUserAddsToPVModuleDB
@@ -52,7 +61,7 @@ Public Sub PrepareForRelease()
     IntroSht.Visible = xlSheetHidden
     SiteSht.Visible = xlSheetHidden
     Orientation_and_ShadingSht.Visible = xlSheetHidden
-    BifacialSht.Visible = x1SheetHidden
+    BifacialSht.Visible = xlSheetHidden
     Horizon_ShadingSht.Visible = xlSheetHidden
     SystemSht.Visible = xlSheetHidden
     LossesSht.Visible = xlSheetHidden
@@ -83,10 +92,10 @@ Public Sub PrepareForRelease()
     ' Put focus on intro sheet
     EnableMacrosSht.Activate
     
-End Sub
+End Function
 
 ' This sub prepares the workbook for work
-Public Sub PrepareForWork()
+Private Sub PrepareForWork()
 
     Dim Sheet As Worksheet
     
@@ -127,7 +136,7 @@ Public Sub PrepareForWork()
     IntroSht.Visible = xlSheetVisible
     SiteSht.Visible = xlSheetVisible
     Orientation_and_ShadingSht.Visible = xlSheetVisible
-    BifacialSht.Visible = x1SheetVisible
+    BifacialSht.Visible = xlSheetVisible
     SystemSht.Visible = xlSheetVisible
     LossesSht.Visible = xlSheetVisible
     SoilingSht.Visible = xlSheetVisible
@@ -155,7 +164,8 @@ Public Sub PrepareForWork()
 End Sub
 
 ' ShowRangeNames provide a visual display of range names on the screen
-Sub ShowRangeNames()
+Private Sub ShowRangeNames()
+    Dim nm As Variant
     
     ' Iterate over all the names in the workbook
     For Each nm In ThisWorkbook.Names
@@ -166,12 +176,14 @@ Sub ShowRangeNames()
         If InStr(nm, "!") = 0 Then GoTo nextName                     ' No idea what those are, as I expect ranges to be of the form SheetName!RangeAddress, but they exist. Just skip them
         
         ' Find the range
+        Dim cl As Range
         Set cl = Range(nm)
         
         ' Skip ranges not in current worksheet
         If cl.Worksheet.Name <> Application.ActiveSheet.Name Then GoTo nextName
         
         ' Find dimentions of range
+        Dim clLeft As Variant, clTop As Variant, clHeight As Variant, clWidth As Variant
         clLeft = cl.Left
         clTop = cl.Top
         clHeight = cl.Height
@@ -181,6 +193,7 @@ Sub ShowRangeNames()
         If clWidth > 1000 Then clWidth = 1000
         
         ' Add the shape
+        Dim s As Shape
         Set s = ActiveSheet.Shapes.AddTextbox(msoTextOrientationHorizontal, clLeft, clTop, clWidth, clHeight)
         
         ' Name the shape and select it
@@ -217,13 +230,60 @@ nextName:
 End Sub
 
 ' Delete the temporary shapes showing the range names
-Sub HideRangeNames()
+Private Sub HideRangeNames()
+    Dim s As Shape
     For Each s In ActiveSheet.Shapes
         If InStr(s.Name, "_shpNamedRng") <> 0 Then
             s.Select
             Selection.Delete
         End If
     Next s
+End Sub
+
+' This function is used to save the CASSYS workbook under its current name
+' The save as menu in Excel is disabled (by catching and cancelling save actions in Workbook_BeforeSave),
+' so calling tihs function is the only way to save the workbook
+Function SaveCASSYSWorkbook() As Boolean
+    BypassBeforeSave = True          ' Bypasses BeforeSave
+    ThisWorkbook.Save
+    BypassBeforeSave = False
+End Function
+
+' This function is used to save the CASSYS workbook under a new name
+' The save as menu in Excel is disabled (by catching and cancelling save actions in Workbook_BeforeSave),
+' so calling tihs function is the only way to save the workbook
+Function SaveCASSYSWorkbookAs() As Boolean
+    Dim fName As Variant
+    BypassBeforeSave = True          ' Bypasses BeforeSave
+    fName = Application.GetSaveAsFilename
+    If fName <> False Then
+        ThisWorkbook.SaveAs fileName:=fName
+    End If
+    BypassBeforeSave = False
+End Function
+
+' The SaveCodeModules sub is used to export all VBA modules to text files, for version control purposes
+' The files are stored in the ./VBA directory
+' Credits: code adapted from http://stackoverflow.com/questions/131605/best-way-to-do-version-control-for-ms-excel
+Private Sub SaveCodeModules()
+
+Dim i As Integer, sName As String
+
+On Error GoTo ErrHandler
+
+With ThisWorkbook.vbproject
+    For i% = 1 To .VBComponents.count
+        sName = .VBComponents(i%).CodeModule.Name
+        .VBComponents(i%).Export Application.ActiveWorkbook.path & "/VBA/" & sName & ".vba"
+    Next i
+End With
+
+On Error GoTo 0
+Exit Sub
+
+ErrHandler:
+Resume
+
 End Sub
 
 

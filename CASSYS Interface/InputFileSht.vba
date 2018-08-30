@@ -198,7 +198,7 @@ Private Sub Worksheet_FollowHyperlink(ByVal Target As Hyperlink)
 End Sub
 
 ' Clear the input file sheet, for example when a new simulation is created
-Sub Clear()
+Function Clear() As Boolean
     
     Dim currentShtStatus As sheetStatus
      
@@ -229,9 +229,9 @@ Sub Clear()
      
     Call PostModify(InputFileSht, currentShtStatus)
 
-End Sub
+End Function
 ' Respond to a change in climate file name
-Sub ChangeClimateFile()
+Function ChangeClimateFile() As Boolean
 
     Dim i As Integer
     Dim validFilePath As Boolean
@@ -259,7 +259,7 @@ Sub ChangeClimateFile()
     End If
     
     ' File is defined. Load first 10 lines
-    inputFilePath = Range("InputFilePath").Value
+    inputFilePath = Range("FullInputPath").Value
     GetLine (inputFilePath)
     
     ' Check for type of file
@@ -289,7 +289,7 @@ change_end:
     Call PostModify(InputFileSht, currentShtStatus)
     Application.EnableEvents = enableEventsStatus
 
-End Sub
+End Function
 
 ' GetDates Function
 '
@@ -439,7 +439,7 @@ End Sub
 ' a function to split those lines based on the delimeter
 ' set by the user
 
- Sub PreviewInput()
+ Function PreviewInput() As Boolean
  
     Dim currentShtStatus As sheetStatus
 
@@ -470,7 +470,7 @@ End Sub
  
     Call PostModify(InputFileSht, currentShtStatus)
     
-End Sub
+End Function
     
 ' Delimeter Function
 '
@@ -622,7 +622,7 @@ End Sub
 ' The purpose of this function is to open a dialog
 ' box to allow the user to change the input file path
 ' NB: edited so that clicking the browse link still gives relative file path 01/02/16
-Sub GetInputFilePath()
+Function GetInputFilePath() As Boolean
     
     Dim FOpen As Variant
     Dim FilePathLeft As String
@@ -636,7 +636,7 @@ Sub GetInputFilePath()
     
     ' Get Open File Name using Dialog box for input file
     ChDir Application.ThisWorkbook.path
-    FOpen = Application.GetOpenFilename(title:="Please choose an input file path", FileFilter:="CSV or TMY Input Files(*.csv;*.tm2; *.tm3; *.epw),*.csv;.tm2;.tm3;.epw," & "All Files (*.*),*.*")
+    FOpen = Application.GetOpenFilename(Title:="Please choose an input file path", FileFilter:="CSV or TMY Input Files(*.csv;*.tm2; *.tm3; *.epw),*.csv;.tm2;.tm3;.epw," & "All Files (*.*),*.*")
     ' If FOpen is true it means that the user did not select Cancel
     If FOpen <> False Then
         Call PreModify(InputFileSht, currentShtStatus)
@@ -656,13 +656,13 @@ Sub GetInputFilePath()
         Call PostModify(InputFileSht, currentShtStatus)
     End If
     
-End Sub
+End Function
 
 ' FormatPreviewTimeStamp Routine
 '
 ' Updates the timestamp date format based on the user selected units
 
-Sub FormatPreviewTimeStamp()
+Function FormatPreviewTimeStamp() As Boolean
     
     Dim i As Integer
     Dim dateColumn As Integer
@@ -685,18 +685,18 @@ Sub FormatPreviewTimeStamp()
                 dateCell.NumberFormat = timeStampFormat
             Else
                 ' The column is not correct or no data has been previewed yet
-                Exit Sub
+                Exit Function
             End If
         Next i
     End If
     
-End Sub
+End Function
 
         
 ' Add column header function
 '
 ' adds red text to label the column in the input file sheet preview
-Sub AddColumnHeaders()
+Function AddColumnHeaders() As Boolean
     Dim i As Integer
         
         ' add the column numbering to the preview
@@ -725,7 +725,7 @@ Sub AddColumnHeaders()
         ' If the horizontal diffuse cell is changed run the addcolumnheader to change the header of the inputted column number
         Call AddColumnHeader(Range("Hor_Diffuse"), Range("PrevHor_Diffuse"))
     
-End Sub
+End Function
 
 ' Check for type of input file
 ' inputFilePath: (i) path of the input file

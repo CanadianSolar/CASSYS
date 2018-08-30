@@ -270,7 +270,7 @@ End Sub
 
 '--------Commenting out Iterative Functionality for this version--------'
 
-Sub IterativeOutputValidation()
+Function IterativeOutputValidation() As Boolean
 '    Dim c As Range
 '    Dim i As Integer
 '
@@ -332,6 +332,6 @@ Sub IterativeOutputValidation()
 '    ' This ensures the output selected is available for the selected mode
 '    IterativeSht.Range("IterativeOutputParam").Value = IterativeSht.Range("W2").Value
 
-End Sub
+End Function
 
 

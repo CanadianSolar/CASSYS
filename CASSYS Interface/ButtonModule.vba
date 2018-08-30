@@ -9,9 +9,9 @@ Attribute VB_Name = "ButtonModule"
 
 Option Explicit
 
-Sub NewButton()
+Function NewButton() As Boolean
     Call ClearAll
-    If Not ThisWorkbook.CASSYSExit Then
+    If Not BypassBeforeSave Then
         Sheets("Site").Activate
     End If
     
@@ -20,8 +20,8 @@ Sub NewButton()
     ' at least opening a file or creating a new one will reset it
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
-End Sub
-Sub LoadButton()
+End Function
+Function LoadButton() As Boolean
     
     Dim loadStatus As LOAD_STATUS
     Dim introShtStatus As sheetStatus
@@ -58,7 +58,7 @@ Sub LoadButton()
         Call PostModify(ErrorSht, errorShtStatus)
         Call PostModify(IntroSht, introShtStatus)
         IntroSht.Activate
-        Exit Sub
+        Exit Function
     End If
     
     Call PrintMessage("Loading...", MessageSht.Range("A1"))
@@ -88,8 +88,8 @@ Sub LoadButton()
     ' at least opening a file or creating a new one will reset it
     Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
-End Sub
-Sub SaveButton()
+End Function
+Function SaveButton() As Boolean
     
     Dim currentShtStatus As sheetStatus
     
@@ -98,8 +98,8 @@ Sub SaveButton()
     Call SaveXML
     Call PostModify(IntroSht, currentShtStatus)
      
-End Sub
-Sub SaveAsButton()
+End Function
+Function SaveAsButton() As Boolean
 
     Dim currentShtStatus As sheetStatus
         
@@ -109,14 +109,14 @@ Sub SaveAsButton()
     Call SaveXML
     Call PostModify(IntroSht, currentShtStatus)
     
-End Sub
+End Function
 ' Simply ask the workbook to close
-Sub ExitButton()
+Function ExitButton() As Boolean
     
     ThisWorkbook.Close
      
-End Sub
-Sub SimulateButton()
+End Function
+Function SimulateButton() As Boolean
 
       ' Clears result sheet except for dates
         Dim currentShtStatus As sheetStatus
@@ -147,12 +147,12 @@ Sub SimulateButton()
         ' at least opening a file or creating a new one will reset it
         Application.Calculation = xlCalculationAutomatic
         Application.ScreenUpdating = True
-End Sub
+End Function
 
 
 
 ' When clicked on the output file page, shows information about each of the output options
-Sub HelpButton()
+Function HelpButton() As Boolean
 
     Call MsgBox("Export PDF Report of Site Definition: Create a PDF report containing all of the site information you have entered on each page." & _
     " This report can be used to reproduce the simulation in the future when the CSYX file is not avaiable to load." & vbNewLine & vbNewLine & "Click the drop down list next to an output parameter to choose from the following options:" & vbNewLine & vbNewLine & _
@@ -160,21 +160,21 @@ Sub HelpButton()
     "Detail: Show simulation data for this parameter on the Results page, but do not provide a data summary." & vbNewLine & vbNewLine & _
     "'-': This parameter will not be displayed after simulation.", vbInformation, "CASSYS: Help")
     
-End Sub
+End Function
 
-Sub ExportAsPdFButton()
+Function ExportAsPdFButton() As Boolean
     Dim FOpen As Variant
     Application.DisplayAlerts = False
     ChDir Application.ThisWorkbook.path
-    FOpen = Application.GetSaveAsFilename(title:="Please specify the name and location of the exported PDF file.", FileFilter:="PDF file(*.pdf),*.pdf")
+    FOpen = Application.GetSaveAsFilename(Title:="Please specify the name and location of the exported PDF file.", FileFilter:="PDF file(*.pdf),*.pdf")
     ChDir Application.ThisWorkbook.path
     
     If FOpen <> False Then Call ReportSht.ExportReportToPDF(FOpen)
     Application.DisplayAlerts = True
-End Sub
+End Function
 ' Adds a new output to the output file sheet upon clicking the button
 '
-Sub InsertNewOutputButton()
+Function InsertNewOutputButton() As Boolean
     Dim outputName As Variant
     Dim rowNum As Variant
     
@@ -215,14 +215,14 @@ endInsertNewOutputButton:
     ActiveWindow.DisplayHeadings = False
     Application.EnableEvents = True
       
-End Sub
+End Function
 
 '--------Commenting out Iterative Functionality for this version--------'
 
 ' Button used in OutputFileSht
 ' Hides output file sheet
 ' Unhides IterativeSht, enabling iterative mode
-Sub EnableIterativeModeButton()
+Function EnableIterativeModeButton() As Boolean
 
 '' Copy output file path from output file sheet to iterative sheet
 'IterativeSht.Range("OutputFilePath").Value = OutputFileSht.Range("OutputFilePath").Value
@@ -232,10 +232,10 @@ Sub EnableIterativeModeButton()
 'Sheets("Iterative Mode").Activate
 MsgBox "Iterative mode has been disabled for this version of CASSYS, but will be available on the next version of CASSYS"
 
-End Sub
+End Function
 ' Button used in IterativeSht
 ' Hides IterativeSht, disabling iterative mode
-Sub DisableIterativeModeButton()
+Function DisableIterativeModeButton() As Boolean
 
 '--------Commenting out Iterative Functionality for this version--------'
 
@@ -247,5 +247,5 @@ Sub DisableIterativeModeButton()
 '
 'Sheets("Output File").Activate
 
-End Sub
+End Function
 

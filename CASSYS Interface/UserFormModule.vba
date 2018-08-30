@@ -6,52 +6,94 @@ Option Explicit
 ' The purpose of this function is to open the
 ' UF_SelectPVModule userform to allow for module
 ' selection
-Sub OpenPVForm()
+Function OpenPVForm() As Boolean
     UF_SelectPVModule.Show
-End Sub
+End Function
 
 ' OpenInvForm Function
 '
 ' The purpose of this function is to open the
 ' UF_SelectInverter userform to allow for inverter
 ' selection
-Sub OpenInvForm()
+Function OpenInvForm() As Boolean
     UF_SelectInverter.Show
-End Sub
+End Function
 
 ' OpenAddPVForm Function
 '
 ' The purpose of this function is to open the
 ' UF_AddInverter userform to allow for creating
 ' new inverters
-Sub OpenAddPVForm()
+Function OpenAddPVForm() As Boolean
     UF_AddPVModule.Show
-End Sub
+End Function
 
 ' OpenAddInvForm Function
 '
 ' The purpose of this function is to open the
 ' UF_AddInverter userform to allow for creating
 ' new inverters
-Sub OpenAddInvForm()
+Function OpenAddInvForm() As Boolean
     UF_AddInverterOptions.Show
-End Sub
+End Function
 ' OpenAddModuleOptions Function
 '
 ' The purpose of this function is to open the
 ' UF_AddModuleOptions userform to allow the user to
 ' choose between importing or defining a module
-Sub OpenAddModuleOptions()
+Function OpenAddModuleOptions() As Boolean
     UF_AddModuleOptions.Show
-End Sub
+End Function
+
+' Save module database
+Function SaveModuleDatabase() As Boolean
+    Call SaveDatabase("module", PV_DatabaseSht)
+End Function
+
+' Save inverter database
+Function SaveInverterDatabase() As Boolean
+    Call SaveDatabase("inverter", Inverter_DatabaseSht)
+End Function
+
+' Generic function to save database
+' This saves CASSYS, first removing the current model and then overwriting the current xlsm
+Function SaveDatabase(dbName As String, sht As Worksheet) As Boolean
+
+    Dim answer As VbMsgBoxResult
+    Dim shtStatus As sheetStatus
+    
+    ' First ask for confirmation
+    answer = MsgBox("Saving the " & dbName & " database will erase the current model. Continue?", vbYesNo)
+    If answer = vbNo Then Exit Function
+    
+    ' Call PreModify
+    Call PreModify(sht, shtStatus)
+    
+    ' Wipe out model
+    Call PrepareForRelease
+    
+    ' Save file
+    Call SaveCASSYSWorkbook
+    
+    ' Do as if the workbook is re-open, so that the normal tabs show
+    Call ThisWorkbook.WorkbookOpen
+    
+    ' Open the inverter database tab
+    sht.Visible = xlSheetVisible
+    sht.Activate
+    
+    ' Restore workbook status
+    Call PostModify(sht, shtStatus)
+
+End Function
 ' OpenAddInvOptions Function
 '
 ' The purpose of this function is to open the
 ' UF_AddModuleOptions userform to allow the user to
 ' choose between importing or defining an inverter
-Sub OpenAddInvOptions()
+Function OpenAddInvOptions() As Boolean
     UF_AddInverterOptions.Show
-End Sub
+End Function
 
 ' PVIndex Function
 '

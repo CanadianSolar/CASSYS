@@ -13,11 +13,6 @@ Attribute VB_Exposed = True
 ' triggered when the workbook is opened or  '
 ' closed.                                   '
 
-' NB: This variable is used in the closing method
-' It allows CASSYS to close without while bypassing
-' the before save sub
-Public CASSYSExit As Boolean
-
 Option Explicit
 ' Workbook_BeforeClose
 '
@@ -29,7 +24,7 @@ Private Sub Workbook_BeforeClose(Cancel As Boolean)
     Dim currSht As Worksheet
     
     ' NB: Stops pop up asking user to save
-    CASSYSExit = True
+    BypassBeforeSave = True
     Application.EnableEvents = True
     
     ' To prevent errors when trying to save
@@ -55,31 +50,17 @@ End Sub
 
 
 Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean, Cancel As Boolean)
-Application.DisplayAlerts = False
 
-' NB: If user is exiting CASSYS, BeforeSave bypassed
-' so not asked if they want to save
-If Not CASSYSExit Then
+    Application.DisplayAlerts = False
 
-    Dim answer As Integer
-    Dim doNotSave As Integer
-    answer = MsgBox("The CASSYS Interface Excel File should not be saved or altered." & vbNewLine & "Click OK to save changes to the CASSYS Interface file." & vbNewLine & "Click Cancel to return to the Interface.", vbOKCancel, "CASSYS: Caution")
-
-    If answer = vbCancel Then
+    ' If user is exiting CASSYS, BeforeSave bypassed
+    ' so not asked if they want to save
+    If Not BypassBeforeSave Then
+        Dim answer As Integer
+        answer = MsgBox("The CASSYS Interface (cassys.xlsm) cannot be saved. To save a project, please use the Save or Save As buttons in the Intro tab.", vbOKOnly, "CASSYS: Save")
         Cancel = True
-    Else
-        ' Check if the user wants to save the existing CSYX file before saving the fie (Do not save by default to allow loading first time when workbook opens)
-        doNotSave = vbYes
-        If Not IntroSht.Range("SaveFilePath").Value = vbNullString Then
-        doNotSave = MsgBox("You will now save the CASSYS Interface File. Would you also like to save the Site file you were working on?" & vbNewLine & "Click No to save the interface only.", vbYesNo + vbQuestion, "CASSYS: Saving Interface File")
-        End If
-        If doNotSave = vbNo Then
-        Call SaveXML
-        End If
+        Application.DisplayAlerts = True
     End If
-    Application.DisplayAlerts = True
-End If
-
 
 End Sub
 
@@ -87,7 +68,12 @@ End Sub
 '
 ' This event is triggered right when the workbook is opened
 Private Sub Workbook_Open()
- 
+    Call WorkbookOpen
+End Sub
+
+' This function contains what goes into Workbook_Open but is accessible from other parts of the program
+Function WorkbookOpen() As Boolean
+    
     On Error Resume Next
     ' If macros are not enabled, the "Enable macros" sheet will show and stay.
     ' Otherwise, this code will execute and show the Intro sheet
@@ -117,7 +103,7 @@ Private Sub Workbook_Open()
     SummarySht.Visible = xlSheetHidden
     ReportSht.Visible = xlSheetHidden
     ChartConfigSht.Visible = xlSheetHidden
-    Inverter_DatabaseSht.Visible = xlSheetHidden
+   Inverter_DatabaseSht.Visible = xlSheetHidden
     PV_DatabaseSht.Visible = xlSheetHidden
     CompChart1.Visible = xlSheetHidden
     CompChart2.Visible = xlSheetHidden
@@ -130,7 +116,7 @@ Private Sub Workbook_Open()
     ' Version number for current development of CASSYS (this is for extra protection, in case it gets overwritten)
     IntroSht.Unprotect
     'NB: increased version number
-    IntroSht.Range("Version").Value = "1.5.0"
+    IntroSht.Range("Version").Value = "1.5.2"
     IntroSht.Protect
     IntroSht.Activate
     Application.ScreenUpdating = True
@@ -138,10 +124,8 @@ Private Sub Workbook_Open()
     
     ThisWorkbook.Saved = True
     Application.DisplayAlerts = False
-    ThisWorkbook.ChangeFileAccess Mode:=xlReadOnly
+    'ThisWorkbook.ChangeFileAccess Mode:=xlReadOnly
     Application.DisplayAlerts = True
     Application.Calculation = xlCalculationAutomatic
-    
-     
-End Sub
-
+ 
+End Function
