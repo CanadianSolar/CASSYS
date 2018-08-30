@@ -28,26 +28,28 @@
 <hr>
 
 <p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
-<p><i>Current Version: 1.5.1</i></p>
+<p><i>Current Version: 1.5.2</i></p>
 <p>All the following changes were made to accommodate the bifacial model. The bifacial model implemented is adapted from the NREL model at <a href="https://github.com/NREL/bifacialvf" title="NREL/bifacialvf">https://github.com/NREL/bifacialvf</a>.</p>
 
-<p><i>New Additions:</i></p>
+<p><i>Latest changes:</i></p>
 <ol>
-<li>GroundShading class added to calculate a profile of global (beam and diffuse) irradiance for ground between rows</li>
-<li>BackTilter class added to calculate components of back side irradiance (diffuse, rear front-panel-reflected, ground-reflected, and beam) using view factors. Implemented for fixed tilt and single axis tracking systems</li>
-<li>Transposition of global back side irradiance to front, weighted by the bifaciality factor</li>
-<li>Bifacial sheet in interface to allow user to detail bifacial parameters: ground clearance, structural blocking factor, transmission factor, bifaciality factor, and inter-row albedo</li>
-<li>Loss Diagram and Output sheets to include bifacial gains and outputs</li>
-<li>Significant changes to handle TMY3 and EPW files better in interface</li>
-<li>ToolsModule in VBA code to hold development tools, including new ShowRangeNames and HideRangeNames macros</li>
+<li>Changed subs to functions so that they don’t appear in the list of macros for the workbook.
+<li>Allowed import of multiple PAN and OND files at once.
+<li>Updated built-in database with all Canadian Solar modules since 2012.
+<li>Changed format of csyx file to match how the data is organized in tabs in the interface.
+<li>Changed format of PV module database to accommodate new modules and their information (gamma, mugamma, bifaciality factor, IAM).
+<li>Changed code to prevent users from saving the workbook. Save or SaveAs now must be run from code in the ToolsModule module.
+<li>Allow user to ‘save’ database of modules of inverters (actually saves the entire workbook).
+<li>Changed default values of limiting angle for single axis trackers to 60°.
+<li>Changed default value of AC losses to 0.7% of nominal AC power.
+<li>Added LID and Ageing losses.
+<li>Added LID and Ageing losses.
 </ol>
 <p><i>Bug Fixes:</i></p>
 <ol>
-<li>Small calculation error in energy loss due to voltage too low</li>
-<li>Resolved problems with the saving of monthly information for albedo, bifacial albedo, and soiling</li>
-<li>Fixed issue with recalculation of array operating point once the voltage is determined; this was causing the mismatch losses to be improperly calculated by the program.</li>
-<li>Added calculation of tracker rotation angle for E-W and N-S single axis trackers.</li>
-<li>Fixed improper calculation of inverter state for bipolar inverters.</li>
+<li>Improved calculation of gamma by using bisection rather than Newton-Raphson algorithm; this increases the stability of the program with certain types of modules.
+<li>Removed reading of mVco from PV module data since that value is actually not used by the program.
+<li>Fixed issues caused by the loss diagram when running the program in Radiation or ASTM 2848 mode.
 </ol>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
