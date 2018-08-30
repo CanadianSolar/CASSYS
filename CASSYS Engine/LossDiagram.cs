@@ -46,6 +46,8 @@ namespace CASSYS
         double temperatureLoss = 0;         // Energy loss due to module temperature efficiency 
         double irradianceLevelLoss = 0;     // Energy loss due to irradiance level 
         double qualityLoss = 0;             // Energy loss due to module quality
+        double LIDLoss = 0;                 // Energy loss due to LID
+        double AgeingLoss = 0;              // Energy loss due to ageing
         double mismatchLoss = 0;            // Energy loss due to module mismatch
         double wiringLossDC = 0;            // Energy loss due to DC wiring
 
@@ -89,7 +91,9 @@ namespace CASSYS
             arrayNomEnergy += ReadFarmSettings.Outputlist["Array_Nominal_Power"];
             temperatureLoss += ReadFarmSettings.Outputlist["Power_Loss_Due_to_Temperature"]; 
             irradianceLevelLoss += ReadFarmSettings.Outputlist["Energy_Loss_Due_to_Irradiance"]; 
-            qualityLoss += ReadFarmSettings.Outputlist["Module_Quality_Loss"]; 
+            qualityLoss += ReadFarmSettings.Outputlist["Module_Quality_Loss"];
+            LIDLoss += ReadFarmSettings.Outputlist["Module_LID_Loss"];
+            AgeingLoss += ReadFarmSettings.Outputlist["Module_Ageing_Loss"];
             mismatchLoss += ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"]; 
             wiringLossDC += ReadFarmSettings.Outputlist["Ohmic_Wiring_Loss"]; 
 
@@ -136,6 +140,8 @@ namespace CASSYS
             LossOutputs["Energy_Loss_Due_to_Temperature"] = temperatureLoss * Util.timeStep / 60;
             LossOutputs["Energy_Loss_Due_to_Irradiance_Level"] = irradianceLevelLoss * Util.timeStep / 60;
             LossOutputs["Module_Quality_Losses"] = qualityLoss * Util.timeStep / 60;
+            LossOutputs["Module_LID_Losses"] = LIDLoss * Util.timeStep / 60;
+            LossOutputs["Module_Ageing_Losses"] = AgeingLoss * Util.timeStep / 60;
             LossOutputs["Mismatch_Losses"] = mismatchLoss * Util.timeStep / 60;
             LossOutputs["DC_Wiring_Losses"] = wiringLossDC * Util.timeStep / 60;
             // Losses at inverter

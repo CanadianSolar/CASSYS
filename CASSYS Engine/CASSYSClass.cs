@@ -28,7 +28,7 @@ using System.Linq;
 
 namespace CASSYS
 {
-   public class CASSYSClass
+    public class CASSYSClass
     {
         static Simulation PVPlant;
         static XmlDocument SiteSettings;                // CSYX file site specifications

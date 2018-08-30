@@ -51,6 +51,8 @@ namespace CASSYS
         // PV Array related:
         double farmDC = 0;                                      // Farm/PVArray DC Output [W]
         double farmDCModuleQualityLoss = 0;                     // Farm/PVArray DC Module Quality Loss (Sum for all sub-arrays) [W]
+        double farmDCModuleLIDLoss = 0;                         // Farm/PVArray DC Module LID Loss (Sum for all sub-arrays) [W]
+        double farmDCModuleAgeingLoss = 0;                      // Farm/PVArray DC Module Ageing Loss (Sum for all sub-arrays) [W]
         double farmDCMismatchLoss = 0;                          // Farm/PVArray DC Module Mismatch Loss (Sum for all sub-arrays) [W]
         double farmDCOhmicLoss = 0;                             // Farm/PVArray DC Ohmic Loss (Sum for all sub-arrays) [W]
         double farmDCSoilingLoss = 0;                           // Farm/PVArray DC Soiling Loss (Sum for all sub-arrays) [W]
@@ -77,6 +79,10 @@ namespace CASSYS
         double farmACMaxVoltageLoss = 0;                        // Loss of power when voltage of the array is too large and forces the inverters to 'shut off' and when inverter is not operating at MPP [W]
         double farmACMinVoltageLoss = 0;                        // Loss of power when voltage of the array is too small and forces the inverters to 'shut off' and when inverter is not operating at MPP [W]
 
+        // Variables used in module ageing calculations
+        DateTime StartTimeStamp = new DateTime();               // Time stamp of very first time step in simulation 
+        double YearsSinceStart;                                 // Number of entire years since the beginning of the simulation          
+
         // Calculate method
         public void Calculate
             (
@@ -84,6 +90,16 @@ namespace CASSYS
                 SimMeteo SimMet                                 // Meteological data from inputfile
             )
         {
+            // Record number of years since start of simulation
+            // This is used to calculate module ageing
+            // Update StartTimeStamp if it has never been initialized
+            if (StartTimeStamp == new DateTime())
+            {
+                StartTimeStamp = RadProc.TimeStampAnalyzed;
+            }
+            TimeSpan SimDelta = RadProc.TimeStampAnalyzed.Subtract(StartTimeStamp);
+            YearsSinceStart = Math.Floor(SimDelta.Days / 365.25);
+
             // Reset Losses
             for (int i = 0; i < SimPVA.Length; i++)
             {
@@ -137,7 +153,7 @@ namespace CASSYS
                         SimInv[j].ACPwrOut = 0;
                         SimInv[j].IOut = 0;
                         SimPVA[j].CalcAtOpenCircuit();
-                        SimPVA[j].Calculate(false, SimPVA[j].Voc);
+                        SimPVA[j].Calculate(false, SimPVA[j].Voc, YearsSinceStart);
                     }
 
                     //performing AC wiring calculations
@@ -152,7 +168,7 @@ namespace CASSYS
                     ReadFarmSettings.Outputlist["SubArray_Power_Inv" + (j + 1).ToString()] = SimInv[j].ACPwrOut / 1000;
                 }
 
-                //Calculating total farm output and total ohmic loss
+                // Calculating total farm output and total ohmic loss
                 farmACOutput = 0;
                 farmACOhmicLoss = 0;
                 for (int i = 0; i < SimInv.Length; i++)
@@ -177,6 +193,8 @@ namespace CASSYS
                 farmDCCurrent = 0;
                 farmDCMismatchLoss = 0;
                 farmDCModuleQualityLoss = 0;
+                farmDCModuleLIDLoss = 0;
+                farmDCModuleAgeingLoss = 0;
                 farmDCOhmicLoss = 0;
                 farmDCSoilingLoss = 0;
                 farmDCTemp = 0;
@@ -197,6 +215,8 @@ namespace CASSYS
                     farmDCCurrent += SimPVA[i].IOut;
                     farmDCMismatchLoss += Math.Max(0, SimPVA[i].MismatchLoss);
                     farmDCModuleQualityLoss += SimPVA[i].ModuleQualityLoss;
+                    farmDCModuleLIDLoss += SimPVA[i].ModuleLIDLoss;
+                    farmDCModuleAgeingLoss += SimPVA[i].ModuleAgeingLoss;
                     farmDCOhmicLoss += SimPVA[i].OhmicLosses;
                     farmDCSoilingLoss += SimPVA[i].SoilingLoss;
                     farmDCTemp += SimPVA[i].TModule * SimPVA[i].itsNumModules;
@@ -273,6 +293,8 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Modules_Array_Mismatch_Loss"] = farmDCMismatchLoss / 1000;
             ReadFarmSettings.Outputlist["Ohmic_Wiring_Loss"] = farmDCOhmicLoss / 1000;
             ReadFarmSettings.Outputlist["Module_Quality_Loss"] = farmDCModuleQualityLoss / 1000;
+            ReadFarmSettings.Outputlist["Module_LID_Loss"] = farmDCModuleLIDLoss / 1000;
+            ReadFarmSettings.Outputlist["Module_Ageing_Loss"] = farmDCModuleAgeingLoss / 1000;
             ReadFarmSettings.Outputlist["Effective_Energy_at_the_Output_of_the_Array"] = farmDC / 1000;
             ReadFarmSettings.Outputlist["Calculated_Module_Temperature__deg_C_"] = farmDCTemp;
             ReadFarmSettings.Outputlist["Difference_between_Module_and_Ambient_Temp.__deg_C_"] = farmModuleTempAndAmbientTempDiff;
@@ -294,7 +316,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["AC_side_Efficiency"] = (farmACOutput > 0 && SimTransformer.POut > 0 ? SimTransformer.POut / farmACOutput : 0) * 100;
             ReadFarmSettings.Outputlist["Overall_System_Efficiency"] = farmOverAllEff;
             ReadFarmSettings.Outputlist["Normalized_System_Production"] = SimTransformer.POut > 0 ? SimTransformer.POut / (farmPNomDC * 1000) : 0;
-            ReadFarmSettings.Outputlist["Array_losses_ratio"] = SimTransformer.POut > 0 ? (farmDCMismatchLoss + farmDCModuleQualityLoss + farmDCOhmicLoss + farmDCSoilingLoss) / SimTransformer.POut : 0;
+            ReadFarmSettings.Outputlist["Array_losses_ratio"] = SimTransformer.POut > 0 ? (farmDCMismatchLoss + farmDCModuleQualityLoss + farmDCModuleLIDLoss + farmDCModuleAgeingLoss + farmDCOhmicLoss + farmDCSoilingLoss) / SimTransformer.POut : 0;
             ReadFarmSettings.Outputlist["Inverter_losses_ratio"] = SimTransformer.POut > 0 ? farmACOhmicLoss / SimTransformer.POut : 0;
             ReadFarmSettings.Outputlist["AC_losses_ratio"] = SimTransformer.Losses / SimTransformer.POut < 0 ? 0 : SimTransformer.Losses / SimTransformer.POut;
             ReadFarmSettings.Outputlist["Performance_Ratio"] = farmPR;
@@ -338,7 +360,7 @@ namespace CASSYS
             // Beginning Bisection Method to find the voltage at which the Inverter will produce Nominal AC Power Out
             do
             {
-                SimPVA[j].Calculate(false, trialInvV);                      // Calculate the PV Array Power at given voltage
+                SimPVA[j].Calculate(false, trialInvV, YearsSinceStart);     // Calculate the PV Array Power at given voltage
                 SimInv[j].Calculate(SimPVA[j].POut, trialInvV);             // Calculate the Inverter AC Out and Determine the Clipping Status
 
                 if (SimInv[j].isClipping)
@@ -362,7 +384,7 @@ namespace CASSYS
         void GetInverterStatus(int j)
         {
            // Determine MPPT from the array
-            SimPVA[j].Calculate(true, 0);
+            SimPVA[j].Calculate(true, 0, YearsSinceStart);
             double arrayVMPP = SimPVA[j].VOut;
             double arrayPMPP = SimPVA[j].PMPP;
             
@@ -408,7 +430,7 @@ namespace CASSYS
             SimInv[j].GetMPPTStatus(arrayVMPP);
 
             // Recalculate array operating point now that the voltage has been determined
-            SimPVA[j].Calculate(SimInv[j].itsMPPTracking && SimInv[j].inMPPTWindow, SimInv[j].VInDC);
+            SimPVA[j].Calculate(SimInv[j].itsMPPTracking && SimInv[j].inMPPTWindow, SimInv[j].VInDC, YearsSinceStart);
             SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
 
             double VInDC = SimInv[j].VInDC;
@@ -448,7 +470,7 @@ namespace CASSYS
                 double NoClippingPwr = SimPVA[j].POutNoLoss;                      // Output power of the array
                 GetClippingVoltage(j);
                 
-                SimPVA[j].Calculate(false, SimInv[j].VInDC);
+                SimPVA[j].Calculate(false, SimInv[j].VInDC, YearsSinceStart);
                 SimInv[j].Calculate(SimPVA[j].POut, SimInv[j].VInDC);
  
                 SimInv[j].LossClipping = NoClippingPwr - SimPVA[j].POutNoLoss;

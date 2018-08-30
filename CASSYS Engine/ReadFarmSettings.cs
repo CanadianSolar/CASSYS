@@ -36,7 +36,7 @@ namespace CASSYS
     public class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String EngineVersion = "1.5.1";               // The supported versions of CASSYS CSYX Files.
+        public static String EngineVersion = "1.5.2";               // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -345,6 +345,9 @@ namespace CASSYS
                         case "Site":
                             Path = "/Site/" + NodeName;
                             break;
+                        case "SiteDef":
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/" : "/Site/SiteDef/") + NodeName;
+                            break;
                         case "ASTM":
                             Path = "/Site/ASTMRegress/" + NodeName;
                             break;
@@ -355,7 +358,7 @@ namespace CASSYS
                             Path = "/Site/ASTMRegress/EAF/" + NodeName;
                             break;
                         case "Albedo":
-                            Path = "/Site/Albedo/" + NodeName;
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/Albedo/" : "/Site/SiteDef/Albedo/") + NodeName;
                             break;
                         case "O&S":
                             Path = "/Site/Orientation_and_Shading/" + NodeName;
@@ -376,10 +379,13 @@ namespace CASSYS
                             Path = "/Site/System/" + "SubArray" + _ArrayNum + "/Inverter/" + NodeName;
                             break;
                         case "Transformer":
-                            Path = "/Site/System/Transformer/" + NodeName;
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/System/Transformer/" : "/Site/Transformer/") + NodeName;
                             break;
                         case "Losses":
-                            Path = "/Site/System/Losses/" + NodeName;
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/System/Losses/" : "/Site/Losses/") + NodeName;
+                            break;
+                        case "SoilingLosses":
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/System/Losses/SoilingLosses/" : "/Site/SoilingLosses/") + NodeName;
                             break;
                         case "Spectral":
                             Path = "/Site/Spectral/" + NodeName;
@@ -447,10 +453,10 @@ namespace CASSYS
                     switch (Path)
                     {
                         case "Site":
-                            Path = "/Site" + _Adder;
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site" : "/SiteDef") + _Adder;
                             break;
                         case "Albedo":
-                            Path = "/Site/Albedo" + _Adder;
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/Albedo" : "/Site/SiteDef/Albedo") + _Adder;
                             break;
                         case "O&S":
                             Path = "/Site/Orientation_and_Shading" + _Adder;
@@ -471,7 +477,10 @@ namespace CASSYS
                             Path = "/Site/System/" + "SubArray" + _ArrayNum + "/Inverter" + _Adder;
                             break;
                         case "Losses":
-                            Path = "/Site/System/Losses" + _Adder;
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/System/Losses" : "/Site/Losses") + _Adder;
+                            break;
+                        case "SoilingLosses":
+                            Path = (String.Compare(CASSYSCSYXVersion, "1.5.2") < 0 ? "/Site/System/Losses/SoilingLosses" : "/Site/SoilingLosses") + _Adder;
                             break;
                         case "Spectral":
                             Path = "/Site/Spectral" + _Adder;

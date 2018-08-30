@@ -152,14 +152,14 @@ namespace CASSYS
         {
             // Gathering the parameters for the Sun Class
             //itsSurfaceSlope = Util.DTOR * double.Parse(ReadFarmSettings.GetInnerText("O&S", "PlaneTilt")); TODO: Re-evaluate.
-            itsSLat = double.Parse(ReadFarmSettings.GetInnerText("Site", "Latitude"));
-            itsSLong = double.Parse(ReadFarmSettings.GetInnerText("Site", "Longitude"));
-            itsLSTFlag = Convert.ToBoolean(ReadFarmSettings.GetInnerText("Site", "UseLocTime"));
+            itsSLat = double.Parse(ReadFarmSettings.GetInnerText("SiteDef", "Latitude"));
+            itsSLong = double.Parse(ReadFarmSettings.GetInnerText("SiteDef", "Longitude"));
+            itsLSTFlag = Convert.ToBoolean(ReadFarmSettings.GetInnerText("SiteDef", "UseLocTime"));
 
             // If Local Standard Time is to be used, get the reference meridian for the "Standard Time" of the region
             if (itsLSTFlag)
             {
-                itsMLong = double.Parse(ReadFarmSettings.GetInnerText("Site", "RefMer"));
+                itsMLong = double.Parse(ReadFarmSettings.GetInnerText("SiteDef", "RefMer"));
             }
         }
 

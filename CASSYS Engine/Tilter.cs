@@ -346,11 +346,11 @@ namespace CASSYS
         public void Config()
         {
             // Getting the Tilt Algorithm for the Simulation
-            if (ReadFarmSettings.GetInnerText("Site", "TransEnum", ErrLevel.WARNING) == "0")
+            if (ReadFarmSettings.GetInnerText("SiteDef", "TransEnum", ErrLevel.WARNING) == "0")
             {
                 itsTiltAlgorithm = TiltAlgorithm.HAY;
             }
-            else if (ReadFarmSettings.GetInnerText("Site", "TransEnum", ErrLevel.WARNING) == "1")
+            else if (ReadFarmSettings.GetInnerText("SiteDef", "TransEnum", ErrLevel.WARNING) == "1")
             {
                 itsTiltAlgorithm = TiltAlgorithm.PEREZ;
             }

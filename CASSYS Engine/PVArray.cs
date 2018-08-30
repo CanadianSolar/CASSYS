@@ -71,7 +71,7 @@ namespace CASSYS
         double[][] itsPANIAMProfile = new double[2][];      // The IAM profile from the .PAN file
         double[][] itsUserIAMProfile = new double[2][];     // The IAM profile entered by the user.
         double itsTCoefIsc;                                 // Temperature coefficient for Isc [1/C]
-        double itsTCoefVoc;                                 // Temperature coefficient for Voc [1/C]
+        // double itsTCoefVoc;                              // Temperature coefficient for Voc [1/C] (note: not used by the model)
         double itsTCoefP;                                   // Temperature coefficient for Power [%/C]
         bool useMeasuredTemp;                               // Override boolean, true uses measured values, false calculates values using the Faiman Module Temperature Model
 
@@ -79,6 +79,8 @@ namespace CASSYS
         double itsMismatchLossSTCPC;          // Mismatch Loss for Sub Array [%] 
         double itsMismatchFixedVLoss;         // Mismatch Loss during Fixed Voltage Operation [%]
         double itsModuleQualityLossPC;        // Module Quality Loss [%]
+        double itsModuleLIDPC;                // Module LID [%]
+        double itsModuleAgeingPC;             // Module ageing [%]
         double[] itsMonthlySoilingPC;         // Soiling loss Percentage Array [Month #, %]
         double itsSoilingLossPC;              // Soiling Loss Percentage [%]
         double itsConstHTC;                   // Constant Heat Transfer Coefficient (CHTC)
@@ -120,6 +122,8 @@ namespace CASSYS
         public double SoilingLoss;            // Losses due to soiling of the PV Array [W]
         public double MismatchLoss;           // Losses due to mismatch of modules in the PV array [W]
         public double ModuleQualityLoss;      // Losses due to module quality [W]
+        public double ModuleLIDLoss;          // Losses due to module LID [W]
+        public double ModuleAgeingLoss;       // Losses due to ageing [W]
         public double OhmicLosses;            // Losses due to Wiring between PV Array and Inverter [ohms]
         public double Efficiency;             // PV array efficiency [%]
         public double itsPNomDCArray;         // The Nominal DC Power of the Array [W]
@@ -138,7 +142,8 @@ namespace CASSYS
         public void Calculate
             (
                bool isMPPT                      // Determines the operating mode of the PV Array as Fixed Voltage or MPP 
-            , double InvVoltage                 // Voltage set by inverter [V], only used if MPPT status is false                                      
+            , double InvVoltage                 // Voltage set by inverter [V], only used if MPPT status is false   
+            , double YearsSinceStart            // Number of years since start of simulation (for ageing calculations)                                   
             )
         {
 
@@ -152,7 +157,7 @@ namespace CASSYS
             }
 
             // Assigning result to the output, i.e. multiplying the currents and voltages by Series and Parallel resp.
-            CalcModuleToArray(isMPPT);
+            CalcModuleToArray(isMPPT, YearsSinceStart);
         }
 
         // Calculates the parameters required by the I-V curve equations given environmental conditions
@@ -346,7 +351,7 @@ namespace CASSYS
         }
 
         // Calculates Module to Array and applies losses at the Array Level, i.e. Multiplying the currents and voltages by Series and Parallel resp.
-        void CalcModuleToArray(bool isMPPT)
+        void CalcModuleToArray(bool isMPPT, double YearsSinceStart)
         {
             // Calculate power of array at maximum power point
             PMPP = mPMPP * itsNumModules;
@@ -366,7 +371,10 @@ namespace CASSYS
 
             // Module Quality Losses, Soiling Loses, etc are first adjusted to their before loss value, then losses are calculated.
             ModuleQualityLoss = mIout * itsNParallel * itsModuleQualityLossPC * VOut;
-            IOut *= (1 - itsModuleQualityLossPC);  
+            ModuleLIDLoss = mIout * itsNParallel * itsModuleLIDPC * VOut;
+            ModuleAgeingLoss = mIout * itsNParallel * itsModuleAgeingPC * (YearsSinceStart + 0.5) * VOut;
+            IOut *= (1 - itsModuleQualityLossPC - itsModuleLIDPC - itsModuleAgeingPC * (YearsSinceStart + 0.5));  
+            
             SoilingLoss = mIout * itsNParallel * itsSoilingLossPC * VOut / (1 - itsSoilingLossPC);
 
             // The loss percentage applied is different if the array is in MPP Mode or in Fixed Operation Mode
@@ -385,7 +393,7 @@ namespace CASSYS
             OhmicLosses = Math.Pow(IOut, 2) * itsRw;
 
             // Calculating PV array output power after losses
-            POut = POutNoLoss - (OhmicLosses + MismatchLoss + ModuleQualityLoss);
+            POut = POutNoLoss - (OhmicLosses + MismatchLoss + ModuleQualityLoss + ModuleLIDLoss + ModuleAgeingLoss);
 
             // Calculating DC Efficiency
             Efficiency = lossLessTGlo > 0 ? mPower / lossLessTGlo / itsArea : 0;
@@ -548,7 +556,7 @@ namespace CASSYS
             itsHref = double.Parse(ReadFarmSettings.GetInnerText("PV", "Gref", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "1000"));
             itsCellCount = int.Parse(ReadFarmSettings.GetInnerText("PV", "CellsinS", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsTCoefIsc = double.Parse(ReadFarmSettings.GetInnerText("PV", "mIsc", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 1000;
-            itsTCoefVoc = double.Parse(ReadFarmSettings.GetInnerText("PV", "mVco", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 1000;
+            // itsTCoefVoc = double.Parse(ReadFarmSettings.GetInnerText("PV", "mVco", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL)) / 1000;           // Note: not used by the model
             itsRpRef = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rshunt", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsRs = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rserie", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             itsRshZero = double.Parse(ReadFarmSettings.GetInnerText("PV", "Rsh0", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: (4*itsRpRef).ToString()));
@@ -564,8 +572,19 @@ namespace CASSYS
                 itsConvHTC = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ThermalLosses/ConvHLF", _ArrayNum: ArrayNum, _Error: ErrLevel.FATAL));
             }
 
-            // Defining the Module Quality Losses
+            // Defining the Module Quality Losses, LID and ageing
+            // Note: only module quality loss is defined in versions prior to 1.5.2
             itsModuleQualityLossPC = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ModuleQualityLosses/EfficiencyLoss", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0"));
+            if (string.Compare(ReadFarmSettings.CASSYSCSYXVersion, "1.5.2") < 0)
+            {
+                itsModuleLIDPC = 0;
+                itsModuleAgeingPC = 0;
+            }
+            else
+            {
+                itsModuleLIDPC = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ModuleQualityLosses/ModuleLID", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0"));
+                itsModuleAgeingPC = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ModuleQualityLosses/ModuleAgeing", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0"));
+            }
 
             // Defining the Mismatch Losses
             itsMismatchLossSTCPC = double.Parse(ReadFarmSettings.GetInnerText("Losses", "ModuleMismatchLosses/PowerLoss", _ArrayNum: ArrayNum, _Error: ErrLevel.WARNING, _default: "0"));
@@ -642,31 +661,31 @@ namespace CASSYS
 
             // If soiling losses are defined on a monthly basis, then populate an array with values for each month
             // Based on month number
-            if (ReadFarmSettings.GetAttribute("Losses", "Frequency", _Adder: "/SoilingLosses") == "Monthly")
+            if (ReadFarmSettings.GetAttribute("SoilingLosses", "Frequency", _Adder: "") == "Monthly")
             {
                 // Initializing the array for the soiling losses; index numbers correspond to the months (therefore index 0 must be included in array size but is not used for assigning values
                 itsMonthlySoilingPC = new double[13];
 
                 // Using the month number as the index, populate the Soiling Loss values from each corresponding node
-                itsMonthlySoilingPC[1] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Jan", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[2] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Feb", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[3] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Mar", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[4] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Apr", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[5] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/May", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[6] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Jun", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[7] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Jul", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[8] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Aug", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[9] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Sep", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[10] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Oct", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[11] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Nov", ErrLevel.WARNING, _default: "0.01"));
-                itsMonthlySoilingPC[12] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Dec", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[1] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Jan", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[2] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Feb", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[3] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Mar", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[4] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Apr", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[5] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "May", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[6] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Jun", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[7] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Jul", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[8] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Aug", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[9] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Sep", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[10] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Oct", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[11] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Nov", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[12] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Dec", ErrLevel.WARNING, _default: "0.01"));
             }
             // If soiling losses are defined with one value for the whole year then use that value for each month
             else
             {
                 // Initializing the expected list
                 itsMonthlySoilingPC = new double[13];
-                itsMonthlySoilingPC[1] = double.Parse(ReadFarmSettings.GetInnerText("Losses", "SoilingLosses/Yearly", ErrLevel.WARNING, _default: "0.01"));
+                itsMonthlySoilingPC[1] = double.Parse(ReadFarmSettings.GetInnerText("SoilingLosses", "Yearly", ErrLevel.WARNING, _default: "0.01"));
 
                 // Apply the same soiling percentage to all months
                 for (int i = 3; i < itsMonthlySoilingPC.Length + 1; i++)
@@ -711,72 +730,50 @@ namespace CASSYS
             double d2 = Util.ELEMCHARGE * (itsVmppref + (itsImppref * itsRs)) / (Util.BOLTZMANNCONST * itsCellCount * itsTrefK);
             double d3 = Util.ELEMCHARGE * itsVocref / (Util.BOLTZMANNCONST * itsCellCount * itsTrefK);
 
-            // Using N-R method to solve for GammaRef
-            double gInit = 1;                                                           // Initial guess for GAMMA (To track changes on non-convergence)  
+            // Solve for GammaRef
             double gammaTol = 0.0001;                                                   // Tolerance for the Gamma value
-            double gNew = 1;                                                            // First guess for the new Gamma value
             double gGuess = 0;                                                          // Guess and evaluation variable
             double fGamma = 0;                                                          // Function of Gamma initialized        
-            double fPGamma = 0;                                                         // Derivative of fGamma
             double counter = 0;                                                         // Iteration counter to check for divergence
 
-            // Begin N-R method to solve for gamma by defining its function and derivative of the function
+
+            // Since v. 1.5.2, use bisection instead of NR method
             try
             {
+                // Initial bracket where to look for the solution
+                double gGuess_l = 0.5;
+                double gGuess_r = 1.5;
+                double fGamma_l, fGamma_r;              // values of fGamma for gGuess_l and gGuess_r
+
+                // Check that the bracket actually works
+                fGamma_l = (c2 - c3) * (Math.Exp(d1 / gGuess_l))
+                         + (c3 - c1) * (Math.Exp(d2 / gGuess_l))
+                         + (c1 - c2) * (Math.Exp(d3 / gGuess_l));
+                fGamma_r = (c2 - c3) * (Math.Exp(d1 / gGuess_r))
+                         + (c3 - c1) * (Math.Exp(d2 / gGuess_r))
+                         + (c1 - c2) * (Math.Exp(d3 / gGuess_r));
+                if (Math.Sign(fGamma_l) == Math.Sign(fGamma_r))
+                {
+                    ErrorLogger.Log("Bisection method failed for Gamma: initial guesses do not bracket solution. Simulation has ended.", ErrLevel.FATAL);
+                }
+
+                // Now perform the bisection
                 do
                 {
-                    gGuess = gNew;
-                    fGamma = (c2 - c3) * (Math.Exp(d1 / gGuess))
-                            + (c3 - c1) * (Math.Exp(d2 / gGuess))
-                            + (c1 - c2) * (Math.Exp(d3 / gGuess));
-
-                    fPGamma = (c2 - c3) * -d1 * (Math.Exp(d1 / gGuess)) / Math.Pow(gGuess, 2)
-                            + (c3 - c1) * -d2 * (Math.Exp(d2 / gGuess)) / Math.Pow(gGuess, 2)
-                            + (c1 - c2) * -d3 * (Math.Exp(d3 / gGuess)) / Math.Pow(gGuess, 2);
-                    gNew = gGuess - (fGamma / fPGamma);
+                    // Increase counter. Exit if too many iterations
                     counter++;
                     if (counter > Util.NRLIMIT)
-                    {
-                        // If the first time Gamma does not converge, change the initial guess to try another method.
-                        // Try gInit = 0.5
-                        if (gInit == 1)
-                        {
-                            gNew = 0.5;
-                            gInit = 0.5;
-                            gGuess = 0;
-                            fGamma = 0;
-                            fPGamma = 0;
-                            counter = 0;
-
-                        }
-                        // Try gInit = 1.5
-                        else if (gInit == 0.5)
-                        {
-                            gNew = 1.5;
-                            gInit = 1.5;
-                            gGuess = 0;
-                            fGamma = 0;
-                            fPGamma = 0;
-                            counter = 0;
-                        }
-                        // Try gInit = 0
-                        else if (gInit == 1.5)
-                        {
-                            gNew = 0;
-                            gInit = 0;
-                            gGuess = 0;
-                            fGamma = 0;
-                            fPGamma = 0;
-                            counter = 0;
-                        }
-                        // If it does not converge in any of these cases, Log the error and end simulation.
-                        else
-                        {
-                            ErrorLogger.Log("Newton-Raphson Method did not converge for Gamma. Simulation has ended.", ErrLevel.FATAL);
-                        }
-                    }
+                        ErrorLogger.Log("Bisection method did not converge for Gamma. Simulation has ended.", ErrLevel.FATAL);
+                    gGuess = (gGuess_l + gGuess_r) / 2;
+                    fGamma = (c2 - c3) * (Math.Exp(d1 / gGuess))
+                           + (c3 - c1) * (Math.Exp(d2 / gGuess))
+                           + (c1 - c2) * (Math.Exp(d3 / gGuess));
+                    if (Math.Sign(fGamma) == Math.Sign(fGamma_l))
+                        gGuess_l = gGuess;
+                    else
+                        gGuess_r = gGuess;
                 }
-                while (Math.Abs(gNew - gGuess) > gammaTol);
+                while (gGuess_r - gGuess_l > gammaTol) ;
             }
             catch (ArithmeticException ae)
             {
@@ -788,7 +785,7 @@ namespace CASSYS
             }
 
             // Assigning output value to Gamma, and calculating the value for IPhiRef, and IrsRef using Case 1 and Case 2
-            itsGammaRef = Math.Round(gNew, 3);
+            itsGammaRef = Math.Round(gGuess, 3);
             itsIrsRef = Utilities.Truncate((c1 - c2) / (Math.Exp(d1 / itsGammaRef) - Math.Exp(d2 / itsGammaRef)), 4);
             itsIPhiRef = Math.Round(itsIrsRef * (Math.Exp(d1 / itsGammaRef) - 1) - c1, 3);
 
@@ -877,7 +874,7 @@ namespace CASSYS
             }
             else
             {
-                ErrorLogger.Log("The calculation for Gamma did not have the correct boundries. CASSYS cannot configure the module, and has stopped.", ErrLevel.FATAL);
+                ErrorLogger.Log("The calculation for Gamma did not have the correct boundaries. CASSYS cannot configure the module, and has stopped.", ErrLevel.FATAL);
             }
 
             // Determining the resulting coefficient. Linear assumption allows a calculation with one temperature change to determine the coefficient.
