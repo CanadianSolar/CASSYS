@@ -1,0 +1,230 @@
+<Site>
+	<Version>1.5.2</Version>
+	<ModeSelect>Grid-Connected System</ModeSelect>
+	<SiteDef>
+		<Name>Sample Site - Toronto</Name>
+		<Country>Canada</Country>
+		<Region>Greater Toronto Area</Region>
+		<City>Toronto</City>
+		<Latitude>43.68</Latitude>
+		<Longitude>-79.63</Longitude>
+		<Altitude>100</Altitude>
+		<TimeZone>-5</TimeZone>
+		<UseLocTime>True</UseLocTime>
+		<RefMer>-75</RefMer>
+		<TransEnum>0</TransEnum>
+		<Albedo Frequency="Monthly">
+			<Jan>0.2</Jan>
+			<Feb>0.2</Feb>
+			<Mar>0.2</Mar>
+			<Apr>0.2</Apr>
+			<May>0.2</May>
+			<Jun>0.2</Jun>
+			<Jul>0.2</Jul>
+			<Aug>0.2</Aug>
+			<Sep>0.2</Sep>
+			<Oct>0.2</Oct>
+			<Nov>0.2</Nov>
+			<Dec>0.2</Dec>
+		</Albedo>
+	</SiteDef>
+	<Orientation_and_Shading ArrayType="Unlimited Rows">
+		<PlaneTilt>28</PlaneTilt>
+		<Azimuth>0</Azimuth>
+		<Pitch>9</Pitch>
+		<CollBandWidth>4</CollBandWidth>
+		<TopInactive>0</TopInactive>
+		<BottomInactive>0</BottomInactive>
+		<GAOR>0.444444444444444</GAOR>
+		<ShadingLimit>18.9534375398948</ShadingLimit>
+		<UseCellVal>True</UseCellVal>
+		<StrInWid>4</StrInWid>
+		<CellSize>15.6</CellSize>
+		<WidOfStr>1</WidOfStr>
+		<RowsBlock>99</RowsBlock>
+		<DefineHorizonProfile>False</DefineHorizonProfile>
+	</Orientation_and_Shading>
+	<Bifacial>
+		<UseBifacialModel>False</UseBifacialModel>
+	</Bifacial>
+	<System TotalArrays="1">
+		<ACWiringLossAtSTC>True</ACWiringLossAtSTC>
+		<SystemDC>14040</SystemDC>
+		<SystemAC>9997</SystemAC>
+		<SubArray1>
+			<PVModule>
+				<Module>CS6X - 300P</Module>
+				<Manufacturer>Canadian Solar Inc.</Manufacturer>
+				<Origin>User_Added</Origin>
+				<FileName>Canadian_CS6X_300P.PAN</FileName>
+				<Pnom>300</Pnom>
+				<PnomToLow></PnomToLow>
+				<PnomToUp>0.1</PnomToUp>
+				<LIDLoss></LIDLoss>
+				<Technology>Si-poly</Technology>
+				<CellsinS>72</CellsinS>
+				<CellsinP>1</CellsinP>
+				<Gref>1000</Gref>
+				<Tref>25</Tref>
+				<Vmpp>36.1</Vmpp>
+				<Impp>8.3</Impp>
+				<Voc>44.6</Voc>
+				<Isc>8.87</Isc>
+				<mIsc>5.8</mIsc>
+				<mVco>-165</mVco>
+				<mPmpp>-0.43</mPmpp>
+				<Rsh0>1200</Rsh0>
+				<Rshexp>5.5</Rshexp>
+				<Rshunt>300</Rshunt>
+				<Rserie>0.26</Rserie>
+				<Gamma></Gamma>
+				<muGamma></muGamma>
+				<RelEffic800></RelEffic800>
+				<RelEffic700></RelEffic700>
+				<RelEffic600></RelEffic600>
+				<RelEffic400></RelEffic400>
+				<RelEffic200></RelEffic200>
+				<Vmax>1000</Vmax>
+				<ByPassDiodes>3</ByPassDiodes>
+				<ByPassDiodeVoltage>-0.7</ByPassDiodeVoltage>
+				<Brev>3.92</Brev>
+				<Length>1954</Length>
+				<Width>982</Width>
+				<Depth>40</Depth>
+				<Weight>27</Weight>
+				<AreaM>1.919</AreaM>
+				<Cellarea>243.4</Cellarea>
+				<Area>1.752</Area>
+				<IAMDefinition/>
+				<NumModules>46800</NumModules>
+				<ModulesInString>18</ModulesInString>
+				<NumStrings>2600</NumStrings>
+				<LossFraction>0.015</LossFraction>
+				<GlobWireResist>0.452225956653305</GlobWireResist>
+			</PVModule>
+			<Inverter>
+				<Model>Sunny Central 800CP-US (769kW modified)</Model>
+				<Manufacturer>SMA</Manufacturer>
+				<Origin>CASSYS</Origin>
+				<FileName>SMA_Central800CP_US 769kW modified.OND</FileName>
+				<PNomAC>769</PNomAC>
+				<PMaxAC>880</PMaxAC>
+				<Inom>1283</Inom>
+				<IMax>1411</IMax>
+				<Output>360</Output>
+				<Type>Tri</Type>
+				<Frequency>50/60 Hz</Frequency>
+				<Threshold>5000</Threshold>
+				<MinMPP>570</MinMPP>
+				<MaxMPP>820</MaxMPP>
+				<Max.V>1000</Max.V>
+				<Min.V>570</Min.V>
+				<Oper.>MPPT</Oper.>
+				<NumInverters>13</NumInverters>
+				<MultiCurve>False</MultiCurve>
+				<Efficiency>
+					<EffCurve>
+						<Max.>98.68</Max.>
+						<Euro>98.46</Euro>
+						<IN2>40</IN2>
+						<Effic.2>96.82</Effic.2>
+						<IN3>80</IN3>
+						<Effic.3>97.94</Effic.3>
+						<IN4>160</IN4>
+						<Effic.4>98.53</Effic.4>
+						<IN5>240</IN5>
+						<Effic.5>98.68</Effic.5>
+						<IN6>400</IN6>
+						<Effic.6>98.67</Effic.6>
+						<IN7>600</IN7>
+						<Effic.7>98.51</Effic.7>
+						<IN8>800</IN8>
+						<Effic.8>98.23</Effic.8>
+					</EffCurve>
+				</Efficiency>
+				<BipolarInput>False</BipolarInput>
+				<LossFraction>0.015</LossFraction>
+			</Inverter>
+		</SubArray1>
+	</System>
+	<Transformer>
+		<PNomTrf>10000</PNomTrf>
+		<PIronLossTrf>40</PIronLossTrf>
+		<PFullLoadLss>150</PFullLoadLss>
+		<PResLssTrf>110</PResLssTrf>
+		<ACCapSTC>13736.4552</ACCapSTC>
+		<NightlyDisconnect>False</NightlyDisconnect>
+	</Transformer>
+	<Losses>
+		<ThermalLosses>
+			<UseMeasuredValues>False</UseMeasuredValues>
+			<ConsHLF>29</ConsHLF>
+			<ConvHLF>0</ConvHLF>
+		</ThermalLosses>
+		<ModuleQualityLosses>
+			<EfficiencyLoss>0</EfficiencyLoss>
+			<ModuleLID>0</ModuleLID>
+			<ModuleAgeing>0</ModuleAgeing>
+		</ModuleQualityLosses>
+		<ModuleMismatchLosses>
+			<PowerLoss>0.01</PowerLoss>
+			<LossFixedVoltage>0.01</LossFixedVoltage>
+		</ModuleMismatchLosses>
+		<IncidenceAngleModifier IAMSelection="ASHRAE">
+			<bNaught>0.05</bNaught>
+		</IncidenceAngleModifier>
+	</Losses>
+	<SoilingLosses Frequency="Monthly">
+		<Jan>0.1</Jan>
+		<Feb>0.13</Feb>
+		<Mar>0.07</Mar>
+		<Apr>0.04</Apr>
+		<May>0.03</May>
+		<Jun>0.01</Jun>
+		<Jul>0.01</Jul>
+		<Aug>0.01</Aug>
+		<Sep>0.01</Sep>
+		<Oct>0.02</Oct>
+		<Nov>0.06</Nov>
+		<Dec>0.09</Dec>
+	</SoilingLosses>
+	<Spectral>
+		<UseSpectralModel>False</UseSpectralModel>
+		<ClearnessIndex>
+			<kt>0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1</kt>
+			<ktCorrection>0,0,0,0,0,0,0,0,0,0,0</ktCorrection>
+		</ClearnessIndex>
+	</Spectral>
+	<InputFilePath>Toronto_ClimateFile_CWEC.csv</InputFilePath>
+	<InputFileStyle>
+		<RowsToSkip>1</RowsToSkip>
+		<Delimeter>,</Delimeter>
+		<TimeFormat>yyyy-MM-dd HH:mm:ss</TimeFormat>
+		<AveragedAt>End</AveragedAt>
+		<Interval>60</Interval>
+		<TMYType>0</TMYType>
+		<MeterTilt>N/A</MeterTilt>
+		<MeterAzimuth>N/A</MeterAzimuth>
+		<TimeStamp>1</TimeStamp>
+		<GlobalRad>N/A</GlobalRad>
+		<HorIrradiance>3</HorIrradiance>
+		<Hor_Diffuse>5</Hor_Diffuse>
+		<TempAmbient>2</TempAmbient>
+		<TempPanel>N/A</TempPanel>
+		<WindSpeed>6</WindSpeed>
+		<IncorrectClimateRowsAllowed>0</IncorrectClimateRowsAllowed>
+	</InputFileStyle>
+	<OutputFilePath>Toronto_Sample_Output.csv</OutputFilePath>
+	<OutputFileStyle>
+		<Input_Timestamp Units="yyyy-mm-dd hh:mm:ss" DisplayName="Input Timestamp" Summarize="False">True</Input_Timestamp>
+		<Timestamp_Used_for_Simulation Units="yyyy-mm-dd hh:mm:ss" DisplayName="Timestamp Used for Simulation" Summarize="False">True</Timestamp_Used_for_Simulation>
+		<Sun_Zenith_Angle Units="deg." DisplayName="Sun Zenith Angle" Summarize="False">True</Sun_Zenith_Angle>
+		<Horizontal_Global_Irradiance Units="W/m2" DisplayName="Horizontal Global Irradiance" Summarize="True">True</Horizontal_Global_Irradiance>
+		<Ambient_Temperature Units="deg. C" DisplayName="Ambient Temperature" Summarize="True">True</Ambient_Temperature>
+		<Array_Nominal_Power Units="kW" DisplayName="Array Nominal Power" Summarize="True">True</Array_Nominal_Power>
+		<Ohmic_Wiring_Loss Units="kW" DisplayName="DC Wiring Loss" Summarize="True">True</Ohmic_Wiring_Loss>
+		<Available_Energy_at_Inverter_Output Units="kW" DisplayName="Available Power at Inverter Output" Summarize="True">True</Available_Energy_at_Inverter_Output>
+		<Power_Injected_into_Grid Units="kW" DisplayName="Power Injected into Grid" Summarize="False">True</Power_Injected_into_Grid>
+		<Energy_Injected_into_Grid Units="kWh" DisplayName="Energy Injected into Grid" Summarize="True">True</Energy_Injected_into_Grid>
+	</OutputFileStyle>
+</Site>
