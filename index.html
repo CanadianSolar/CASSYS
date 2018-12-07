@@ -28,27 +28,28 @@
 <hr>
 
 <p>CASSYS is a computer program used to simulate the performance of photovoltaic grid-connected systems. Using a detailed description of the system provided by the user (arrays, inverters, and balance of system components), site location, and weather conditions (irradiance, temperature) at arbitrary time steps, it calculates the state of the system at each step and provides a detailed estimate of the energy flows and losses in the system.</p>
-<p><i>Current Version: 1.5.2</i></p>
+<p><i>Current Version: 1.5.3</i></p>
 <p>The following changes were made to increase the built-in database of PV modules and make the program stronger and safer.</p>
 
 <p><i>Latest changes:</i></p>
 <ol>
-<li>Changed subs to functions so that they don’t appear in the list of macros for the workbook.
-<li>Allowed import of multiple PAN and OND files at once.
-<li>Updated built-in database with the most recent Canadian Solar modules (2018/Q2).
-<li>Changed format of csyx file to match how the data is organized in tabs in the interface.
-<li>Changed format of PV module database to accommodate new modules and their information (gamma, mugamma, bifaciality factor, IAM).
-<li>Changed code to prevent users from saving the workbook. Save or SaveAs now must be run from code in the ToolsModule module.
-<li>Allow user to ‘save’ database of modules of inverters (actually saves the entire workbook).
-<li>Changed default values of limiting angle for single axis trackers to 60°.
-<li>Changed default value of AC losses to 0.7% of nominal AC power.
-<li>Added LID and Ageing losses.
-</ol>
+<li>Albedo can be read from climate file (can apply to either the site albedo or the bifacial model albedo).
+<li>aths to climate and output files are now stored relative to workbook. This makes the exchange of models between users easier.
+<</ol>
 <p><i>Bug Fixes:</i></p>
 <ol>
-<li>Improved calculation of gamma by using bisection rather than Newton-Raphson algorithm; this increases the stability of the program with certain types of modules.
-<li>Removed reading of mVco from PV module data since that value is actually not used by the program.
-<li>Fixed issues caused by the loss diagram when running the program in Radiation or ASTM 2848 mode.
+<li> Fixed the calculation of the row blocking factor for beam and ground-reflected irradiance for systems with unlimited rows case and cell-based shading, and for diffuse irradiance for all systems with unlimited rows.
+<li> Fixed issue with climate files wrapping around the end of the year, for example in the case of a simulation that runs from July 1 to June 30.
+<li> In Details sheet, force format of all cells (except the timestamps) to 'General'.
+<li> Bifacial option set to No by default for new systems; when option is selected, default values are provided for the model.
+<li> Horizon profile set to No by default for new systems.
+<li> Bifacial entry added to the left-side menu of the Intro sheet.
+<li> ASTM 2848 regression does not make program crash after the simulation is run (it was crashing because of the absence of loss diagram XML file).
+<li> When ASTM 2848 regression is selected, tracker or collector parameters are not visible in Output sheet.
+<li> When loading a csyx file and the weather file cannot be found, fields in the Climate File sheet are not blanked out anymore, they are left to the value specified in the csyx file. This enables the user to locate the file without having to re-define all its fields.
+<li> Selections in the Output File sheet are cleared before loading a new csyx file.
+<li> Summary sheet was not visible for simulations with N/A values in the Details sheet.
+<li> Near shading was not disabled for fixed or seasonal tilt systems, leading to incorrect values of energy produced.
 </ol>
 </p>
 <p>The goal of CASSYS is to provide a reliable, flexible and user-friendly way to simulate solar grid-connected system performance for operational purposes.  </p>
