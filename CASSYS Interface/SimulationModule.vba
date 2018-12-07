@@ -200,6 +200,21 @@ Sub Update(ByVal FOpen As Variant)
             ResultSht.Range("A1:B1").EntireColumn.Hidden = True
             ' Clear date formatting on columns that are not supposed to have dates (due to residue formatting from previous simulations)
             
+            ' Replace all cells with NaN with -9999
+            ' Otherwise it makes the filling of the Results page crash
+            ResultSht.Activate
+            Cells.Select
+            Selection.Replace What:="NaN", Replacement:="-9999", LookAt:=xlWhole, _
+              SearchOrder:=xlByColumns, MatchCase:=True, SearchFormat:=False, _
+              ReplaceFormat:=False
+              
+            ' Adjust the format of the cells so that they all look pretty
+            Cells.Select
+            Selection.NumberFormat = "General"
+            Columns("C:D").Select
+            Selection.NumberFormat = "yyyy-mm-dd hh:mm:ss"
+            
+            ' Make the sheet visible
             ResultSht.Visible = xlSheetVisible
             
             ' Deletes the temporary file
@@ -353,13 +368,13 @@ Function requiredFieldsFound(ByVal FOpen As String) As Boolean
         If Not xDoc.SelectSingleNode("//TempAmbient") Is Nothing Or Not xDoc.SelectSingleNode("//TempPanel") Is Nothing Then
             If (xDoc.SelectSingleNode("//TempAmbient").text = "N/A" Or xDoc.SelectSingleNode("//TempAmbient").text = vbNullString) And _
             (xDoc.SelectSingleNode("//TempPanel").text = "N/A" Or xDoc.SelectSingleNode("//TempPanel").text = vbNullString) Then
-                errMessage = errMessage & vbNewLine & "Climate file column number for Ambient Temperature or Panel Temperature"
+                errMessage = errMessage & vbNewLine & "Climate file column number for Ambient Temperature or Panel Temperature."
                 requiredFieldsFound = False
             Else
                 ' If 'Use measured module values' on the losses sheet is "True" then a column for panel temperature must be defined.
                 If LossesSht.Range("UseMeasuredValues").Value = "True" Then
                     If xDoc.SelectSingleNode("//TempPanel").text = vbNullString Or xDoc.SelectSingleNode("//TempPanel").text = "N/A" Then
-                        errMessage = errMessage & vbNewLine & "Climate file column number for Panel Temperature"
+                        errMessage = errMessage & vbNewLine & "Climate file column number for Panel Temperature."
                         requiredFieldsFound = False
                     End If
                 End If
@@ -371,7 +386,15 @@ Function requiredFieldsFound(ByVal FOpen As String) As Boolean
     If Not xDoc.SelectSingleNode("//GlobalRad") Is Nothing And Not xDoc.SelectSingleNode("//HorIrradiance") Is Nothing Then
         If (xDoc.SelectSingleNode("//GlobalRad").text = "N/A" Or xDoc.SelectSingleNode("//GlobalRad").text = vbNullString) And _
         (xDoc.SelectSingleNode("//HorIrradiance").text = "N/A" Or xDoc.SelectSingleNode("//HorIrradiance").text = vbNullString) Then
-            errMessage = errMessage & vbNewLine & "Climate file column number for POA Irradiance or Horizontal Irradiance"
+            errMessage = errMessage & vbNewLine & "Climate file column number for POA Irradiance or Horizontal Irradiance."
+            requiredFieldsFound = False
+        End If
+    End If
+    
+    ' If measured albedo is selected either in the Site or Bifacial sheets then a column for albedo must be defined.
+    If SiteSht.Range("AlbFreqVal").Value = "From Climate File" Or (BifacialSht.Range("UseBifacialModel").Value = "Yes" And BifacialSht.Range("BifAlbFreqVal").Value = "From Climate File") Then
+        If xDoc.SelectSingleNode("//MeasAlbedo").text = vbNullString Or xDoc.SelectSingleNode("//MeasAlbedo").text = "N/A" Then
+            errMessage = errMessage & vbNewLine & "Climate file column number for Albedo."
             requiredFieldsFound = False
         End If
     End If

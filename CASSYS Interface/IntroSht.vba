@@ -105,8 +105,11 @@ Sub SwitchMode(ByVal Selection As String)
         Call PostModify(InputFileSht, InputFileShtStatus)
         
         Call PreModify(OutputFileSht, OutputShtStatus)
+        OutputFileSht.Range("CollectorOrientation_Section").EntireRow.Hidden = False
         OutputFileSht.Range("OutputSht_ASTM_hide").EntireRow.Hidden = False
         OutputFileSht.Range("GridConnectedOutputs").EntireRow.Hidden = True
+        OutputFileSht.CheckBoxes("Tracker Checkbox").Visible = True
+        OutputFileSht.CheckBoxes("BifacialChkBox").Visible = False
         OutputFileSht.CheckBoxes("PVArrayChkBox").Visible = False
         OutputFileSht.CheckBoxes("InverterChkBox").Visible = False
         OutputFileSht.CheckBoxes("SystemLossesChkBox").Visible = False
@@ -186,12 +189,14 @@ Sub SwitchMode(ByVal Selection As String)
         OutputFileSht.Range("GridConnectedOutputs").EntireRow.Hidden = False
         OutputFileSht.CheckBoxes("SystemLossesChkBox").Visible = True
         OutputFileSht.CheckBoxes("Tracker Checkbox").Visible = False
+        OutputFileSht.CheckBoxes("BifacialChkBox").Visible = False
         OutputFileSht.CheckBoxes("PVArrayChkBox").Visible = False
         OutputFileSht.CheckBoxes("InverterChkBox").Visible = False
         OutputFileSht.CheckBoxes("EfficienciesChkBox").Visible = False
         OutputFileSht.CheckBoxes("IncidentEnergy CheckBox").Visible = False
         OutputFileSht.CheckBoxes("ShadingChkBox").Visible = False
         OutputFileSht.Range("OutputSht_ASTM_hide").EntireRow.Hidden = True
+        OutputFileSht.Range("CollectorOrientation_Section").EntireRow.Hidden = True
         Call PostModify(OutputFileSht, OutputShtStatus)
         
         'hiding site file parameters not needed for ASTM mode
@@ -227,9 +232,11 @@ Sub SwitchMode(ByVal Selection As String)
         Call PostModify(InputFileSht, InputFileShtStatus)
         
         Call PreModify(OutputFileSht, OutputShtStatus)
+        OutputFileSht.Range("CollectorOrientation_Section").EntireRow.Hidden = False
         OutputFileSht.Range("OutputSht_ASTM_hide").EntireRow.Hidden = False
         OutputFileSht.Range("GridConnectedOutputs").EntireRow.Hidden = False
         OutputFileSht.CheckBoxes("Tracker Checkbox").Visible = True
+        OutputFileSht.CheckBoxes("BifacialChkBox").Visible = True
         OutputFileSht.CheckBoxes("PVArrayChkBox").Visible = True
         OutputFileSht.CheckBoxes("InverterChkBox").Visible = True
         OutputFileSht.CheckBoxes("SystemLossesChkBox").Visible = True

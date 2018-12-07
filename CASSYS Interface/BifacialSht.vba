@@ -88,7 +88,7 @@ Sub BifSwitchFreq(ByVal Selection As String)
         BifacialSht.Range("BifYearlyAlbedo").EntireRow.Hidden = True
         BifacialSht.Range("BifMonthlyAlbedo").EntireRow.Hidden = False
         BifacialSht.Range("BifAlbedoGraph").EntireRow.Hidden = False
-    ElseIf (Selection = "Site") Then
+    ElseIf (Selection = "Site" Or Selection = "From Climate File") Then
         BifacialSht.Range("BifYearlyAlbedo").EntireRow.Hidden = True
         BifacialSht.Range("BifMonthlyAlbedo").EntireRow.Hidden = True
         BifacialSht.Range("BifAlbedoGraph").EntireRow.Hidden = True

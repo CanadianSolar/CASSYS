@@ -920,20 +920,16 @@ End Sub
 
 Sub Add_BifAlbedo_Info(ByRef newdoc As DOMDocument60, ByRef albedoElement As IXMLDOMElement, ByRef element As IXMLDOMElement)
 
-    Dim MonthName() As String  ' Names of the 12 months of the year (Jan, Feb, etc.)
+    Dim MonthName() As String           ' Names of the 12 months of the year (Jan, Feb, etc.)
     Dim BifAlbRngName() As String       ' Names of the ranges used for albedo values
     MonthName = Split("Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec", ",")
     BifAlbRngName = Split("BifAlbJan,BifAlbFeb,BifAlbMar,BifAlbApr,BifAlbMay,BifAlbJun,BifAlbJul,BifAlbAug,BifAlbSep,BifAlbOct,BifAlbNov,BifAlbDec", ",")
     Dim i As Integer
-    If (BifacialSht.Range("BifAlbFreqVal").Value = "Site") Then
-        Call AddArray_Element(newdoc, albedoElement, element, "UseBifAlb", "False")
-    ElseIf (BifacialSht.Range("BifAlbFreqVal").Value = "Yearly") Then
-        Call AddArray_Element(newdoc, albedoElement, element, "UseBifAlb", "True")
-        ' If albedo is set to yearly, add yearly albedo values
+    ' If albedo is set to yearly, add yearly albedo values
+    If (BifacialSht.Range("BifAlbFreqVal").Value = "Yearly") Then
         Call AddArray_Element(newdoc, albedoElement, element, BifacialSht.Range("BifAlbFreqVal"), BifacialSht.Range("BifAlbYearly"))
+    ' If albedo is set to monthly, add monthly albedo values
     ElseIf (BifacialSht.Range("BifAlbFreqVal").Value = "Monthly") Then
-        Call AddArray_Element(newdoc, albedoElement, element, "UseBifAlb", "True")
-        ' If albedo is set to monthly, add monthly albedo values
         For i = 0 To 11
             Call AddArray_Element(newdoc, albedoElement, element, MonthName(i), BifacialSht.Range(BifAlbRngName(i)).Value)
         Next i

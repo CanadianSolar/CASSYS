@@ -8,16 +8,14 @@ Option Explicit
 Enum LOAD_STATUS
     ItemNotFound = 0
     ItemFound = 1
-    filePathFound = True
-    filePathNotFound = False
 End Enum
 
 ' GetFileToLoad Function
 '
 ' The purpose of this function is to get the file path of the XML file to be loaded
-' and insert it into a cell on the intro sheet
+' and return it to the calling functon
 
-Function GetFileToLoad()
+Function GetFileToLoad() As String
 
     Dim browsePath As Variant
     Dim currentShtStatus As sheetStatus
@@ -26,27 +24,20 @@ Function GetFileToLoad()
     ' Check if the user wants to save the existing CSYX file before moving to another one (Do not save by default to allow loading first time when workbook opens)
     doNotSave = vbYes
     If Not IntroSht.Range("SaveFilePath").Value = vbNullString Then
-        doNotSave = MsgBox("Are you sure you want to load a new file? Click Yes to proceed without saving the existing file, and No to save the file", vbYesNo + vbQuestion, "Save Reminder")
+        doNotSave = MsgBox("Are you sure you want to load a new file? Unsaved changes in the current simulation will be lost.", vbYesNo + vbQuestion, "Save Reminder")
     End If
     
-    ' If yes, then open browswer window to find the file
+    ' If yes, then open file dialog box to find the file
     If doNotSave = vbYes Then
         ' The browse box begins in the same directory as CASSYS.xlsm
         ChDir Application.ThisWorkbook.path
         browsePath = Application.GetOpenFilename(Title:=" CASSYS: Please choose a Site definition to load", FileFilter:="CASSYS Site file (*.csyx),*.csyx")
             
         If (browsePath <> False) Then
-            Call PreModify(IntroSht, currentShtStatus)
-            IntroSht.Range("LoadFilePath").Value = browsePath
-            IntroSht.Range("SaveFilePath").Value = browsePath
-            Call PostModify(IntroSht, currentShtStatus)
-            GetFileToLoad = True
+            GetFileToLoad = browsePath
         Else
-            GetFileToLoad = False
+            GetFileToLoad = ""
         End If
-    Else
-        ' If no, Save the existing document
-        Call SaveXML
     End If
     
 End Function
@@ -58,8 +49,7 @@ End Function
 ' the CSYX site file into their respective
 ' sheets
 
-Function Load() As Boolean
-   
+Function Load(fileNameToLoad) As Boolean
     
     Dim newdoc As DOMDocument60
     Set newdoc = New DOMDocument60
@@ -68,9 +58,13 @@ Function Load() As Boolean
     Dim errorShtStatus As sheetStatus
     
     ' Get the load file path and load the DOMDocument60
-    newdoc.Load IntroSht.Range("LoadFilePath").Value
+    newdoc.Load fileNameToLoad
     
     Call PreModify(ErrorSht, errorShtStatus)
+    
+    ' Set file name
+    IntroSht.Range("LoadFilePath").Value = fileNameToLoad
+    IntroSht.Range("SaveFilePath").Value = fileNameToLoad
     
     ' Set ModeSelect
     ' ModeSelect indicates whether the file is a full system simulation, just for radiation calculation, or ASTM 2848 Regression
@@ -641,68 +635,14 @@ Private Sub loadInputSht(ByRef newdoc As DOMDocument60)
         
     ' Check if input file path is defined. If not, then make it red and notify user with a message on the error sheet
     inputFilePath = newdoc.SelectSingleNode("//Site/InputFilePath").text ' InputFileSht.Range("InputFilePath").Value
-    inputFilePath = Replace(inputFilePath, "/", "\")
-    ' Defines input file name
-    FilePathLeft = Left(inputFilePath, Len(ThisWorkbook.path))
-    FilePathLeft = Replace(FilePathLeft, "/", "\")
-    FilePathLeft_csyx = Left(inputFilePath, Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
-    FilePathLeft_csyx = Replace(FilePathLeft_csyx, "/", "\")
     
-    ' If the file path is in the same directory as csyx or CASSYS or is in a folder further down, the file path is given as a relative file path
-    If ThisWorkbook.path = FilePathLeft Then
-        InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(ThisWorkbook.path) - 1)
-    ElseIf Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) = FilePathLeft_csyx Then
-        InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(FilePathLeft_csyx))
-    ' If the file is stored somewhere else entirely, the whole file path is stored
-    Else
-        InputFileName = inputFilePath
-    End If
-
     ' Displays input file name
-    InputFileSht.Range("InputFilePath").Value = InputFileName
+    InputFileSht.Range("InputFilePath").Value = inputFilePath
     validFilePath = checkValidFilePath(InputFileSht, "Input", inputFilePath)
     ' If the file path is not correct then check the relative path (check the directory as CASSYS.xlsm is contained in)
     If validFilePath = False Then
-        relativeFilePath = Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) & Right(inputFilePath, Len(FilePathLeft_csyx))
-        validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
-        If validFilePath = True Then
-            inputFilePath = relativeFilePath
-            InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(FilePathLeft_csyx))
-            InputFileSht.Range("InputFilePath").Value = InputFileName
-        Else:
-            relativeFilePath = ThisWorkbook.path & "\" & Right(inputFilePath, Len(FilePathLeft))
-            validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
-            If validFilePath = True Then
-                inputFilePath = relativeFilePath
-                InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(ThisWorkbook.path) - 1)
-                InputFileSht.Range("InputFilePath").Value = InputFileName
-            ' Looks for file in location of .csyx file as well as in location of CASSYS itself
-            Else:
-                relativeFilePath = Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) & Right(inputFilePath, Len(inputFilePath) - InStrRev(inputFilePath, "\"))
-                validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
-                If validFilePath = True Then
-                    inputFilePath = relativeFilePath
-                    InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
-                    InputFileSht.Range("InputFilePath").Value = InputFileName
-                Else:
-                    relativeFilePath = ThisWorkbook.path & "\" & Right(inputFilePath, Len(inputFilePath) - InStrRev(inputFilePath, "\"))
-                    validFilePath = checkValidFilePath(InputFileSht, "Input", relativeFilePath)
-                    If validFilePath = True Then
-                        inputFilePath = relativeFilePath
-                        InputFileName = Right(inputFilePath, Len(inputFilePath) - Len(ThisWorkbook.path) - 1)
-                        InputFileSht.Range("InputFilePath").Value = InputFileName
-                    End If
-                End If
-            End If
-        End If
-    Else
         ' Change browse path color back to white if the input file exists
         InputFileSht.Range("InputFilePath").Interior.Color = ColourWhite
-        If checkValidFilePath(InputFileSht, "Input", CurDir() & "\" & inputFilePath) = False Then
-            Range("FullInputPath").Value = inputFilePath
-        Else
-            Range("FullInputPath").Value = CurDir() & "\" & inputFilePath
-        End If
     End If
     
     ' Continues to load input file sheet even if input file is invalid
@@ -710,7 +650,11 @@ Private Sub loadInputSht(ByRef newdoc As DOMDocument60)
     If IntroSht.Range("ModeSelect") = "ASTM E2848 Regression" Then
         Call InsertValue(newdoc, "//Site/InputFileStyle/*", InputFileSht.Range("RowsToSkip,Delimeter,TimeFormat,AveragedAt,Interval,ASTMInputRange,TMYType"))
     Else
-        Call InsertValue(newdoc, "//Site/InputFileStyle/*", InputFileSht.Range("RowsToSkip,Delimeter,TimeFormat,AveragedAt,Interval,InputColumnNums,TMYType"))
+        Call InsertValue(newdoc, "//Site/InputFileStyle/*", InputFileSht.Range("RowsToSkip,Delimeter,TimeFormat,AveragedAt,Interval,InputColumnNumsNoAlbedo,TMYType"))
+    End If
+    
+    If (newdoc.SelectSingleNode("//Version").text > "1.5.2") Then
+        Call InsertValue(newdoc, "//Site/InputFileStyle/*", InputFileSht.Range("MeasAlbedo"))
     End If
     
     If (Not newdoc.SelectSingleNode("//Site/InputFileStyle/IncorrectClimateRowsAllowed") Is Nothing) Then
@@ -1599,10 +1543,12 @@ Private Sub InsertAttribute(ByRef newdoc As DOMDocument60, ByVal path As String,
     Set node = newdoc.SelectSingleNode(path)
     
     ' Get the attribute of the selected node
+    ' Note: HasChildNodes commented out because it causes issues when loading csyx files with albedo read from climate file.
+    ' The usefulness of that line wasn't clear anyway.
     If Not node Is Nothing Then
-        If node.HasChildNodes Or Worksheets("Iterative Mode").Visible = True Then
+        'If node.HasChildNodes Or Worksheets("Iterative Mode").Visible = True Then
             insertLocations.Value = node.Attributes.getNamedItem(attr).text
-        End If
+        'End If
     End If
     
 End Sub

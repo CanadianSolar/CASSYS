@@ -59,6 +59,7 @@ Function ClearAll() As Boolean
      SiteSht.Range("Longitude").Value = 0
      SiteSht.Range("Altitude").Value = 0
      SiteSht.Range("TimeZone").Value = 0
+     SiteSht.Range("AlbFreqVal").Value = "Yearly"
      SiteSht.Range("AlbJan,AlbFeb,AlbMar,AlbApr,AlbMay,AlbJun,AlbJul,AlbAug,AlbSep,AlbOct,AlbNov,AlbDec").Value = 0.2
      SiteSht.Range("AlbYearly").Value = 0.2
      Application.EnableEvents = False
@@ -170,15 +171,28 @@ Function ClearAll() As Boolean
     
     Call PostModify(Orientation_and_ShadingSht, currentShtStatus)
     
+    ' Clear bifacial sheet
+    Range("GroundClearance").Value = "1.00"
+    Range("StructBlockingFactor").Value = "0.1"
+    Range("PanelTransFactor").Value = "0"
+    Range("BifacialityFactor").Value = "0.75"
+    Call PreModify(BifacialSht, currentShtStatus)
+    Range("BifAlbYearly").Value = "0.2"
+    Range("BifAlbJan,BifAlbFeb,BifAlbMar,BifAlbApr,BifAlbMay,BifAlbJun,BifAlbJul,BifAlbAug,BifAlbSep,BifAlbOct,BifAlbNov,BifAlbDec").Value = 0.2
+    Application.EnableEvents = True
+    Range("BifAlbFreqVal").Value = "Yearly"
+    Range("UseBifacialModel").Value = "No"
+    Application.EnableEvents = False
+    Call PostModify(BifacialSht, currentShtStatus)
     
-     ' Clear Horizon Shading Sheet
-     ' Sets the horizon to True with zero points
-     ' Clear Horizon Shading Sheet
-     ' Sets the horizon to True with zero points
+    ' Clear Horizon Shading Sheet
+    ' Sets the horizon to True with zero points
+    ' Finally, set horizon to False
     Call PreModify(Horizon_ShadingSht, currentShtStatus)
     Application.EnableEvents = True
     Range("DefineHorizonProfile").Value = "Yes"
     Call Horizon_ShadingSht.ClearHorizon
+    Range("DefineHorizonProfile").Value = "No"
     Application.EnableEvents = False
     Call PostModify(Horizon_ShadingSht, currentShtStatus)
     
@@ -392,7 +406,6 @@ Function checkValidFilePath(fileSheet As Worksheet, ByVal pathLabel As String, B
 fileNotFound:
         If pathLabel = "Input" Then
             InputFileSht.Range("previewInputs").ClearContents
-            InputFileSht.Range("InputColumnNums").ClearContents
             Range(pathLabel & "FilePath").Interior.Color = RGB(255, 0, 0)
         End If
         checkValidFilePath = False
@@ -567,4 +580,52 @@ Private Sub RemoveUserAddsToPVModuleDB()
         End If
     Loop
 End Sub
+
+' Function to get the path of a file relative to the path of the workbook
+Function GetRelativePath(FilePath As Variant) As String
+  Dim RelativePath As String
+  RelativePath = ""
+  
+  ' Get the workbook path, replace backslashes with slashes and add final slash
+  Dim WBPath As String
+  WBPath = Application.ActiveWorkbook.path
+  WBPath = Replace(WBPath, "\", "/") + "/"
+  
+  ' In file path, replace backslashes with slashes
+  FilePath = Replace(FilePath, "\", "/")
+  
+  ' Check if the workbook path and the file path have anything in common
+  Dim p As Integer               ' p is the first position where the two strings differ
+  Dim s As Integer               ' s is the next position of the / character
+  p = 1
+  Do While (p <= WorksheetFunction.Min(Len(WBPath), Len(FilePath)))
+    s = InStr(p, WBPath, "/")
+    If Left(WBPath, s) = Left(FilePath, s) Then
+      p = s + 1
+    Else
+      Exit Do
+    End If
+  Loop
+    
+  ' The workbook path and the file path have nothing in common: keep path as is
+  ' (can be absolute path on a different drive, or can already be relative path)
+  If (p = 1) Then
+    RelativePath = FilePath
+  
+  ' Build relative path
+  Else
+    ' First, build relative path from common part to workbook
+    Dim c As Integer               ' c is a counter
+    For c = p To WorksheetFunction.Min(Len(WBPath))
+      If Mid(WBPath, c, 1) = "/" Then
+        RelativePath = RelativePath + "../"
+      End If
+    Next c
+    
+    ' Append relative path from common part to file
+    RelativePath = RelativePath + Mid(FilePath, p, Len(FilePath))
+  End If
+  
+  GetRelativePath = RelativePath
+End Function
 

@@ -49,6 +49,17 @@ Private Sub Worksheet_Activate()
         End If
     End If
     
+    ' This code section checks if albedo 'From Climate File' is selected for on the bifacial model page
+    ' If this option is selected then a comment is added in the cell for the Albedo column number to show that it is a required field
+    If Not InputFileSht.Range("MeasAlbedo").Comment Is Nothing Then
+        InputFileSht.Range("MeasAlbedo").Comment.Delete
+    End If
+    If (BifacialSht.Range("UseBifacialModel").Value = "Yes" And BifacialSht.Range("BifAlbFreqVal").Value = "From Climate File") Then
+        InputFileSht.Range("MeasAlbedo").AddComment ("Required field: albedo 'From Climate File' was selected on the Bifacial model page.")
+    ElseIf SiteSht.Range("AlbFreqVal").Value = "From Climate File" Then
+        InputFileSht.Range("MeasAlbedo").AddComment ("Required field: albedo 'From Climate File' was selected on the Site page.")
+    End If
+       
     Call PostModify(InputFileSht, currentShtStatus)
     
 End Sub
@@ -79,6 +90,9 @@ Private Sub Worksheet_Change(ByVal Target As Range)
     Call PreModify(InputFileSht, currentShtStatus)
 
     'If the delimiter cell, input file path is changed run the preview input function
+    If Not Intersect(Target, Range("InputFilePath")) Is Nothing Then
+        Range("InputFilePath") = GetRelativePath(Range("InputFilePath").Value)
+    End If
     If Not Intersect(Target, Range("Delimeter")) Is Nothing Or Not Intersect(Target, Range("InputFilePath")) Is Nothing Then
         Call ChangeClimateFile
     End If
@@ -117,12 +131,12 @@ Private Sub Worksheet_Change(ByVal Target As Range)
         End If
      
         ' Preview the first and last dates from the input file
-        If Not Intersect(Target, Range("TimeStamp")) Is Nothing Or Not Intersect(Target, Range("TimeStamp")) Is Nothing Then Call GetDates(InputFileSht.Range("FullInputPath").Value)
+        If Not Intersect(Target, Range("TimeStamp")) Is Nothing Or Not Intersect(Target, Range("TimeStamp")) Is Nothing Then Call GetDates(InputFileSht.Range("InputFilePath").Value)
         
         ' Update the brown coloured input header line if the user changes the number of rows to skip
         If Not Intersect(Target, Range("RowsToSkip")) Is Nothing Then
             Call SplitToColumns(InputFileSht.Range("Delimeter").Value)
-            Call GetDates(InputFileSht.Range("FullInputPath").Value)
+            Call GetDates(InputFileSht.Range("InputFilePath").Value)
         End If
         
         ' Update the time stamp format in the preview if a different time format is selected
@@ -213,11 +227,11 @@ Function Clear() As Boolean
     InputFileSht.Range("lastInputColumn").Value = 0
     InputFileSht.Range("InputFilePath").Value = vbNullString
     InputFileSht.Range("Interval").Value = 60
-    InputFileSht.Range("FullInputPath").Value = vbNullString
+    'InputFileSht.Range("FullInputPath").Value = vbNullString
     InputFileSht.Range("IncorrectClimateRowsAllowed").Value = 0
      
     ' Clear column headers, column selections and reset colours
-    InputFileSht.Range("TimeStamp,GlobalRad,TempAmbient,TempPanel,WindSpeed,HorIrradiance,Hor_Diffuse,FirstDate,LastDate,previewInputs,MeterTilt,MeterAzimuth").ClearContents
+    InputFileSht.Range("TimeStamp,GlobalRad,TempAmbient,TempPanel,WindSpeed,MeasAlbedo,HorIrradiance,Hor_Diffuse,FirstDate,LastDate,previewInputs,MeterTilt,MeterAzimuth").ClearContents
     InputFileSht.Range("MeterTilt").Interior.ColorIndex = 0
     InputFileSht.Range("MeterAzimuth").Interior.ColorIndex = 0
     InputFileSht.Range("InputFilePath").Interior.Color = ColourWhite
@@ -247,7 +261,7 @@ Function ChangeClimateFile() As Boolean
     Call PreModify(InputFileSht, currentShtStatus)
 
     ' Check that file actually exists
-    validFilePath = checkValidFilePath(InputFileSht, "Input", InputFileSht.Range("FullInputPath").Value)
+    validFilePath = checkValidFilePath(InputFileSht, "Input", InputFileSht.Range("InputFilePath").Value)
     
     ' File does not exist. Skip all other steps
     If validFilePath = False Then
@@ -259,11 +273,11 @@ Function ChangeClimateFile() As Boolean
     End If
     
     ' File is defined. Load first 10 lines
-    inputFilePath = Range("FullInputPath").Value
+    inputFilePath = Range("InputFilePath").Value
     GetLine (inputFilePath)
     
     ' Check for type of file
-    fileType = detectInputFileType(inputFilePath)
+    fileType = detectInputFileType(inputFilePath, validFilePath)
     
     ' Configure readers
     If (fileType = 1) Then
@@ -455,13 +469,13 @@ End Sub
     InputFileSht.Range("InputFilePath").Interior.Color = ColourWhite
     
     'Get the first 10 lines from the csv file
-    GetLine InputFileSht.Range("FullInputPath").Value
+    GetLine InputFileSht.Range("InputFilePath").Value
     
     'Split the lines using the value in the delimeter cell
     Call SplitToColumns(InputFileSht.Range("Delimeter").Value)
     
      ' Fill in the 'first' and 'last' date preview cells
-    GetDates InputFileSht.Range("FullInputPath").Value
+    GetDates InputFileSht.Range("InputFilePath").Value
     
     ' Format the preview dates according to the time format selection
     Call FormatPreviewTimeStamp
@@ -640,19 +654,7 @@ Function GetInputFilePath() As Boolean
     ' If FOpen is true it means that the user did not select Cancel
     If FOpen <> False Then
         Call PreModify(InputFileSht, currentShtStatus)
-        Range("FullInputPath").Value = FOpen
-        FilePathLeft = Left(FOpen, Len(ThisWorkbook.path))
-        FilePathLeft = Replace(FilePathLeft, "/", "\")
-        FilePathLeft_csyx = Left(FOpen, Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
-        FilePathLeft_csyx = Replace(FilePathLeft_csyx, "/", "\")
-
-        If (Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) = FilePathLeft_csyx) And IntroSht.Range("LoadFilePath").Value <> "" Then
-            InputFileSht.Range("InputFilePath").Value = Right(FOpen, Len(FOpen) - Len(FilePathLeft_csyx))
-        ElseIf ThisWorkbook.path = FilePathLeft Then
-            InputFileSht.Range("InputFilePath").Value = Right(FOpen, Len(FOpen) - Len(ThisWorkbook.path) - 1)
-        Else:
-            Range("InputFilePath").Value = FOpen
-        End If
+        Range("InputFilePath") = GetRelativePath(CStr(FOpen))
         Call PostModify(InputFileSht, currentShtStatus)
     End If
     
@@ -719,6 +721,9 @@ Function AddColumnHeaders() As Boolean
         ' If the wind speed cell is changed run the addcolumnheader to change the header of the inputted column number
         Call AddColumnHeader(Range("WindSpeed"), Range("PrevWindSpeed"))
         
+        ' If the measured albedo cell is changed run the addcolumnheader to change the header of the inputted column number
+        Call AddColumnHeader(Range("MeasAlbedo"), Range("PrevMeasAlbedo"))
+        
         ' If the horizontal irradiance cell is changed run the addcolumnheader to change the header of the inputted column number
         Call AddColumnHeader(Range("HorIrradiance"), Range("PrevHorIrradiance"))
         
@@ -730,7 +735,7 @@ End Function
 ' Check for type of input file
 ' inputFilePath: (i) path of the input file
 ' detectInputFileType: (o) type of the file: 0 for csv, 1 for EPW, 2 for TMY2, 3 for TMY3
-Private Function detectInputFileType(inputFilePath As String) As Integer
+Private Function detectInputFileType(inputFilePath As String, fileExists As Boolean) As Integer
     ' Declarations
     Dim firstLine As String              ' first line as read from file
     Dim secondLine As String             ' second line read from file
@@ -738,9 +743,11 @@ Private Function detectInputFileType(inputFilePath As String) As Integer
     Dim extension As String              ' the extension of the file in the file path
     
     ' Read the first ten lines
-    GetLine (inputFilePath)
-    firstLine = InputFileSht.Cells(1 + OriginalFormatLine, 3).Value
-    secondLine = InputFileSht.Cells(2 + OriginalFormatLine, 3).Value
+    If fileExists Then
+        GetLine (inputFilePath)
+        firstLine = InputFileSht.Cells(1 + OriginalFormatLine, 3).Value
+        secondLine = InputFileSht.Cells(2 + OriginalFormatLine, 3).Value
+    End If
     
     ' Guess the file type based on extension
     fileType = 0
@@ -754,7 +761,7 @@ Private Function detectInputFileType(inputFilePath As String) As Integer
     End If
     
     ' In the case of csv file, try guessing the file type based on first and second lines
-    If (fileType = 0) Then
+    If (fileType = 0 And fileExists) Then
         If (Left(firstLine, 8) = "LOCATION") Then
             fileType = 1
         ElseIf (InStr(1, secondLine, "Date (MM/DD/YYYY),Time (HH:MM),ETR (W/m^2),ETRN (W/m^2),")) Then
@@ -805,6 +812,11 @@ Private Sub configureInputTMY(TMYType As Integer)
     ' Prevents the comment telling the user to put in a column number for Panel Temperature from showing up
     If Not InputFileSht.Range("TempPanel").Comment Is Nothing Then
         InputFileSht.Range("TempPanel").Comment.Delete
+    End If
+    
+    ' Prevents the comment telling the user to put in a column number for Measured Albedo from showing up
+    If Not InputFileSht.Range("MeasAlbedo").Comment Is Nothing Then
+        InputFileSht.Range("MeasAlbedo").Comment.Delete
     End If
     
     ' Sets the default date format for TMY files

@@ -116,7 +116,7 @@ Function WorkbookOpen() As Boolean
     ' Version number for current development of CASSYS (this is for extra protection, in case it gets overwritten)
     IntroSht.Unprotect
     'NB: increased version number
-    IntroSht.Range("Version").Value = "1.5.2"
+    IntroSht.Range("Version").Value = "1.5.3"
     IntroSht.Protect
     IntroSht.Activate
     Application.ScreenUpdating = True

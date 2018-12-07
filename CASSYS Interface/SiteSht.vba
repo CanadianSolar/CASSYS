@@ -168,12 +168,16 @@ Sub SwitchFreq(ByVal Selection As String)
     Call PreModify(SiteSht, currentShtStatus)
     ' If yearly albedo is selected show yearly value fields
     If (Selection = "Yearly") Then
+        SiteSht.Range("AlbDefinitions").EntireRow.Hidden = False
         SiteSht.Range("YearlyAlbedo").EntireRow.Hidden = False
         SiteSht.Range("MonthlyAlbedo").EntireRow.Hidden = True
     ElseIf (Selection = "Monthly") Then
+        SiteSht.Range("AlbDefinitions").EntireRow.Hidden = False
         ' If monthly albedo is selected show monthly value fields
         SiteSht.Range("YearlyAlbedo").EntireRow.Hidden = True
         SiteSht.Range("MonthlyAlbedo").EntireRow.Hidden = False
+    ElseIf (Selection = "From Climate File") Then
+        SiteSht.Range("AlbDefinitions").EntireRow.Hidden = True
     End If
     Call PostModify(SiteSht, currentShtStatus)
     

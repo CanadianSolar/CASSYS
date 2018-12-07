@@ -63,6 +63,7 @@ Private Sub Worksheet_Change(ByVal Target As Range)
             If Not Right(outputFile, 4) = ".csv" Then
                 If Not Right(outputFile, 4) = ".CSV" Then MsgBox "Output file must end in .csv."
             Else
+                OutputFileSht.Range("OutputFilePath").Value = GetRelativePath(outputFile)
                 OutputFileSht.Range("OutputFilePath").Interior.Color = ColourWhite
             End If
         End If
@@ -115,24 +116,7 @@ Private Sub GetOutputFilePath()
     
     If FOpen <> False Then
         Call PreModify(OutputFileSht, currentShtStatus)
-        Range("OutputFilePath").Value = FOpen
-        
-        ' Get the directory of the file minus the specific file name
-        FilePathLeft = Left(FOpen, Len(ThisWorkbook.path))
-        FilePathLeft = Replace(FilePathLeft, "/", "\")
-        
-        ' Get the directory of the .csyx file minus the .csyx file name
-        FilePathLeft_csyx = Left(FOpen, Len(Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\"))))
-        FilePathLeft_csyx = Replace(FilePathLeft_csyx, "/", "\")
-        
-        ' If the directory of the load file is the same as that of the csyx file
-        If (Left(IntroSht.Range("LoadFilePath").Value, InStrRev(IntroSht.Range("LoadFilePath").Value, "\")) = FilePathLeft_csyx) And IntroSht.Range("LoadFilePath").Value <> "" Then
-            OutputFileSht.Range("OutputFilePath").Value = Right(FOpen, Len(FOpen) - Len(FilePathLeft_csyx))
-        ElseIf ThisWorkbook.path = FilePathLeft Then
-            OutputFileSht.Range("OutputFilePath").Value = Right(FOpen, Len(FOpen) - Len(ThisWorkbook.path) - 1)
-        Else:
-            Range("OutputFilePath").Value = FOpen
-        End If
+        Range("OutputFilePath").Value = GetRelativePath(CStr(FOpen))
         
         Call PostModify(OutputFileSht, currentShtStatus)
     End If

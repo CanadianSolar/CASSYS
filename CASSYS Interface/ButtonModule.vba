@@ -23,7 +23,7 @@ Function NewButton() As Boolean
 End Function
 Function LoadButton() As Boolean
     
-    Dim loadStatus As LOAD_STATUS
+    Dim fileNameToLoad As String
     Dim introShtStatus As sheetStatus
     Dim errorShtStatus As sheetStatus
     
@@ -51,10 +51,10 @@ Function LoadButton() As Boolean
     ErrorSht.Rows("7:" & Rows.count).ClearContents
     ErrorSht.Columns("P:XFD").ClearContents
     
-    loadStatus = GetFileToLoad
+    fileNameToLoad = GetFileToLoad
     
     ' If the file could not be found then do not continue loading
-    If loadStatus = filePathNotFound Then
+    If fileNameToLoad = "" Then
         Call PostModify(ErrorSht, errorShtStatus)
         Call PostModify(IntroSht, introShtStatus)
         IntroSht.Activate
@@ -63,8 +63,11 @@ Function LoadButton() As Boolean
     
     Call PrintMessage("Loading...", MessageSht.Range("A1"))
     
+    ' Clear the data to start from a clean slate
+    Call ClearAll
+    
     ' Load the file
-    Call Load
+    Call Load(fileNameToLoad)
     
     
     ' Hides the "Loading" Message
