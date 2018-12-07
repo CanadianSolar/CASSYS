@@ -57,7 +57,8 @@ namespace CASSYS
         public double TDif;                        // Diffuse irradiance in tilted plane [W/m2]
         public double TRef;                        // Reflected irradiance in tilted plane [W/m2]
         public double IncidenceAngle;              // Incidence angle [radians]
-        public bool NoPyranoAnglesDefined;         // Boolean to track if the angles for the pyranometer are defined.            
+        public bool NoPyranoAnglesDefined;         // Boolean to track if the angles for the pyranometer are defined.  
+        public double Albedo;                      // Albedo value          
 
         // Blank constructor
         public Tilter()
@@ -83,8 +84,17 @@ namespace CASSYS
             , double SunAzimuth      // azimuth angle of sun [radians]
             , double AirMass         // air mass [#]
             , int MonthNum           // The month number of the time stamp [1->12]
+            , double MeasAlbedo      // albedo read from climate file, if available (NaN otherwise)
             )
         {
+            // Calculate albedo
+            // Read from climate file
+            if (ReadFarmSettings.GetAttribute("Albedo", "Frequency", ErrLevel.WARNING) == "From Climate File")
+                Albedo = MeasAlbedo;
+            // Otherwise, read from monthly array
+            else
+                Albedo = itsMonthlyAlbedo[MonthNum];
+
             // Calculate direct horizontal if direct normal is provided
             double HDir = NDir * Math.Cos(SunZenith);
 

@@ -181,8 +181,8 @@ namespace CASSYS
             }
 
             // Calculate tilted irradiance
-            SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
-            SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+            SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
+            SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
         }
 
         // De-transposition of the titled irradiance values to the global horizontal values
@@ -211,8 +211,8 @@ namespace CASSYS
             if (SimMet.TGlo <= 0)
             {
                 SimSplitter.Calculate(SimSun.Zenith, 0, NExtra: SimSun.NExtra);
-                SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
-                SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
+                SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
             }
             else if ((SimSun.Zenith > 87.5 * Util.DTOR) || (cosInc <= Math.Cos(87.5 * Util.DTOR)))
             {
@@ -224,8 +224,8 @@ namespace CASSYS
                 SimSplitter.NDir = 0;
                 SimSplitter.HDir = 0;
 
-                SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
-                SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
+                SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
             }
             // Otherwise, bisection loop
             else
@@ -236,8 +236,8 @@ namespace CASSYS
                     // Use the central value between the domain to start the bisection, and then solve for TGlo,
                     double HGloAv = (HGloLo + HGloHi) / 2;
                     SimSplitter.Calculate(SimSun.Zenith, _HGlo: HGloAv, NExtra: SimSun.NExtra);
-                    SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
-                    SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                    SimTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
+                    SimTilterOpposite.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
                     double TGloAv = SimTilter.TGlo;
 
                     // Compare the TGloAv calculated from the Horizontal guess to the acutal TGlo and change the bounds for analysis
@@ -281,7 +281,7 @@ namespace CASSYS
             if (SimMet.TGlo <= 0)
             {
                 SimSplitter.Calculate(SimSun.Zenith, 0, NExtra: SimSun.NExtra);
-                pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
             }
             else if ((SimSun.Zenith > 87.5 * Util.DTOR) || (cosInc <= Math.Cos(87.5 * Util.DTOR)))
             {
@@ -294,7 +294,7 @@ namespace CASSYS
                 SimSplitter.HDir = 0;
 
                 //SimSplitter.Calculate(SimSun.Zenith, HGlo, NExtra: SimSun.NExtra);
-                pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
             }
             // Otherwise, bisection loop
             else
@@ -305,7 +305,7 @@ namespace CASSYS
                     // Use the central value between the domain to start the bisection, and then solve for TGlo,
                     double HGloAv = (HGloLo + HGloHi) / 2;
                     SimSplitter.Calculate(SimSun.Zenith, _HGlo: HGloAv, NExtra: SimSun.NExtra);
-                    pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear);
+                    pyranoTilter.Calculate(SimSplitter.NDir, SimSplitter.HDif, SimSun.NExtra, SimSun.Zenith, SimSun.Azimuth, SimSun.AirMass, SimMet.MonthOfYear, SimMet.Albedo);
                     double TGloAv = pyranoTilter.TGlo;
 
                     // Compare the TGloAv calculated from the Horizontal guess to the acutal TGlo and change the bounds for analysis
@@ -337,7 +337,7 @@ namespace CASSYS
             ReadFarmSettings.Outputlist["Sun_Azimuth_Angle"] = Util.RTOD * SimSun.Azimuth;
             ReadFarmSettings.Outputlist["ET_Irrad"] = SimSun.NExtra;
             ReadFarmSettings.Outputlist["Air_Mass"] = SimSun.AirMass;
-            ReadFarmSettings.Outputlist["Albedo"] = SimTilter.itsMonthlyAlbedo[Utilities.CurrentTimeStamp.Month];
+            ReadFarmSettings.Outputlist["Albedo"] = SimTilter.Albedo;
             ReadFarmSettings.Outputlist["Normal_beam_irradiance"] = SimSplitter.NDir;
             ReadFarmSettings.Outputlist["Horizontal_Global_Irradiance"] = SimSplitter.HGlo;
             ReadFarmSettings.Outputlist["Horizontal_diffuse_irradiance"] = SimSplitter.HDif;

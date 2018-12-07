@@ -167,6 +167,8 @@ namespace CASSYS
             , double[] rearGroundGHI                // Global irradiance for each of the ground segments to rear of the row [W/m2]
             , double aveGroundGHI                   // Average global irradiance on ground segment to the rear of row [W/m2]
             , int month                             // Current month, used for getting albedo value [#]
+            , double siteAlbedo                     // Site albedo (used only if inter-row albedo is set to site albedo) [#]
+            , double measAlbedo                     // Measured albedo read from climate file, if available [#]
             , double backSH                         // Fraction of the back surface of the PV array that is unshaded [#]
             , double TDir                           // Back tilted beam irradiance [W/m2]
             , DateTime ts                           // Time stamp analyzed, used for printing .csv files
@@ -190,7 +192,12 @@ namespace CASSYS
             double topY = bottomY + h;                       // y value for point on top edge of PV panel behind current row
 
             // Get albedo value for the month
-            Albedo = itsMonthlyAlbedo[month];
+            if (ReadFarmSettings.GetAttribute("BifAlbedo", "Frequency", ErrLevel.WARNING) == "From Climate File")
+                Albedo = measAlbedo;
+            else if (ReadFarmSettings.GetAttribute("BifAlbedo", "Frequency", ErrLevel.WARNING) == "Site")
+                Albedo = siteAlbedo;
+            else
+                Albedo = itsMonthlyAlbedo[month];
 
             // Accumulate diffuse, reflected, and beam irradiance components for each cell row over its field of view of PI radians
             for (int i = 0; i < numCellRows; i++)
@@ -386,45 +393,39 @@ namespace CASSYS
         // Config the albedo value based on monthly/yearly values defined on file
         void ConfigAlbedo()
         {
-            // Determine whether to use site albedo values, or inter-row specific albedo values
-            string whichAlbedo;
-            if (Convert.ToBoolean(ReadFarmSettings.GetInnerText("BifAlbedo", "UseBifAlb", ErrLevel.FATAL)))
-            {
-                whichAlbedo = "BifAlbedo";
-            }
-            else
-            {
-                whichAlbedo = "Albedo";
-            }
-
             // Initializing the expected list
             itsMonthlyAlbedo = new double[13];
-            if (ReadFarmSettings.GetAttribute(whichAlbedo, "Frequency", ErrLevel.WARNING) == "Monthly")
+            if (ReadFarmSettings.GetAttribute("BifAlbedo", "Frequency", ErrLevel.WARNING) == "Monthly")
             {
                 // Using the month number as the index, populate the albedo vales from each corresponding node
-                itsMonthlyAlbedo[1] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Jan", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[2] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Feb", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[3] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Mar", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[4] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Apr", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[5] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "May", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[6] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Jun", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[7] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Jul", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[8] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Aug", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[9] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Sep", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[10] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Oct", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[11] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Nov", ErrLevel.WARNING, _default: "0.2"));
-                itsMonthlyAlbedo[12] = double.Parse(ReadFarmSettings.GetInnerText(whichAlbedo, "Dec", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[1] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Jan", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[2] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Feb", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[3] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Mar", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[4] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Apr", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[5] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "May", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[6] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Jun", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[7] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Jul", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[8] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Aug", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[9] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Sep", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[10] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Oct", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[11] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Nov", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[12] = double.Parse(ReadFarmSettings.GetInnerText("BifAlbedo", "Dec", ErrLevel.WARNING, _default: "0.2"));
             }
-            else if (ReadFarmSettings.GetAttribute(whichAlbedo, "Frequency", ErrLevel.WARNING) == "Yearly")
+            else if (ReadFarmSettings.GetAttribute("BifAlbedo", "Frequency", ErrLevel.WARNING) == "Yearly")
             {
-                itsMonthlyAlbedo[1] = Convert.ToDouble(ReadFarmSettings.GetInnerText(whichAlbedo, "Yearly", ErrLevel.WARNING, _default: "0.2"));
+                itsMonthlyAlbedo[1] = Convert.ToDouble(ReadFarmSettings.GetInnerText("BifAlbedo", "Yearly", ErrLevel.WARNING, _default: "0.2"));
 
                 // Apply the same albedo to all months
-                for (int i = 3; i < itsMonthlyAlbedo.Length + 1; i++)
+                for (int i = 2; i < 13; i++)
                 {
-                    itsMonthlyAlbedo[i - 1] = itsMonthlyAlbedo[1];
+                    itsMonthlyAlbedo[i] = itsMonthlyAlbedo[1];
                 }
             }
+            else                    // read from file or equal to site albedo - set monthly valus to NaN for safety
+                for (int i = 1; i < 13; i++)
+                {
+                    itsMonthlyAlbedo[i] = Double.NaN;
+                }
         }
 
         void PrintModel

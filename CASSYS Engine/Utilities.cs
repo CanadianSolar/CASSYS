@@ -78,18 +78,17 @@ namespace CASSYS
                     if (CurrentTimeStamp != cachedTimeStamp)
                     {
                         // Check if the time stamps are going back in time
-                        if (DateTime.Compare(CurrentTimeStamp, cachedTimeStamp) < 0)
+                        // Do this except if the hour is Jan 1 00:00 in which case we may have a file that wraps around, for example a simulation starting on July 1 and ending June 30
+                        bool WrapAround = CurrentTimeStamp.Month == 1 && CurrentTimeStamp.Day == 1 && CurrentTimeStamp.Hour == 0 & CurrentTimeStamp.Minute == 0;
+                        if (DateTime.Compare(CurrentTimeStamp, cachedTimeStamp) < 0 && ! WrapAround)
                         {
                             ErrorLogger.Log("Time stamps in the Input File go backwards in time. Please check your input file. CASSYS has ended.", ErrLevel.FATAL);
 
                         }
                     }
                 }
-                else
-                {
-                    // Get the next expected time stamp
-                    cachedTimeStamp = CurrentTimeStamp;
-                }
+                // Save the current time stamp
+                cachedTimeStamp = CurrentTimeStamp;
 
                 // Next and Base time stamps are used to check if the sun-rise and sun-set event occurs in between the time stamps under consideration
                 DateTime nextTimeStamp = DateTime.ParseExact(TimeStamp, Util.timeFormat, null);

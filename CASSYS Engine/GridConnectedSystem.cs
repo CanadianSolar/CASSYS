@@ -126,7 +126,7 @@ namespace CASSYS
 
                 // Calculate back side global irradiance
                 SimBackTilter.Calculate(RadProc.SimTracker.SurfSlope, RadProc.SimTracker.SurfClearance, RadProc.SimSplitter.HDif, SimPVA[0].TDifRef, SimMet.HGlo, SimGround.frontGroundGHI, SimGround.rearGroundGHI, SimGround.aveGroundGHI,
-                    SimMet.MonthOfYear, SimShading.BackBeamSF, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
+                    SimMet.MonthOfYear, RadProc.SimTilter.Albedo, SimMet.Albedo, SimShading.BackBeamSF, RadProc.SimTilterOpposite.TDir, RadProc.TimeStampAnalyzed);
             }
             else
             {

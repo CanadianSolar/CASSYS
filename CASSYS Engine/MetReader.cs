@@ -36,12 +36,13 @@ namespace CASSYS
         public double TAmbient = double.NaN;                        // Ambient temperature [C]
         public double WindSpeed = double.NaN;                       // Windspeed [m/s]
         public double TModMeasured = double.NaN;                    // Measured module temperature [C]
+        public double Albedo = double.NaN;                          // Albedo []
         public String TimeStamp = null;                             // Timestamp initialized to null
         public int Year;                                            // Holds current year
         public int DayOfYear;                                       // Holds current day of year
-        public int DayOfMonth;                                      // // Holds current day of month
+        public int DayOfMonth;                                      // Holds current day of month
         public double HourOfDay;                                    // Holds current hour of day
-        public double minuteInterval;                               // Hold the interval at which the weather was collected
+        public double minuteInterval;                               // Holds the interval at which the weather was collected
         public int MonthOfYear;                                     // Holds current month of year
         public double TimeStepEnd;                                  // Time at which timestamp begins
         public double TimeStepBeg;                                  // Time at which timestamp ends
@@ -304,6 +305,15 @@ namespace CASSYS
                     else
                     {
                         WindSpeed = double.NaN;
+                    }
+
+                    if (ReadFarmSettings.UseMeasuredAlbedo)
+                    {
+                        Albedo = double.Parse(inputLineDelimited[ReadFarmSettings.ClimateRefPos[7] - 1]);
+                    }
+                    else
+                    {
+                        Albedo = double.NaN;
                     }
                 }
             }

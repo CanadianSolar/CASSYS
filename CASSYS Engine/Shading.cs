@@ -85,12 +85,17 @@ namespace CASSYS
             itsCollAzimuth = CollectorAzimuth;
             GetShadingLimitAngles(CollectorTilt);
 
+            // Set shading factors to one by default
+            BeamSF = 1;
+            DiffuseSF = 1;
+            ReflectedSF = 1;
+
             // Calculates the shading fraction applied to each component of irradiance on the front side
             if (itsShadModel == ShadModel.UR || itsShadModel == ShadModel.TE || itsShadModel == ShadModel.TS)
             {
-                // itsRowBlockFactor accounts for the fact that all sheds but one (the first) experience shading
+                // itsRowBlockFactor accounts for the fact that all rows but one (the first) experience shading
                 BeamSF = 1 - GetFrontShadedFraction(SunZenith, SunAzimuth, CollectorTilt) * itsRowBlockFactor;
-                DiffuseSF = itsRowBlockFactor * (1 + Math.Cos(FrontSLA)) / 2;
+                DiffuseSF = 1 - itsRowBlockFactor * (1 - Math.Cos(FrontSLA)) / 2;
                 ReflectedSF = 1 - itsRowBlockFactor;
             }
 
@@ -309,7 +314,6 @@ namespace CASSYS
                     {
                         CellSize = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CellSize", ErrLevel.FATAL)) / 100D;
                         itsNumModTransverseStrings = int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWid", ErrLevel.FATAL));
-                        itsRowBlockFactor = 1; // No row related shading adjustments should be applied.
 
                         // Use cell based shading to calculate the effect on the beam shading factor
                         // The shading factor gets worse in steps based on how much of the collector bandwidth is currently under shadowed length
@@ -344,7 +348,6 @@ namespace CASSYS
                     {
                         CellSize = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CellSizeSAET", ErrLevel.FATAL)) / 100D;
                         itsNumModTransverseStrings = int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAET", ErrLevel.FATAL));
-                        itsRowBlockFactor = 1; // No row related shading adjustments should be applied.
 
                         // Use cell based shading to calculate the effect on the beam shading factor
                         // The shading factor gets worse in steps based on how much of the collector bandwidth is currently under shadowed length
@@ -378,7 +381,6 @@ namespace CASSYS
                     {
                         CellSize = Convert.ToDouble(ReadFarmSettings.GetInnerText("O&S", "CellSizeSAST", ErrLevel.FATAL)) / 100D;
                         itsNumModTransverseStrings = int.Parse(ReadFarmSettings.GetInnerText("O&S", "StrInWidSAST", ErrLevel.FATAL));
-                        itsRowBlockFactor = 1; // No row related shading adjustments should be applied.
 
                         // Use cell based shading to calculate the effect on the beam shading factor
                         // The shading factor gets worse in steps based on how much of the collector bandwidth is currently under shadowed length

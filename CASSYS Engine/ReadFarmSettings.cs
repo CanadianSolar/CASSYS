@@ -36,7 +36,7 @@ namespace CASSYS
     public class ReadFarmSettings
     {
         // Inputs or Parameters for the ReadFarmSettings Class
-        public static String EngineVersion = "1.5.2";               // The supported versions of CASSYS CSYX Files.
+        public static String EngineVersion = "1.5.3";               // The supported versions of CASSYS CSYX Files.
         public static XmlDocument doc;                              // The .CSYX document that contains the Site, System, etc. definitions
         public static String CASSYSCSYXVersion;                     // The CASSYS .CSYX Version Number obtained from the .CSYX file
         public static bool UseDiffMeasured;                         // Using the Measured Diffuse on Horizontal Value
@@ -45,6 +45,7 @@ namespace CASSYS
         public static bool UseGHI;                                  // Boolean that indicates if the program should use horizontal irradiance to simulate
         public static bool UseWindSpeed;                            // Boolean indicating if the program has the Wind Speed available to use
         public static bool tempAmbDefined;                          // Boolean indicating if the program has Temp Ambient available to use
+        public static bool UseMeasuredAlbedo;                       // Boolean indicating if the program has albedo values in the input file
         public static bool batchMode = false;                       // Determines if the program is being run in batch mode (CMD prompt arguments for IO files) or not
         public static string outputMode = "csv";                    // Determines if output should be a comma seperated string (str), a csv file (csv), or a csv file with multiple runs with varying parameter (var)
         public static string currentYear = DateTime.Now.Year.ToString();   // Gets the current year that the program is run for copywrite message
@@ -185,6 +186,7 @@ namespace CASSYS
                     tempAmbDefined = Int32.TryParse(GetInnerText("InputFile", "TempAmbient", _Error: ErrLevel.FATAL), out ClimateRefPos[3]);
                     UseMeasuredTemp = Int32.TryParse(GetInnerText("InputFile", "TempPanel", _default: "N/A", _Error: ErrLevel.WARNING), out ClimateRefPos[4]);
                     UseWindSpeed = Int32.TryParse(GetInnerText("InputFile", "WindSpeed", _default: "N/A", _Error: ErrLevel.WARNING), out ClimateRefPos[5]);
+                    UseMeasuredAlbedo = Int32.TryParse(GetInnerText("InputFile", "MeasAlbedo", _Error: ErrLevel.FATAL), out ClimateRefPos[7]);
 
                     // Check if Horizontal Irradiance is provided for use in simulation.
                     if (UseGHI)
