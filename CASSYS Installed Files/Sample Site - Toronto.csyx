@@ -1,5 +1,5 @@
 <Site>
-	<Version>1.5.2</Version>
+	<Version>1.5.3</Version>
 	<ModeSelect>Grid-Connected System</ModeSelect>
 	<SiteDef>
 		<Name>Sample Site - Toronto</Name>
@@ -212,6 +212,7 @@
 		<TempAmbient>2</TempAmbient>
 		<TempPanel>N/A</TempPanel>
 		<WindSpeed>6</WindSpeed>
+		<MeasAlbedo>N/A</MeasAlbedo>
 		<IncorrectClimateRowsAllowed>0</IncorrectClimateRowsAllowed>
 	</InputFileStyle>
 	<OutputFilePath>Toronto_Sample_Output.csv</OutputFilePath>
